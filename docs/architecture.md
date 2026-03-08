@@ -1,6 +1,6 @@
 # Architecture
 
-> How qed works internally — the state machine, verification dispatch, and backend abstraction.
+> How qed works internally — execution modes, the state machine, and verification dispatch.
 
 ## Overview
 
@@ -110,28 +110,14 @@ The verification type determines both **what runs** and **what guarantee you get
 | `property` | Test framework | Statistical | `always` |
 | `proof` | Proof checker | Mathematical | `always` |
 
-## Backend abstraction
+## Spec loading
 
-Spec sources are pluggable via the `Backend` typeclass:
+Specs are files in the repo — version-controlled, schema-validated, colocated with the code they specify. `SpecLoader` reads and lists spec files from disk:
 
 ```lean
-class Backend (β : Type) where
-  name : β → String
-  fetchSpec : β → SpecId → IO (Except String Spec)
-  reportResult : β → SpecId → LoopState → IO ReportResult
-  listSpecs : β → IO (Except String (List SpecId))
+def loadSpec (path : System.FilePath) : IO (Except String Spec)
+def listSpecs (directory : System.FilePath) (extension : String) : IO (Except String (List System.FilePath))
 ```
-
-```mermaid
-flowchart TB
-    core[State Machine\nTypes, Proofs] --> backend{Backend typeclass}
-    backend --> fs[FileSystem\n.spec.json / .spec.toml]
-    backend -.-> linear[Linear\nAPI integration]
-    backend -.-> jira[Jira\nAPI integration]
-    backend -.-> db[Database\nSQL / SQLite]
-```
-
-Adding a new backend means implementing the three typeclass methods. The core state machine and all proofs are untouched — they don't know or care where specs come from.
 
 ## Proven properties
 
