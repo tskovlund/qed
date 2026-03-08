@@ -28,6 +28,7 @@ Tests/
   Types.lean           isTerminal behavior tests
   Parser.lean          JSON parser tests (all verify types, error cases)
   Integration.lean     TOML converter and SpecLoader end-to-end tests
+  Verifier.lean        Command verifier tests (shell execution, exit codes, output capture)
 specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry
   state-machine.spec.toml  State machine correctness — proof + agentReview
