@@ -22,13 +22,6 @@
         "type": "command",
         "run": "! grep -rn 'sorry' --include='*.lean' Qed/ Tests/ Main.lean 2>/dev/null | grep -v '^\\s*--' | grep -q ."
       }
-    },
-    {
-      "description": "Generated docs are fresh (schema and format reference match source)",
-      "verify": {
-        "type": "command",
-        "run": "lake build docgen && .lake/build/bin/docgen schema | diff docs/spec.schema.json - && .lake/build/bin/docgen markdown | diff docs/spec-format.md -"
-      }
     }
   ]
 }

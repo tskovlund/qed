@@ -57,13 +57,19 @@ qed run state-machine.spec.toml
 
 ## Proven properties
 
-The state machine has formal proofs verified by Lean 4's kernel:
+Formal proofs verified by Lean 4's kernel:
 
-- **Termination** — the loop always reaches a terminal state
+**State machine (worker loop):**
+- **Termination** — the loop always reaches a terminal state within maxIterations
 - **Stuck detection** — fires iff the same failures repeat consecutively
 - **No skipped verification** — worker output is always checked before passing
+- **Worker before verification** — verifying is only reachable from workerRunning
 - **Terminal states are absorbing** — once done, done
 - **Monotonic iteration count** — no going backwards
+
+**Verify mode:**
+- **No worker or loop config** — verify mode cannot carry worker loop state
+- **Independent of state machine** — verify mode does not use the transition function
 
 ## Status
 

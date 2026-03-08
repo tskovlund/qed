@@ -21,10 +21,11 @@ Qed/Proofs/
   NoSkip.lean          Cannot skip verification phase
   FinalStates.lean     Terminal states are absorbing
   Monotonic.lean       Iteration count is non-decreasing
+  VerifyMode.lean      Verify mode type-level separation proofs
 Tests/
   Main.lean            Test driver
 specs/                 qed's own specs (dogfooding)
-  build.spec.json          Build integrity — compile, test, no sorry, docs fresh
+  build.spec.json          Build integrity — compile, test, no sorry
   state-machine.spec.toml  State machine correctness — proof + agentReview
   parser.spec.toml         Parser correctness — tests + agentReview
   verify-mode.spec.toml    Verify mode correctness — command + agentReview

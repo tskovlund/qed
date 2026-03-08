@@ -2,36 +2,11 @@
 
 # Parser correctness — the bridge between spec files and the typed Spec type.
 # If the parser misparses, the wrong thing gets verified.
+#
+# Build and test coverage is owned by build.spec.json.
+# This spec adds the design review layer.
 
 name = "parser-correctness"
-
-[[criteria]]
-description = "Parser module compiles"
-
-[criteria.verify]
-type = "command"
-run = "lake build Qed.Parser"
-
-[[criteria]]
-description = "TOML converter module compiles"
-
-[criteria.verify]
-type = "command"
-run = "lake build Qed.TomlConverter"
-
-[[criteria]]
-description = "Parser tests cover all verify types, both modes, defaults, and error paths"
-
-[criteria.verify]
-type = "command"
-run = "lake test"
-
-[[criteria]]
-description = "SpecLoader loads real spec files from disk (JSON and TOML)"
-
-[criteria.verify]
-type = "command"
-run = "lake test"
 
 [[criteria]]
 description = """
