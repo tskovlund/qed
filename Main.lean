@@ -11,34 +11,44 @@ private def statusIndicator : VerificationResult → String
   | .needsHuman _ => "NEEDS-HUMAN"
   | .skipped _ => "SKIP"
 
-/-- Run single-pass verification on a spec file: load, verify all criteria, print results. -/
+/-- Run single-pass verification on an already-loaded spec. -/
+def verifySpec (spec : Spec) (jsonOutput : Bool) : IO UInt32 := do
+  let results ← Verifier.verifyAll spec.criteria
+  if jsonOutput then
+    let json := Output.resultsToJson spec.name results
+    IO.println (json.pretty 2)
+  else
+    IO.println s!"Verifying: {spec.name}"
+    IO.println ""
+    for (description, result) in results do
+      IO.println s!"  [{statusIndicator result}] {description}"
+    IO.println ""
+    let failed := results.filter fun (_, result) => result.isFailed
+    if failed.isEmpty then
+      IO.println s!"All {results.length} criteria passed."
+    else
+      IO.eprintln s!"{failed.length} of {results.length} criteria failed."
+  let anyFailed := results.any fun (_, result) => result.isFailed
+  return if anyFailed then 1 else 0
+
+/-- Load a spec file, handling IO exceptions (e.g., missing files). -/
+def loadSpecSafe (path : String) : IO (Except String Spec) := do
+  try
+    SpecLoader.loadSpec path
+  catch error =>
+    return .error s!"cannot read '{path}': {error}"
+
+/-- Load a spec and run single-pass verification. -/
 def runVerify (path : String) (jsonOutput : Bool) : IO UInt32 := do
-  match ← SpecLoader.loadSpec path with
+  match ← loadSpecSafe path with
   | .error message =>
     IO.eprintln s!"error: {message}"
     return 1
-  | .ok spec =>
-    let results ← Verifier.verifyAll spec.criteria
-    if jsonOutput then
-      let json := Output.resultsToJson spec.name results
-      IO.println (json.pretty 2)
-    else
-      IO.println s!"Verifying: {spec.name}"
-      IO.println ""
-      for (description, result) in results do
-        IO.println s!"  [{statusIndicator result}] {description}"
-      IO.println ""
-      let failed := results.filter fun (_, result) => result.isFailed
-      if failed.isEmpty then
-        IO.println s!"All {results.length} criteria passed."
-      else
-        IO.eprintln s!"{failed.length} of {results.length} criteria failed."
-    let anyFailed := results.any fun (_, result) => result.isFailed
-    return if anyFailed then 1 else 0
+  | .ok spec => verifySpec spec jsonOutput
 
 /-- Parse and validate a spec file, printing the parsed result. -/
 def runParse (path : String) (jsonOutput : Bool) : IO UInt32 := do
-  match ← SpecLoader.loadSpec path with
+  match ← loadSpecSafe path with
   | .error message =>
     IO.eprintln s!"error: {message}"
     return 1
@@ -91,16 +101,16 @@ def main (args : List String) : IO UInt32 := do
   | ["verify", path] =>
     runVerify path jsonOutput
   | ["run", path] =>
-    match ← SpecLoader.loadSpec path with
+    match ← loadSpecSafe path with
     | .error message =>
       IO.eprintln s!"error: {message}"
       return 1
     | .ok spec =>
       match spec.mode with
-      | .verify => runVerify path jsonOutput
+      | .verify => verifySpec spec jsonOutput
       | .workerLoop _ _ =>
-        IO.println "Worker loop mode is not yet implemented."
-        IO.println "Use `qed verify` for single-pass verification."
+        IO.eprintln "Worker loop mode is not yet implemented."
+        IO.eprintln "Use `qed verify` for single-pass verification."
         return 1
   | ["parse", path] =>
     runParse path jsonOutput
