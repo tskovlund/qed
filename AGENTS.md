@@ -22,15 +22,18 @@ Qed/Proofs/
   NoSkip.lean          Cannot skip verification phase
   FinalStates.lean     Terminal states are absorbing
   Monotonic.lean       Iteration count is non-decreasing
+  VerifyMode.lean      Verify mode type-level separation proofs
 Tests/
   Main.lean            Test runner (imports all test modules)
   Types.lean           isTerminal behavior tests
   Parser.lean          JSON parser tests (all verify types, error cases)
   Integration.lean     TOML converter and SpecLoader end-to-end tests
 specs/                 qed's own specs (dogfooding)
-  build.spec.json      Build integrity — verify mode (no worker)
-  verify-mode.spec.toml    Verify mode correctness — command + agentReview
+  build.spec.json          Build integrity — compile, test, no sorry
   state-machine.spec.toml  State machine correctness — proof + agentReview
+  parser.spec.toml         Parser correctness — tests + agentReview
+  verify-mode.spec.toml    Verify mode correctness — command + agentReview
+  docs.spec.toml           Documentation accuracy — freshness + agentReview
 DocGen/
   Schema.lean          JSON Schema generation (exhaustive matches on Types)
   Markdown.lean        JSON Schema → markdown transformation
@@ -39,6 +42,7 @@ docs/                  Auto-generated + hand-written documentation
   spec.schema.json     JSON Schema (auto-generated, CI-checked)
   spec-format.md       Spec format reference (auto-generated from schema)
   architecture.md      System design, state machine, mermaid diagrams
+  specs.md             Spec design philosophy and layer organization
 ```
 
 ## Spec format

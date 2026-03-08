@@ -10,14 +10,14 @@
       }
     },
     {
-      "description": "All unit tests pass",
+      "description": "All tests pass",
       "verify": {
         "type": "command",
         "run": "lake test"
       }
     },
     {
-      "description": "No sorry in source files — all proofs are complete",
+      "description": "No sorry in proof or source files",
       "verify": {
         "type": "command",
         "run": "! grep -rn 'sorry' --include='*.lean' Qed/ Tests/ Main.lean 2>/dev/null | grep -v '^\\s*--' | grep -q ."

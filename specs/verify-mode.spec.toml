@@ -1,17 +1,11 @@
 #:schema ../docs/spec.schema.json
 
-# Verify mode — no worker, single-pass verification.
-# This spec verifies itself: it runs in verify mode and checks that
-# verify mode is correctly modeled in the type system and schema.
+# Verify mode — the simpler of qed's two execution modes.
+# Structural checks, formal proofs, and design review.
 
 name = "verify-mode"
 
-[[criteria]]
-description = "SpecMode.verify exists as a constructor (the type system models verify mode)"
-
-[criteria.verify]
-type = "command"
-run = "grep -q '| verify' Qed/Types.lean"
+# --- Structural assertions ---
 
 [[criteria]]
 description = "SpecMode has exactly two constructors: workerLoop and verify"
@@ -27,34 +21,47 @@ description = "JSON Schema enforces at least one criterion when no worker is pre
 type = "command"
 run = "grep -q 'minItems' docs/spec.schema.json"
 
+# --- Proof criteria ---
+# These formalize the type-level separation between modes.
+
 [[criteria]]
-description = "Verify mode is documented in architecture.md"
+description = "Verify mode cannot carry a WorkerConfig or LoopConfig"
 
 [criteria.verify]
-type = "command"
-run = "grep -q 'SpecMode.verify' docs/architecture.md"
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.VerifyMode.verify_has_no_worker"
+
+[[criteria]]
+description = "Verify mode does not depend on the state machine transition function"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.VerifyMode.verify_independent_of_loop"
+
+# --- Agent review ---
 
 [[criteria]]
 description = """
-Verify mode implementation is correct and complete — single-pass \
-verification with no worker, no loop, no state machine dependency."""
+Verify mode design is correct and complete — single-pass verification \
+with no worker, no loop, no state machine dependency."""
 
 [criteria.verify]
 type = "agentReview"
 prompt = """
 Review the verify mode design across these files:
 
-1. Qed/Types.lean — SpecMode.verify constructor exists, Spec uses SpecMode
-2. DocGen/Schema.lean — JSON Schema makes worker optional, conditional
-   validation enforces ≥1 criteria when no worker
-3. docs/architecture.md — verify mode is documented as a separate execution
-   path from the worker loop
+1. Qed/Types.lean — SpecMode.verify constructor, Spec uses SpecMode
+2. DocGen/Schema.lean — worker is optional, conditional validation
+   enforces ≥1 criteria when no worker
+3. docs/architecture.md — verify mode documented as separate path
 
 Verify that:
-- The type system makes the two modes explicit (not implicit via Option)
-- LoopConfig (maxIterations, stuckThreshold) cannot exist without a worker
-- The verify mode path does not depend on StateMachine.lean at all
+- The two modes are explicit at the type level (sum type, not Option)
+- LoopConfig only exists inside workerLoop (cannot leak to verify mode)
+- The verify mode path does not depend on StateMachine.lean
 - Documentation accurately describes both modes
 
-Report any inconsistencies or missing pieces.
+Report any inconsistencies.
 """

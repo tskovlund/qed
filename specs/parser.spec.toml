@@ -1,0 +1,35 @@
+#:schema ../docs/spec.schema.json
+
+# Parser correctness — the bridge between spec files and the typed Spec type.
+# If the parser misparses, the wrong thing gets verified.
+#
+# Build and test coverage is owned by build.spec.json.
+# This spec adds the design review layer.
+
+name = "parser-correctness"
+
+[[criteria]]
+description = """
+Parser faithfully maps JSON to the Spec type — no data loss, no \
+silent defaults where explicit values should be required, no ambiguous \
+error messages."""
+
+[criteria.verify]
+type = "agentReview"
+prompt = """
+Review Qed/Parser.lean. Verify:
+
+1. Every field in the Spec type is parsed (nothing silently dropped)
+2. Required vs optional fields match the JSON Schema (docs/spec.schema.json)
+3. Default values match the type definitions in Qed/Types.lean
+4. Error messages identify the exact field and expected type
+5. The parser handles both execution modes correctly:
+   - worker present → SpecMode.workerLoop with LoopConfig
+   - worker absent → SpecMode.verify with ≥1 criteria validation
+
+Also review Qed/TomlConverter.lean:
+6. TOML content is passed via stdin (not command-line arg interpolation)
+7. Error output from Python is surfaced, not swallowed
+
+Report any parsing bugs, missing validation, or data loss risks.
+"""

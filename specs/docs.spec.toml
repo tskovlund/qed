@@ -1,0 +1,57 @@
+#:schema ../docs/spec.schema.json
+
+# Documentation accuracy — stale docs are worse than no docs.
+
+name = "documentation-accuracy"
+
+[[criteria]]
+description = "JSON Schema is fresh (generated output matches committed file)"
+
+[criteria.verify]
+type = "command"
+run = "lake build docgen && .lake/build/bin/docgen schema | diff docs/spec.schema.json -"
+
+[[criteria]]
+description = "Spec format reference is fresh (generated output matches committed file)"
+
+[criteria.verify]
+type = "command"
+run = "lake build docgen && .lake/build/bin/docgen markdown | diff docs/spec-format.md -"
+
+[[criteria]]
+description = "Architecture docs accurately describe the system"
+
+[criteria.verify]
+type = "agentReview"
+prompt = """
+Compare docs/architecture.md against the actual codebase. Check:
+
+1. State diagram matches the transitions in Qed/StateMachine.lean
+   (every match arm should have a corresponding arrow)
+2. Events table matches the LoopEvent constructors in StateMachine.lean
+3. Terminal states table matches isTerminal in Qed/Types.lean
+4. Pure core / IO shell table correctly categorizes every module
+5. Verification dispatch diagram lists all VerifyType constructors
+   from Qed/Types.lean in the correct order (human → proof)
+6. Both execution modes (worker loop, verify) are described
+
+Report any states, events, types, or modules that are in the code
+but missing from the docs, or documented but not in the code.
+"""
+
+[[criteria]]
+description = "README verification spectrum matches Types.lean"
+
+[criteria.verify]
+type = "agentReview"
+prompt = """
+Compare the verification spectrum table in README.md against the
+VerifyType constructors in Qed/Types.lean. Check:
+
+1. Every VerifyType constructor has a row in the table
+2. No rows reference types that don't exist in the code
+3. The ordering matches (human → agentReview → command → property → proof)
+4. The guarantee names are accurate and consistent with docs/architecture.md
+
+Report any mismatches.
+"""
