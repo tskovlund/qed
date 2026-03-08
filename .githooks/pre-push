@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Run build and tests before push.
+
+echo "pre-push: building..."
+lake build || exit 1
+
+echo "pre-push: running tests..."
+lake test || exit 1
+
+echo "pre-push: checking for sorry..."
+if grep -rn 'sorry' --include='*.lean' Qed/ Tests/ Main.lean 2>/dev/null | grep -v '^--' | grep -v '^\s*--'; then
+  echo "pre-push: found 'sorry' in source files"
+  exit 1
+fi
