@@ -58,7 +58,7 @@ description = "Stuck detection fires iff the same failures repeat for stuckThres
 [criteria.verify]
 type = "proof"
 prover = "lean4"
-target = "Qed.Proofs.StuckDetection.stuck_iff_repeated"
+target = "Qed.Proofs.StuckDetection.stuck_iff_threshold"
 
 # --- Agent review ---
 

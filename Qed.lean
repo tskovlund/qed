@@ -4,3 +4,9 @@ import Qed.Parser
 import Qed.TomlConverter
 import Qed.SpecLoader
 import Qed.Verifier
+import Qed.Proofs.FinalStates
+import Qed.Proofs.Monotonic
+import Qed.Proofs.NoSkip
+import Qed.Proofs.StuckDetection
+import Qed.Proofs.Termination
+import Qed.Proofs.VerifyMode
