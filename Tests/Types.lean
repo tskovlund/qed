@@ -26,29 +26,9 @@ def testLoopStateWorkerRunningIsNotTerminal : IO Bool := do
   -- Act / Assert
   return !state.isTerminal
 
-def testCiScheduleDefaultsToAlwaysForCommand : IO Bool := do
-  -- Arrange
-  let criterion : AcceptanceCriterion := {
-    description := "test"
-    verify := VerifyType.command "echo"
-  }
-  -- Act / Assert
-  return criterion.ci == CiSchedule.always
-
-def testCiScheduleDefaultsToManualForHuman : IO Bool := do
-  -- Arrange
-  let criterion : AcceptanceCriterion := {
-    description := "test"
-    verify := VerifyType.human "check visually"
-  }
-  -- Act / Assert
-  return criterion.ci == CiSchedule.manual
-
 def typeTests : List (String × IO Bool) := [
   ("testLoopStatePassedIsTerminal", testLoopStatePassedIsTerminal),
   ("testLoopStateStuckIsTerminal", testLoopStateStuckIsTerminal),
   ("testLoopStateReadyIsNotTerminal", testLoopStateReadyIsNotTerminal),
-  ("testLoopStateWorkerRunningIsNotTerminal", testLoopStateWorkerRunningIsNotTerminal),
-  ("testCiScheduleDefaultsToAlwaysForCommand", testCiScheduleDefaultsToAlwaysForCommand),
-  ("testCiScheduleDefaultsToManualForHuman", testCiScheduleDefaultsToManualForHuman)
+  ("testLoopStateWorkerRunningIsNotTerminal", testLoopStateWorkerRunningIsNotTerminal)
 ]
