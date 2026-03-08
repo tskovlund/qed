@@ -24,7 +24,7 @@ iteration >= n. -/
 theorem iteration_monotonic (config : LoopConfig) (state : LoopState)
     (context : LoopContext) (event : LoopEvent) :
     iterationOf (transition config state context event).1 ≥ iterationOf state := by
-  unfold transition
+  unfold transition newFailureCount
   cases h : state.isTerminal
   case false =>
     simp only [Bool.false_eq_true, ↓reduceIte]

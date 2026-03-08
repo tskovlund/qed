@@ -17,7 +17,7 @@ theorem no_skip_verification (config : LoopConfig) (state : LoopState)
     (hnonterm : state.isTerminal = false)
     (h : (transition config state context event).1 = .passed n) :
     ∃ (m : Nat), state = .verifying m := by
-  unfold transition at h
+  unfold transition newFailureCount at h
   simp only [hnonterm, Bool.false_eq_true, ↓reduceIte] at h
   cases state with
   | ready => cases event <;> simp at h
@@ -38,7 +38,7 @@ theorem worker_before_verification (config : LoopConfig) (state : LoopState)
     (hnonterm : state.isTerminal = false)
     (h : (transition config state context event).1 = .verifying m) :
     state = .workerRunning m ∨ state = .verifying m := by
-  unfold transition at h
+  unfold transition newFailureCount at h
   simp only [hnonterm, Bool.false_eq_true, ↓reduceIte] at h
   cases state with
   | ready => cases event <;> simp at h

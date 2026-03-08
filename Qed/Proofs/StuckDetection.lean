@@ -7,10 +7,6 @@ namespace Qed.Proofs.StuckDetection
 
 open Qed Qed.StateMachine
 
-/-- Helper to compute the new consecutive failure count from context and failures. -/
-private def newFailureCount (context : LoopContext) (failures : List String) : Nat :=
-  if failures == context.previousFailures then context.consecutiveFailureCount + 1 else 1
-
 /-- Stuck detection fires when `consecutiveFailureCount` reaches `stuckThreshold`.
 When transitioning from `verifying` with `someFailed` and the iteration has
 not reached `maxIterations`, if the computed new count reaches `stuckThreshold`,

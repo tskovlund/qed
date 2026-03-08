@@ -26,6 +26,12 @@ structure LoopContext where
 def LoopContext.initial : LoopContext :=
   { consecutiveFailureCount := 0, previousFailures := [] }
 
+/-- Compute the new consecutive failure count given the current context and
+the latest failures. Increments if failures match the previous iteration,
+resets to 1 otherwise. Used by both `transition` and proofs. -/
+def newFailureCount (context : LoopContext) (failures : List String) : Nat :=
+  if failures == context.previousFailures then context.consecutiveFailureCount + 1 else 1
+
 /-- The pure transition function. No IO, no side effects.
 
 Given the current state, context, config, and an event, produces the next
@@ -59,8 +65,7 @@ def transition (config : LoopConfig) (state : LoopState) (context : LoopContext)
         (.maxIterationsReached iteration, context)
       else
         -- Check stuck detection: same failures for stuckThreshold consecutive iterations
-        let sameAsBefore := failures == context.previousFailures
-        let newCount := if sameAsBefore then context.consecutiveFailureCount + 1 else 1
+        let newCount := newFailureCount context failures
         let newContext := { consecutiveFailureCount := newCount, previousFailures := failures }
         if newCount ≥ config.stuckThreshold then
           (.stuck iteration failures, newContext)

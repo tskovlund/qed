@@ -1,5 +1,6 @@
 import Qed.Types
 import Qed.StateMachine
+import Qed.Proofs.FinalStates
 import Qed.Proofs.Monotonic
 
 set_option autoImplicit false
@@ -17,7 +18,7 @@ theorem verify_someFailed_outcomes (config : LoopConfig)
     (∃ n, result = .maxIterationsReached n) ∨
     (∃ n fs, result = .stuck n fs) ∨
     result = .workerRunning (iteration + 1) := by
-  unfold transition
+  unfold transition newFailureCount
   simp [LoopState.isTerminal]
   -- Three levels of if: maxIterations, failures==prev, stuckThreshold
   split
@@ -77,14 +78,6 @@ theorem workerRunning_transition (config : LoopConfig) (iteration : Nat)
   | allPassed => left; rfl
   | someFailed _ => left; rfl
 
-/-- Terminal states are absorbing. -/
-theorem terminal_absorbing (config : LoopConfig) (state : LoopState)
-    (context : LoopContext) (event : LoopEvent)
-    (h : state.isTerminal = true) :
-    transition config state context event = (state, context) := by
-  unfold transition
-  simp [h]
-
 /-- The fuel measure: maxIterations - current iteration. For any non-terminal
 transition from `verifying` with `someFailed` that doesn't terminate, the fuel
 strictly decreases. Since fuel is a natural number, the loop must terminate. -/
@@ -107,11 +100,11 @@ theorem fuel_decreases_on_retry (config : LoopConfig) (iteration : Nat)
     simp [Monotonic.iterationOf]
     omega
 
-/-- The loop terminates: each non-terminal transition from `verifying` with
-`someFailed` either terminates immediately or produces `workerRunning` with a
-strictly higher iteration. Since iteration is bounded by maxIterations and is
-a natural number, this can only happen finitely many times. -/
-theorem loop_terminates (config : LoopConfig) (iteration : Nat)
+/-- Single-step progress: each transition from `verifying` with `someFailed`
+either terminates immediately or produces `workerRunning` with a strictly
+higher iteration bounded by maxIterations. Combined with `fuel_decreases_on_retry`,
+this gives termination by well-founded induction on (maxIterations - iteration). -/
+theorem loop_progress (config : LoopConfig) (iteration : Nat)
     (ctx : LoopContext) (failures : List String)
     (hiter : iteration < config.maxIterations) :
     (transition config (.verifying iteration) ctx (.someFailed failures)).1.isTerminal = true ∨
@@ -123,5 +116,34 @@ theorem loop_terminates (config : LoopConfig) (iteration : Nat)
   | inr hworker =>
     right
     exact ⟨iteration + 1, rfl, by omega, hworker⟩
+
+/-- Full termination: every transition from `verifying` with `someFailed`
+either reaches a terminal state immediately, or strictly decreases the fuel
+measure `maxIterations - iteration`. Since fuel is a `Nat`, this can happen
+at most `maxIterations` times before terminating.
+
+This is the composition of `loop_progress` (single-step progress) and
+`fuel_decreases_on_retry` (well-founded measure). Together they establish
+that the worker loop terminates for any sequence of events. -/
+theorem loop_terminates (config : LoopConfig) (iteration : Nat)
+    (context : LoopContext) (failures : List String) :
+    (transition config (.verifying iteration) context (.someFailed failures)).1.isTerminal = true ∨
+    (∃ (n : Nat),
+      (transition config (.verifying iteration) context (.someFailed failures)).1 = .workerRunning n ∧
+      config.maxIterations - n < config.maxIterations - iteration) := by
+  have key := verify_someFailed_terminates_or_increments config iteration context failures
+  cases key with
+  | inl hterm => left; exact hterm
+  | inr hworker =>
+    right
+    exact ⟨iteration + 1, hworker, by
+      have := fuel_decreases_on_retry config iteration context failures
+        (by intro h; unfold transition newFailureCount at hworker
+            simp [LoopState.isTerminal] at hworker
+            split at hworker <;> simp at hworker)
+        (.workerRunning (iteration + 1)) hworker
+        (by simp [LoopState.isTerminal])
+      simp [Monotonic.iterationOf] at this
+      exact this⟩
 
 end Qed.Proofs.Termination

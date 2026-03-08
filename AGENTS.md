@@ -17,7 +17,7 @@ Qed/
   Verifier.lean        Verification dispatch (command, agent_review, property, proof)
   Output.lean          JSON result serialization
 Qed/Proofs/
-  Termination.lean     Loop terminates within maxIterations
+  Termination.lean     Loop termination, progress, and fuel decrease
   StuckDetection.lean  Stuck iff same failures for stuckThreshold iterations
   NoSkip.lean          Cannot skip verification phase
   FinalStates.lean     Terminal states are absorbing
@@ -110,7 +110,8 @@ The `Qed/Proofs/` directory contains formal proofs about the state machine trans
 | `StuckDetection.lean` | `failure_count_update` | Failure count increments on same failures, resets on different failures |
 | `Termination.lean` | `verify_someFailed_terminates_or_increments` | Each verify+someFailed step either terminates or increments iteration |
 | `Termination.lean` | `fuel_decreases_on_retry` | The fuel measure (maxIterations - iteration) strictly decreases on retry |
-| `Termination.lean` | `loop_terminates` | The loop reaches a terminal state within maxIterations iterations |
+| `Termination.lean` | `loop_progress` | Each non-terminal step either terminates or increments iteration (bounded by maxIterations) |
+| `Termination.lean` | `loop_terminates` | Full termination: each step terminates or strictly decreases fuel (maxIterations - iteration) |
 | `VerifyMode.lean` | `verify_has_no_worker` | `SpecMode.verify` cannot carry a `WorkerConfig` or `LoopConfig` |
 | `VerifyMode.lean` | `verify_independent_of_loop` | Verify mode is independent of the worker loop machinery |
 
