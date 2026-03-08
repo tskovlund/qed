@@ -14,10 +14,25 @@ inductive VerifyType where
   | human (instruction : String)
   deriving Repr, BEq
 
+/-- When a criterion runs in CI. Controls cost without special-casing
+    verification types — the CI runner filters by this field alone. -/
+inductive CiSchedule where
+  /-- Every CI run (PRs, pushes, merge queue). Default for automatable types. -/
+  | always
+  /-- Only when the default branch changes (merge or direct push). -/
+  | trunk
+  /-- Never in CI — only via explicit `qed run`. Default for `human`. -/
+  | manual
+  deriving Repr, BEq
+
 /-- A single acceptance criterion: a description and how to verify it. -/
 structure AcceptanceCriterion where
   description : String
   verify : VerifyType
+  /-- When this criterion runs in CI. Defaults based on verify type. -/
+  ci : CiSchedule := match verify with
+    | .human _ => .manual
+    | _ => .always
   deriving Repr, BEq
 
 /-- Configuration for the worker agent. -/
