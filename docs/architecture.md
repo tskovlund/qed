@@ -104,11 +104,11 @@ The verification type determines both **what runs** and **what guarantee you get
 
 | Type | Runs | Guarantee | CI default |
 |------|------|-----------|------------|
-| `command` | Shell command | Deterministic (exit code) | `always` |
-| `agentReview` | LLM agent | Probabilistic (model judgment) | `always` |
-| `property` | Test framework | Probabilistic (random inputs) | `always` |
-| `proof` | Proof checker | Mathematical (kernel-verified) | `always` |
 | `human` | Nothing (waits) | Human judgment | `manual` |
+| `agentReview` | LLM agent | Probabilistic | `always` |
+| `command` | Shell command | Deterministic | `always` |
+| `property` | Test framework | Statistical | `always` |
+| `proof` | Proof checker | Mathematical | `always` |
 
 ## Backend abstraction
 
