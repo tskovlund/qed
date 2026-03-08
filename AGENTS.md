@@ -24,7 +24,7 @@ Qed/Proofs/
   Monotonic.lean       Iteration count is non-decreasing
 Tests/
   Main.lean            Test runner (imports all test modules)
-  Types.lean           Type construction and default value tests
+  Types.lean           isTerminal behavior tests
   Parser.lean          JSON parser tests (all verify types, error cases)
   Integration.lean     TOML converter and SpecLoader end-to-end tests
 specs/                 qed's own specs (dogfooding)
