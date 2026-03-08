@@ -1,9 +1,11 @@
 import Qed
 
+def version : String := "0.1.0-dev"
+
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["version"] =>
-    IO.println "qed 0.1.0-dev"
+    IO.println s!"qed {version}"
     return 0
   | ["help"] =>
     IO.println "qed — typed spec-driven development with deterministic verification"
@@ -15,5 +17,5 @@ def main (args : List String) : IO UInt32 := do
     IO.println "  qed help               Show this help"
     return 0
   | _ =>
-    IO.println "qed 0.1.0-dev — run `qed help` for usage"
+    IO.println s!"qed {version} — run `qed help` for usage"
     return 0

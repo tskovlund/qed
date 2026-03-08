@@ -12,7 +12,7 @@ Qed/
   Types.lean           Core types (VerifyType, AcceptanceCriterion, Spec, LoopState)
   Backend/
     Backend.lean       Backend typeclass (interface for spec sources)
-    FileSystem.lean    File system backend (JSON spec files)
+    FileSystem.lean    File system backend (.spec.json + .spec.toml)
   Parser.lean          JSON spec parser (Lean.Json → Spec)
   StateMachine.lean    Pure transition function (proven core)
   Verifier.lean        Verification dispatch (command, agent_review, property, proof)
@@ -25,7 +25,28 @@ Qed/Proofs/
   Monotonic.lean       Iteration count is non-decreasing
 Tests/
   Main.lean            Test driver
+specs/                 qed's own specs (dogfooding)
+  build.spec.json      Build integrity — command verification
+  state-machine.spec.toml  State machine correctness — proof + agentReview
+  backend.spec.toml    Backend abstraction — agentReview + command
+DocGen/
+  Schema.lean          JSON Schema generation (exhaustive matches on Types)
+  Markdown.lean        JSON Schema → markdown transformation
+  Main.lean            CLI entry point (lake exe docgen schema|markdown)
+docs/                  Auto-generated + hand-written documentation
+  spec.schema.json     JSON Schema (auto-generated, CI-checked)
+  spec-format.md       Spec format reference (auto-generated from schema)
+  architecture.md      System design, state machine, mermaid diagrams
 ```
+
+## Spec format
+
+Two formats, used by context:
+
+- **`.spec.json`** — for simple command-only specs. Parsed via `Lean.Json` (built-in, zero deps).
+- **`.spec.toml`** — for specs with multi-line strings (agentReview prompts, human instructions). TOML's `"""..."""` and comments make these readable.
+
+Both parse into the same `Spec` type. The `specs/` directory contains qed's own specs — qed verifies itself.
 
 ## Key design principle
 

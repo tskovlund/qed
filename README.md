@@ -4,120 +4,85 @@
 
 # qed
 
-Typed spec-driven development with deterministic verification — from shell commands to formal proofs.
+**Typed acceptance criteria. Deterministic verification. Formally proven orchestration.**
 
-Define acceptance criteria per task. Dispatch typed verification. Loop deterministically until all criteria pass or escalate. Core orchestration logic is formally verified in Lean 4.
+Define what "done" means with typed specs. qed runs a worker, verifies each criterion using the right strategy — from shell commands to formal proofs — and loops until everything passes or it knows to stop.
 
-## The verification spectrum
+The core loop is a state machine written in Lean 4 with formally proven termination, stuck detection, and transition correctness. LLMs are tools used *by* the orchestrator, never the control plane.
 
-| Level | Type           | Guarantee        | Example                                |
-|-------|----------------|------------------|----------------------------------------|
-| 0     | `human`        | Human judgment   | "Visual change looks correct"          |
-| 1     | `command`      | Exit code        | `make test`, `make lint`               |
-| 2     | `agent_review` | LLM evaluation   | "Check diff follows CONVENTIONS.md"    |
-| 3     | `property`     | Probabilistic    | Hypothesis / QuickCheck properties     |
-| 4     | `proof`        | Mathematical     | Lean 4 theorem                         |
+## Example
 
-## Quick start
-
-```bash
-# Install
-lake build
-
-# Define a spec
-cat > spec.json << 'EOF'
+```json
 {
-  "name": "my-task",
-  "worker": {
-    "command": "claude -p 'implement the feature' --output-format json"
-  },
+  "name": "add-auth",
+  "worker": { "command": "claude -p 'implement auth middleware'" },
   "criteria": [
     {
       "description": "All tests pass",
       "verify": { "type": "command", "run": "make test" }
     },
     {
-      "description": "No lint violations",
-      "verify": { "type": "command", "run": "make lint" }
+      "description": "No credentials in source",
+      "verify": { "type": "command", "run": "! grep -r 'password' src/" }
+    },
+    {
+      "description": "Auth flow handles edge cases",
+      "verify": {
+        "type": "agentReview",
+        "prompt": "Review the auth middleware. Check: expired tokens, missing headers, concurrent sessions."
+      }
     }
   ]
 }
-EOF
+```
 
-# Run the loop
+```bash
 qed run spec.json
 ```
 
-## How it works
+The worker runs. Each criterion is verified with its typed strategy. Failures feed back to the worker. The loop terminates — guaranteed.
 
-```
-Spec File (JSON) ──► qed run ──► Deterministic Loop
-                                       │
-                         Worker ◄── dispatch ──► Verifiers
-                       (claude/cmd)              (command/agent/proof)
-                                       │
-                                  All pass? ──► QED
-                                  Stuck?    ──► Escalate
-```
+## Verification spectrum
 
-1. **Parse** the spec file — typed acceptance criteria with verification strategy per criterion
-2. **Dispatch** the worker — any shell command (Claude Code, scripts, builds)
-3. **Verify** each AC — run the typed verifier (shell command, agent review, property test, formal proof)
-4. **Loop** — feed failures back to the worker, repeat until all pass
-5. **Terminate** — hard cap on iterations + stuck detection (same failures for N consecutive rounds)
-
-The orchestrator is a deterministic state machine. LLMs are tools used **by** the orchestrator (as workers and reviewers), not the control plane. Core loop logic — state transitions, termination, stuck detection — is formally proven in Lean 4.
-
-## Architecture
-
-```
-qed/
-  Main.lean              CLI entry point
-  Qed/
-    Types.lean           Core types (AC spec, verification types, loop state)
-    Backend/
-      Backend.lean       Backend typeclass (pluggable spec sources)
-      FileSystem.lean    File system backend (JSON spec files)
-    Parser.lean          JSON spec parser
-    StateMachine.lean    Pure transition function (the proven core)
-    Verifier.lean        Verification dispatch (command, agent, proof)
-    Output.lean          JSON result output
-  Qed/Proofs/
-    Termination.lean     Loop always terminates
-    StuckDetection.lean  Stuck iff same failures for N iterations
-    NoSkip.lean          Cannot skip verification
-    FinalStates.lean     Terminal states are final
-    Monotonic.lean       Iteration count never decreases
-  Tests/
-    Main.lean            Test driver
-```
+| Type | Strategy | Guarantee |
+|------|----------|-----------|
+| `command` | Shell command, exit code | Deterministic |
+| `agentReview` | Independent LLM review | Probabilistic |
+| `property` | Hypothesis / QuickCheck | Probabilistic |
+| `proof` | Lean 4 / Coq / Agda | Mathematical |
+| `human` | Manual sign-off | Human judgment |
 
 ## Proven properties
 
-The core state machine has formal proofs (verified by Lean 4's kernel) for:
+The state machine has formal proofs verified by Lean 4's kernel:
 
-1. **Termination** — the loop always reaches a terminal state within `maxIterations`
-2. **Stuck detection correctness** — `stuck` iff the same failures persist for `stuckThreshold` consecutive iterations
-3. **No skipped verification** — cannot transition from worker to passed without verifying
-4. **Terminal states are final** — once passed/stuck/escalated, no further transitions
-5. **Monotonic iteration count** — iteration count never decreases
+- **Termination** — the loop always reaches a terminal state
+- **Stuck detection** — fires iff the same failures repeat consecutively
+- **No skipped verification** — worker output is always checked before passing
+- **Terminal states are absorbing** — once done, done
+- **Monotonic iteration count** — no going backwards
 
 ## Status
 
-**Under active development.** Building the MVP — see the [Linear project](https://linear.app/tskovlund/project/qed-bd1192dc905e) for progress.
+Under active development — building the MVP. qed eats its own dogfood: the repo's own acceptance criteria are defined as [specs](specs/).
 
-qed is built using qed — the repo's own acceptance criteria are defined in [`qed.spec.json`](qed.spec.json).
-
-## Development
+## Quick start
 
 ```bash
 devbox shell          # or: direnv allow
-lake build            # build the binary
-lake test             # run tests
-devbox run check      # build + test
+lake build            # build
+lake test             # test
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/architecture.md) | State machine, verification dispatch, backend design |
+| [Spec format](docs/spec-format.md) | Complete reference for spec files (auto-generated) |
+| [JSON Schema](docs/spec.schema.json) | Machine-readable schema for editor autocomplete |
 
 ## Author
 

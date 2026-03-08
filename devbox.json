@@ -9,7 +9,8 @@
     "scripts": {
       "build": "lake build",
       "test": "lake test",
-      "check": "lake build && lake test"
+      "check": "lake build && lake test && .lake/build/bin/docgen schema | diff docs/spec.schema.json - && .lake/build/bin/docgen markdown | diff docs/spec-format.md -",
+      "docs": ".lake/build/bin/docgen schema > docs/spec.schema.json && .lake/build/bin/docgen markdown > docs/spec-format.md"
     }
   }
 }
