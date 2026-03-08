@@ -1,3 +1,7 @@
+[![CI](https://github.com/tskovlund/qed/actions/workflows/ci.yml/badge.svg)](https://github.com/tskovlund/qed/actions/workflows/ci.yml)
+[![Lean 4](https://img.shields.io/badge/Lean-4.28.0-blue.svg)](https://lean-lang.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 # qed
 
 Typed spec-driven development with deterministic verification — from shell commands to formal proofs.
@@ -71,6 +75,9 @@ qed/
   Main.lean              CLI entry point
   Qed/
     Types.lean           Core types (AC spec, verification types, loop state)
+    Backend/
+      Backend.lean       Backend typeclass (pluggable spec sources)
+      FileSystem.lean    File system backend (JSON spec files)
     Parser.lean          JSON spec parser
     StateMachine.lean    Pure transition function (the proven core)
     Verifier.lean        Verification dispatch (command, agent, proof)
@@ -114,7 +121,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
 
 ## Author
 
-Thomas Skovlund Hansen — [skovlund.dev](https://skovlund.dev)
+Thomas Skovlund Hansen — [thomas@skovlund.dev](mailto:thomas@skovlund.dev)
 
 ## License
 

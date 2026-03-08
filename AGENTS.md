@@ -10,6 +10,9 @@ Follow the code standards in [CONVENTIONS.md](CONVENTIONS.md).
 Main.lean              CLI entry point (qed run, qed parse, qed version)
 Qed/
   Types.lean           Core types (VerifyType, AcceptanceCriterion, Spec, LoopState)
+  Backend/
+    Backend.lean       Backend typeclass (interface for spec sources)
+    FileSystem.lean    File system backend (JSON spec files)
   Parser.lean          JSON spec parser (Lean.Json → Spec)
   StateMachine.lean    Pure transition function (proven core)
   Verifier.lean        Verification dispatch (command, agent_review, property, proof)
@@ -27,6 +30,8 @@ Tests/
 ## Key design principle
 
 The orchestrator is a **deterministic state machine**. LLMs are tools used by the orchestrator (as workers and reviewers), never the control plane. The pure transition function (`Qed.StateMachine.transition`) has no IO — all proofs reason about this function.
+
+Spec sources are **backend-agnostic** via the `Backend` typeclass. Supporting a new source (Linear, Jira, database, etc.) means implementing one typeclass instance — the core state machine and proofs are untouched.
 
 ## Dev environment
 

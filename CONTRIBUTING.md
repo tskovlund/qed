@@ -7,12 +7,32 @@
 
 ## Development setup
 
+**Option 1: Devbox + direnv (recommended)**
+
 ```bash
 git clone https://github.com/tskovlund/qed.git
 cd qed
-devbox shell          # or: direnv allow
-lake build            # first run downloads Lean toolchain (~500MB)
-lake test             # run tests
+direnv allow        # automatically enters devbox environment
+lake build          # first run downloads Lean toolchain (~500MB)
+```
+
+**Option 2: Devbox shell**
+
+```bash
+git clone https://github.com/tskovlund/qed.git
+cd qed
+devbox shell
+lake build
+```
+
+**Option 3: elan directly**
+
+```bash
+git clone https://github.com/tskovlund/qed.git
+cd qed
+elan toolchain install leanprover/lean4:v4.28.0
+git config core.hooksPath .githooks
+lake build
 ```
 
 ## Running checks
@@ -21,6 +41,14 @@ lake test             # run tests
 devbox run build      # lake build
 devbox run test       # lake test
 devbox run check      # build + test (same as CI)
+```
+
+Or directly (inside devbox shell / after direnv allow):
+
+```bash
+lake build            # build — also type-checks all proofs
+lake test             # run the test suite
+.lake/build/bin/qed   # run the binary
 ```
 
 ## Code style
@@ -37,16 +65,31 @@ Tests live in `Tests/` and run via `lake test`. The test driver exits non-zero o
 
 Proofs are also tests — `lake build` verifies all theorems. If a proof has `sorry`, CI fails.
 
+## Architecture decisions
+
+- **Deterministic orchestrator** — the core loop is a pure state machine. LLMs are tools used *by* the orchestrator, not the control plane
+- **Proofs alongside code** — theorems about a module live in the same file or a `Proofs/` subdirectory
+- **Typed verification dispatch** — each AC specifies its verification type at definition time, not at runtime
+- **Backend-agnostic** — spec sources (file system, Linear, Jira) are pluggable via typeclass
+
 ## Pull requests
 
-1. Create a feature branch
+1. Create a feature branch from `main`
 2. Make changes, run `lake build` and `lake test`
-3. Push and create PR using the template
-4. Address review comments, iterate until CI passes and reviews are resolved
+3. Ensure no `sorry` in any merged proof files
+4. Push and create PR using the [template](.github/PULL_REQUEST_TEMPLATE.md)
+5. Address review comments, iterate until CI passes and reviews are resolved
+6. Squash and merge
 
 ### Prompt-request PRs
 
-For AI-driven implementation: create a PR with the task description in the body. An agent picks it up, implements, and pushes. The PR goes through normal review.
+For AI-driven implementation: create a PR with a clear task description in the body, including acceptance criteria. An agent picks it up, implements, and pushes. The PR goes through normal review.
+
+Requirements for prompt-request PRs:
+- Title prefixed with `[prompt]`
+- Body contains a clear task description
+- Acceptance criteria defined (ideally as a qed spec)
+- Target branch specified
 
 ## Issue templates
 

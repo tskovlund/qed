@@ -6,6 +6,8 @@ package «qed» where
     ⟨`autoImplicit, false⟩
   ]
 
+require "leanprover-community" / "batteries" @ git "v4.28.0"
+
 lean_lib «Qed» where
   roots := #[`Qed]
 
