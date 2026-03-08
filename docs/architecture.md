@@ -93,11 +93,11 @@ Each acceptance criterion has a typed verification strategy:
 ```mermaid
 flowchart LR
     criterion --> verify{verify type}
-    verify -->|command| shell[Shell command\nexit code check]
+    verify -->|human| human[Human judgment\nmanual sign-off]
     verify -->|agentReview| agent[LLM agent\nprompt-based review]
+    verify -->|command| shell[Shell command\nexit code check]
     verify -->|property| prop[Property tests\nHypothesis / QuickCheck]
     verify -->|proof| prover[Formal proof\nLean 4 / Coq / Agda]
-    verify -->|human| human[Human judgment\nmanual sign-off]
 ```
 
 The verification type determines both **what runs** and **what guarantee you get**:
@@ -126,16 +126,9 @@ class Backend (β : Type) where
 flowchart TB
     core[State Machine\nTypes, Proofs] --> backend{Backend typeclass}
     backend --> fs[FileSystem\n.spec.json / .spec.toml]
-    backend --> linear[Linear\nAPI integration]
-    backend --> jira[Jira\nAPI integration]
-    backend --> db[Database\nSQL / SQLite]
-
-    style core fill:#f9f,stroke:#333
-    style backend fill:#ff9,stroke:#333
-    style fs fill:#9f9,stroke:#333
-    style linear fill:#ddd,stroke:#999,stroke-dasharray: 5 5
-    style jira fill:#ddd,stroke:#999,stroke-dasharray: 5 5
-    style db fill:#ddd,stroke:#999,stroke-dasharray: 5 5
+    backend -.-> linear[Linear\nAPI integration]
+    backend -.-> jira[Jira\nAPI integration]
+    backend -.-> db[Database\nSQL / SQLite]
 ```
 
 Adding a new backend means implementing the three typeclass methods. The core state machine and all proofs are untouched — they don't know or care where specs come from.
