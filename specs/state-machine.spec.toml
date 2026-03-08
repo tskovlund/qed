@@ -2,10 +2,6 @@
 
 name = "state-machine-correctness"
 
-[worker]
-command = "echo 'Fix state machine implementation in Qed/StateMachine.lean and proofs in Qed/Proofs/'"
-workdir = "."
-
 # --- Command criteria ---
 
 [[criteria]]
