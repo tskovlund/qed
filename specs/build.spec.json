@@ -1,0 +1,31 @@
+{
+  "$schema": "../docs/spec.schema.json",
+  "name": "build-integrity",
+  "worker": {
+    "command": "lake build && lake test",
+    "workdir": "."
+  },
+  "criteria": [
+    {
+      "description": "Project compiles with zero errors",
+      "verify": {
+        "type": "command",
+        "run": "lake build"
+      }
+    },
+    {
+      "description": "All unit tests pass",
+      "verify": {
+        "type": "command",
+        "run": "lake test"
+      }
+    },
+    {
+      "description": "No sorry in source files — all proofs are complete",
+      "verify": {
+        "type": "command",
+        "run": "! grep -rn 'sorry' --include='*.lean' Qed/ Tests/ Main.lean 2>/dev/null | grep -v '^\\s*--' | grep -q ."
+      }
+    }
+  ]
+}
