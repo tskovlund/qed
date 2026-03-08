@@ -15,6 +15,9 @@ lean_lib «Qed» where
 lean_exe «qed» where
   root := `Main
 
+lean_lib «TestLib» where
+  roots := #[`Tests.Types, `Tests.Parser, `Tests.Integration]
+
 @[test_driver]
 lean_exe «tests» where
   root := `Tests.Main

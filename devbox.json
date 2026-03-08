@@ -1,6 +1,7 @@
 {
   "packages": [
-    "elan@latest"
+    "elan@latest",
+    "python@3.14.3"
   ],
   "shell": {
     "init_hook": [
