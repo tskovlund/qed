@@ -26,7 +26,8 @@ Qed/Proofs/
 Tests/
   Main.lean            Test driver
 specs/                 qed's own specs (dogfooding)
-  build.spec.json      Build integrity — command verification
+  build.spec.json      Build integrity — verify mode (no worker)
+  verify-mode.spec.toml    Verify mode correctness — command + agentReview
   state-machine.spec.toml  State machine correctness — proof + agentReview
   backend.spec.toml    Backend abstraction — agentReview + command
 DocGen/

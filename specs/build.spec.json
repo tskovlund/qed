@@ -1,10 +1,6 @@
 {
   "$schema": "../docs/spec.schema.json",
   "name": "build-integrity",
-  "worker": {
-    "command": "lake build && lake test",
-    "workdir": "."
-  },
   "criteria": [
     {
       "description": "Project compiles with zero errors",
