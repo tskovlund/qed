@@ -31,11 +31,10 @@ def listSpecs (directory : System.FilePath) (extension : String := ".spec.json")
 /-- List all spec files in a directory (both .spec.json and .spec.toml). -/
 def listAllSpecs (directory : System.FilePath)
     : IO (Except String (List System.FilePath)) := do
-  let entries ← directory.readDir
-  let specFiles := entries.filter fun entry =>
-    entry.fileName.endsWith ".spec.json" || entry.fileName.endsWith ".spec.toml"
-  let paths := specFiles.map fun entry =>
-    directory / entry.fileName
-  return .ok paths.toList
+  let jsonSpecs ← listSpecs directory ".spec.json"
+  let tomlSpecs ← listSpecs directory ".spec.toml"
+  match jsonSpecs, tomlSpecs with
+  | .ok jsonList, .ok tomlList => return .ok (jsonList ++ tomlList)
+  | .error e, _ | _, .error e => return .error e
 
 end Qed.SpecLoader

@@ -19,15 +19,13 @@ private def optionalString (json : Json) (field : String) (default : String) : S
 
 /-- Helper: get an optional natural number field with a default. -/
 private def optionalNat (json : Json) (field : String) (default : Nat) : Except String Nat :=
-  match json.getObjVal? field with
-  | .error _ => .ok default
-  | .ok (Json.num value) =>
-    let intValue := value.toFloat.toUInt32.toNat
-    if intValue == 0 && value != 0 then
-      .error s!"field '{field}': expected positive integer"
-    else
-      .ok intValue
-  | .ok _ => .error s!"field '{field}': expected integer"
+  match json.getObjValAs? Nat field with
+  | .ok value => .ok value
+  | .error _ =>
+    -- Field absent → use default; field present but wrong type → error
+    match json.getObjVal? field with
+    | .error _ => .ok default
+    | .ok _ => .error s!"field '{field}': expected non-negative integer"
 
 /-- Parse a CiSchedule from a JSON string value. -/
 def parseCiSchedule (value : String) : Except String CiSchedule :=

@@ -117,6 +117,7 @@ Specs are files in the repo — version-controlled, schema-validated, colocated 
 ```lean
 def loadSpec (path : System.FilePath) : IO (Except String Spec)
 def listSpecs (directory : System.FilePath) (extension : String) : IO (Except String (List System.FilePath))
+def listAllSpecs (directory : System.FilePath) : IO (Except String (List System.FilePath))
 ```
 
 ## Pure core, IO shell
