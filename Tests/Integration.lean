@@ -62,10 +62,33 @@ def testListAllSpecs : IO Bool := do
     IO.eprintln s!"  list error: {e}"
     return false
 
+def testTomlMultiLineStringRoundtrip : IO Bool := do
+  -- Arrange — multi-line strings are the main reason TOML exists for specs
+  let toml := "name = \"review\"\n\n[[criteria]]\ndescription = \"code review\"\n\n[criteria.verify]\ntype = \"agentReview\"\nprompt = \"\"\"\nReview the code.\nCheck for:\n1. Correctness\n2. Style\n\"\"\"\n"
+  -- Act
+  match ← TomlConverter.tomlToJson toml with
+  | .error e =>
+    IO.eprintln s!"  toml error: {e}"
+    return false
+  | .ok json =>
+    match Parser.parseJson json with
+    | .error e =>
+      IO.eprintln s!"  parse error: {e}"
+      return false
+    | .ok spec =>
+      -- Assert
+      match spec.criteria.head? with
+      | some criterion =>
+        return match criterion.verify with
+          | .agentReview prompt _ => prompt.contains "Correctness" && prompt.contains "Style"
+          | _ => false
+      | none => return false
+
 def integrationTests : List (String × IO Bool) := [
   ("testTomlToJsonBasic", testTomlToJsonBasic),
   ("testTomlToJsonInvalidToml", testTomlToJsonInvalidToml),
   ("testLoadSpecFromJsonFile", testLoadSpecFromJsonFile),
   ("testLoadSpecFromTomlFile", testLoadSpecFromTomlFile),
-  ("testListAllSpecs", testListAllSpecs)
+  ("testListAllSpecs", testListAllSpecs),
+  ("testTomlMultiLineStringRoundtrip", testTomlMultiLineStringRoundtrip)
 ]

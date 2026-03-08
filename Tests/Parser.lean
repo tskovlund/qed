@@ -218,6 +218,71 @@ def testParseErrorUnknownVerifyType : IO Bool := do
   | .ok _ => return false
   | .error e => return e.contains "magic"
 
+def testParseMultipleCriteria : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"multi\", \"criteria\": [{\"description\": \"builds\", \"verify\": {\"type\": \"command\", \"run\": \"make\"}}, {\"description\": \"proven\", \"verify\": {\"type\": \"proof\", \"prover\": \"lean4\", \"target\": \"T\"}}, {\"description\": \"reviewed\", \"verify\": {\"type\": \"agentReview\", \"prompt\": \"check\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    if spec.criteria.length != 3 then return false
+    let types := spec.criteria.map fun c => match c.verify with
+      | .command _ _ => "command"
+      | .proof _ _ => "proof"
+      | .agentReview _ _ => "agentReview"
+      | _ => "other"
+    return types == ["command", "proof", "agentReview"]
+  | .error e =>
+    IO.eprintln s!"  parse error: {e}"
+    return false
+
+def testParseWorkerLoopEmptyCriteriaAllowed : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"no-criteria\", \"worker\": {\"command\": \"agent\"}, \"criteria\": []}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    return spec.criteria.isEmpty &&
+      (match spec.mode with
+        | .workerLoop _ _ => true
+        | .verify => false)
+  | .error e =>
+    IO.eprintln s!"  parse error: {e}"
+    return false
+
+def testParseErrorMissingVerifyField : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\"}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok _ => return false
+  | .error e => return e.contains "verify"
+
+def testParseErrorMissingCommandRun : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok _ => return false
+  | .error e => return e.contains "run"
+
+def testParseErrorInvalidCiSchedule : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}, \"ci\": \"nightly\"}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok _ => return false
+  | .error e => return e.contains "nightly"
+
 def parserTests : List (String × IO Bool) := [
   ("testParseVerifyModeSpec", testParseVerifyModeSpec),
   ("testParseWorkerLoopSpec", testParseWorkerLoopSpec),
@@ -233,5 +298,10 @@ def parserTests : List (String × IO Bool) := [
   ("testParseErrorMissingName", testParseErrorMissingName),
   ("testParseErrorMissingCriteria", testParseErrorMissingCriteria),
   ("testParseErrorVerifyModeNoCriteria", testParseErrorVerifyModeNoCriteria),
-  ("testParseErrorUnknownVerifyType", testParseErrorUnknownVerifyType)
+  ("testParseErrorUnknownVerifyType", testParseErrorUnknownVerifyType),
+  ("testParseMultipleCriteria", testParseMultipleCriteria),
+  ("testParseWorkerLoopEmptyCriteriaAllowed", testParseWorkerLoopEmptyCriteriaAllowed),
+  ("testParseErrorMissingVerifyField", testParseErrorMissingVerifyField),
+  ("testParseErrorMissingCommandRun", testParseErrorMissingCommandRun),
+  ("testParseErrorInvalidCiSchedule", testParseErrorInvalidCiSchedule)
 ]
