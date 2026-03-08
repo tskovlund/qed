@@ -30,21 +30,31 @@ def testAcceptanceCriterionStoresDescription : IO Bool := do
   -- Act / Assert
   return criterion.description == "All tests pass"
 
-def testSpecDefaultMaxIterationsIsTen : IO Bool := do
+def testLoopConfigDefaultMaxIterationsIsTen : IO Bool := do
   -- Arrange
-  let criterion : AcceptanceCriterion := {
-    description := "test"
-    verify := VerifyType.command "echo"
-  }
-  let spec : Spec := {
-    name := "test-task"
-    worker := { command := "echo hello" }
-    criteria := [criterion]
-  }
+  let config : LoopConfig := {}
   -- Act / Assert
-  return spec.maxIterations == 10
+  return config.maxIterations == 10
 
-def testSpecDefaultStuckThresholdIsThree : IO Bool := do
+def testLoopConfigDefaultStuckThresholdIsThree : IO Bool := do
+  -- Arrange
+  let config : LoopConfig := {}
+  -- Act / Assert
+  return config.stuckThreshold == 3
+
+def testSpecWorkerLoopModeHasWorker : IO Bool := do
+  -- Arrange
+  let spec : Spec := {
+    name := "test-task"
+    mode := .workerLoop { command := "echo hello" } {}
+    criteria := []
+  }
+  -- Act / Assert
+  return match spec.mode with
+    | .workerLoop worker _ => worker.command == "echo hello"
+    | .verify => false
+
+def testSpecVerifyModeHasNoWorker : IO Bool := do
   -- Arrange
   let criterion : AcceptanceCriterion := {
     description := "test"
@@ -52,11 +62,13 @@ def testSpecDefaultStuckThresholdIsThree : IO Bool := do
   }
   let spec : Spec := {
     name := "test-task"
-    worker := { command := "echo hello" }
+    mode := .verify
     criteria := [criterion]
   }
   -- Act / Assert
-  return spec.stuckThreshold == 3
+  return match spec.mode with
+    | .workerLoop _ _ => false
+    | .verify => true
 
 def testLoopStatePassedIsTerminal : IO Bool := do
   -- Arrange
@@ -116,8 +128,10 @@ def main : IO UInt32 := do
   let tests : List (String × IO Bool) := [
     ("testVerifyTypeCommandHasCorrectRun", testVerifyTypeCommandHasCorrectRun),
     ("testAcceptanceCriterionStoresDescription", testAcceptanceCriterionStoresDescription),
-    ("testSpecDefaultMaxIterationsIsTen", testSpecDefaultMaxIterationsIsTen),
-    ("testSpecDefaultStuckThresholdIsThree", testSpecDefaultStuckThresholdIsThree),
+    ("testLoopConfigDefaultMaxIterationsIsTen", testLoopConfigDefaultMaxIterationsIsTen),
+    ("testLoopConfigDefaultStuckThresholdIsThree", testLoopConfigDefaultStuckThresholdIsThree),
+    ("testSpecWorkerLoopModeHasWorker", testSpecWorkerLoopModeHasWorker),
+    ("testSpecVerifyModeHasNoWorker", testSpecVerifyModeHasNoWorker),
     ("testLoopStatePassedIsTerminal", testLoopStatePassedIsTerminal),
     ("testLoopStateStuckIsTerminal", testLoopStateStuckIsTerminal),
     ("testLoopStateReadyIsNotTerminal", testLoopStateReadyIsNotTerminal),

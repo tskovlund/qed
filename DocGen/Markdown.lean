@@ -145,9 +145,18 @@ Schema: [`spec.schema.json`](spec.schema.json) — add `\"$schema\": \"docs/spec
 
 {topLevelTable}
 
+## Execution modes
+
+A spec runs in one of two modes, determined by whether `worker` is present:
+
+- **Worker loop** (`worker` present) — run the worker, verify criteria, feed failures back, repeat until all pass or the loop terminates (stuck / max iterations).
+- **Verify** (`worker` absent) — run each criterion once and report results. Requires at least one criterion. Used for CI checks and standalone verification.
+
+`maxIterations` and `stuckThreshold` only apply in worker loop mode.
+
 ## Worker
 
-The worker is the command that runs to attempt satisfying the criteria. It could be an AI agent, a build command, a script — anything with a shell interface.
+Optional. If present, qed runs in worker loop mode. The worker is the command that attempts to satisfy the criteria — an AI agent, a build command, a script, anything with a shell interface.
 
 {workerTable}
 

@@ -28,6 +28,13 @@ def ciScheduleValues : List String :=
     | .manual => ()
   ["always", "trunk", "manual"]
 
+-- Exhaustive match on SpecMode — compile error if constructors change
+def specModeValues : List String :=
+  let _ : SpecMode → Unit := fun
+    | .workerLoop _ _ => ()
+    | .verify => ()
+  ["workerLoop", "verify"]
+
 -- Exhaustive match on VerificationResult — compile error if constructors change
 def verificationResultValues : List String :=
   let _ : VerificationResult → Unit := fun
@@ -55,7 +62,7 @@ def loopStateValues : List String :=
 def generate : String :=
   let verifyTypes := verifyTypeConstructors
   let ciSchedules := ciScheduleValues
-  let spec := Spec.mk "example" { command := "echo hi" } [] 10 3
+  let loopConfig : LoopConfig := {}
   let worker := WorkerConfig.mk "echo hi" "." 3600
 s!"\{
   \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",
@@ -63,7 +70,7 @@ s!"\{
   \"title\": \"qed spec\",
   \"description\": \"Typed spec-driven development — acceptance criteria with deterministic verification.\",
   \"type\": \"object\",
-  \"required\": [\"name\", \"worker\", \"criteria\"],
+  \"required\": [\"name\", \"criteria\"],
   \"additionalProperties\": false,
   \"properties\": \{
     \"name\": \{
@@ -72,7 +79,7 @@ s!"\{
     },
     \"worker\": \{
       \"type\": \"object\",
-      \"description\": \"Configuration for the worker agent that attempts to satisfy the criteria.\",
+      \"description\": \"Configuration for the worker agent. If present, qed runs in worker loop mode (iterate until criteria pass). If absent, qed runs in verify mode (single-pass verification).\",
       \"required\": [\"command\"],
       \"additionalProperties\": false,
       \"properties\": \{
@@ -96,7 +103,6 @@ s!"\{
     \"criteria\": \{
       \"type\": \"array\",
       \"description\": \"Acceptance criteria — each verified independently.\",
-      \"minItems\": 1,
       \"items\": \{
         \"type\": \"object\",
         \"required\": [\"description\", \"verify\"],
@@ -176,15 +182,30 @@ s!"\{
     },
     \"maxIterations\": \{
       \"type\": \"integer\",
-      \"description\": \"Maximum worker iterations before giving up.\",
-      \"default\": {spec.maxIterations},
+      \"description\": \"Maximum worker iterations before giving up. Only valid when worker is present.\",
+      \"default\": {loopConfig.maxIterations},
       \"minimum\": 1
     },
     \"stuckThreshold\": \{
       \"type\": \"integer\",
-      \"description\": \"Consecutive identical failures before declaring stuck.\",
-      \"default\": {spec.stuckThreshold},
+      \"description\": \"Consecutive identical failures before declaring stuck. Only valid when worker is present.\",
+      \"default\": {loopConfig.stuckThreshold},
       \"minimum\": 1
+    }
+  },
+  \"if\": \{
+    \"required\": [\"worker\"]
+  },
+  \"then\": \{
+    \"description\": \"Worker loop mode: worker iterates against criteria.\"
+  },
+  \"else\": \{
+    \"description\": \"Verify mode: single-pass verification, criteria required.\",
+    \"properties\": \{
+      \"criteria\": \{ \"minItems\": 1 }
+    },
+    \"not\": \{
+      \"required\": [\"maxIterations\"]
     }
   }
 }"

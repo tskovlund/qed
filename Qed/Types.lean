@@ -42,13 +42,26 @@ structure WorkerConfig where
   timeout : Nat := 3600
   deriving Repr, BEq
 
+/-- Configuration for the loop controller. -/
+structure LoopConfig where
+  maxIterations : Nat := 10
+  stuckThreshold : Nat := 3
+  deriving Repr, BEq
+
+/-- How the spec is executed. Worker loop mode iterates a worker against
+    criteria with stuck detection. Verify mode runs criteria once (CI). -/
+inductive SpecMode where
+  /-- Iterative loop: run worker, verify, feed failures back, repeat. -/
+  | workerLoop (worker : WorkerConfig) (loopConfig : LoopConfig)
+  /-- Single-pass verification: run each criterion once, report results. -/
+  | verify
+  deriving Repr, BEq
+
 /-- A complete task specification with typed acceptance criteria. -/
 structure Spec where
   name : String
-  worker : WorkerConfig
+  mode : SpecMode
   criteria : List AcceptanceCriterion
-  maxIterations : Nat := 10
-  stuckThreshold : Nat := 3
   deriving Repr
 
 /-- The result of verifying a single acceptance criterion. -/
@@ -98,11 +111,5 @@ def LoopState.isTerminal : LoopState → Bool
   | .maxIterationsReached _ => true
   | .escalated _ => true
   | _ => false
-
-/-- Configuration for the loop controller. -/
-structure LoopConfig where
-  maxIterations : Nat
-  stuckThreshold : Nat
-  deriving Repr, BEq
 
 end Qed

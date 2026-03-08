@@ -4,17 +4,25 @@
 
 ## Overview
 
-qed is a deterministic verification loop. Given a spec file with typed acceptance criteria, it:
+qed has two execution modes, determined by the `SpecMode` type:
 
-1. Dispatches a **worker** (any shell command — an AI agent, a build script, etc.)
+### Worker loop (`SpecMode.workerLoop`)
+
+When a spec has a `worker`, qed runs an iterative loop:
+
+1. Dispatches the **worker** (any shell command — an AI agent, a build script, etc.)
 2. **Verifies** each criterion using its typed strategy
 3. **Loops** until all criteria pass, or terminates (stuck, max iterations, escalation)
 
-The core insight: the **orchestrator is a state machine, not an LLM**. LLMs are tools used *by* the orchestrator (as workers and reviewers), never the control plane. This makes the loop deterministic and provable.
+The orchestrator is a **deterministic state machine**. LLMs are tools used *by* the orchestrator (as workers and reviewers), never the control plane.
 
-## State machine
+### Verify (`SpecMode.verify`)
 
-The loop is driven by a pure transition function with no IO:
+When a spec has no `worker`, qed runs each criterion once and reports results. No loop, no state machine — just a `List AcceptanceCriterion → List VerificationResult` function. Used for CI checks and standalone verification. Requires at least one criterion.
+
+## State machine (worker loop)
+
+The worker loop is driven by a pure transition function with no IO:
 
 ```lean
 def transition (config : LoopConfig) (state : LoopState) (context : LoopContext)

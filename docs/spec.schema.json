@@ -4,7 +4,7 @@
   "title": "qed spec",
   "description": "Typed spec-driven development — acceptance criteria with deterministic verification.",
   "type": "object",
-  "required": ["name", "worker", "criteria"],
+  "required": ["name", "criteria"],
   "additionalProperties": false,
   "properties": {
     "name": {
@@ -13,7 +13,7 @@
     },
     "worker": {
       "type": "object",
-      "description": "Configuration for the worker agent that attempts to satisfy the criteria.",
+      "description": "Configuration for the worker agent. If present, qed runs in worker loop mode (iterate until criteria pass). If absent, qed runs in verify mode (single-pass verification).",
       "required": ["command"],
       "additionalProperties": false,
       "properties": {
@@ -37,7 +37,6 @@
     "criteria": {
       "type": "array",
       "description": "Acceptance criteria — each verified independently.",
-      "minItems": 1,
       "items": {
         "type": "object",
         "required": ["description", "verify"],
@@ -117,15 +116,30 @@
     },
     "maxIterations": {
       "type": "integer",
-      "description": "Maximum worker iterations before giving up.",
+      "description": "Maximum worker iterations before giving up. Only valid when worker is present.",
       "default": 10,
       "minimum": 1
     },
     "stuckThreshold": {
       "type": "integer",
-      "description": "Consecutive identical failures before declaring stuck.",
+      "description": "Consecutive identical failures before declaring stuck. Only valid when worker is present.",
       "default": 3,
       "minimum": 1
+    }
+  },
+  "if": {
+    "required": ["worker"]
+  },
+  "then": {
+    "description": "Worker loop mode: worker iterates against criteria."
+  },
+  "else": {
+    "description": "Verify mode: single-pass verification, criteria required.",
+    "properties": {
+      "criteria": { "minItems": 1 }
+    },
+    "not": {
+      "required": ["maxIterations"]
     }
   }
 }

@@ -12,14 +12,23 @@ Schema: [`spec.schema.json`](spec.schema.json) — add `"$schema": "docs/spec.sc
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `criteria` | [Criterion](#criterion)[] | yes | — | Acceptance criteria — each verified independently. |
-| `maxIterations` | integer | no | 10 | Maximum worker iterations before giving up. |
+| `maxIterations` | integer | no | 10 | Maximum worker iterations before giving up. Only valid when worker is present. |
 | `name` | string | yes | — | Unique identifier for this spec. |
-| `stuckThreshold` | integer | no | 3 | Consecutive identical failures before declaring stuck. |
-| `worker` | [Worker](#worker) | yes | — | Configuration for the worker agent that attempts to satisfy the criteria. |
+| `stuckThreshold` | integer | no | 3 | Consecutive identical failures before declaring stuck. Only valid when worker is present. |
+| `worker` | [Worker](#worker) | no | — | Configuration for the worker agent. If present, qed runs in worker loop mode (iterate until criteria pass). If absent, qed runs in verify mode (single-pass verification). |
+
+## Execution modes
+
+A spec runs in one of two modes, determined by whether `worker` is present:
+
+- **Worker loop** (`worker` present) — run the worker, verify criteria, feed failures back, repeat until all pass or the loop terminates (stuck / max iterations).
+- **Verify** (`worker` absent) — run each criterion once and report results. Requires at least one criterion. Used for CI checks and standalone verification.
+
+`maxIterations` and `stuckThreshold` only apply in worker loop mode.
 
 ## Worker
 
-The worker is the command that runs to attempt satisfying the criteria. It could be an AI agent, a build command, a script — anything with a shell interface.
+Optional. If present, qed runs in worker loop mode. The worker is the command that attempts to satisfy the criteria — an AI agent, a build command, a script, anything with a shell interface.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|

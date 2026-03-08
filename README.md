@@ -6,9 +6,12 @@
 
 **Typed acceptance criteria. Deterministic verification. Formally proven orchestration.**
 
-Define what "done" means with typed specs. qed runs a worker, verifies each criterion using the right strategy — from shell commands to formal proofs — and loops until everything passes or it knows to stop.
+Define what "done" means with typed specs. Two modes:
 
-The core loop is a state machine written in Lean 4 with formally proven termination, stuck detection, and transition correctness. LLMs are tools used *by* the orchestrator, never the control plane.
+- **Worker loop** — run a worker, verify each criterion, feed failures back, repeat until everything passes or the loop terminates. The orchestration is a formally proven state machine.
+- **Verify** — run each criterion once and report results. No worker, no loop — just verification. Used for CI and standalone checks.
+
+The core loop is written in Lean 4 with formally proven termination, stuck detection, and transition correctness. LLMs are tools used *by* the orchestrator, never the control plane.
 
 ## Example
 
