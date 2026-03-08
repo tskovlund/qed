@@ -3,3 +3,4 @@ import Qed.StateMachine
 import Qed.Parser
 import Qed.TomlConverter
 import Qed.SpecLoader
+import Qed.Verifier
