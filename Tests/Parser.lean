@@ -2,7 +2,7 @@ import Qed
 
 open Qed
 
-def testParseVerifyModeSpec : IO Bool := do
+def testParseJsonReturnsVerifyModeWhenNoWorker : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"test\", \"criteria\": [{\"description\": \"builds\", \"verify\": {\"type\": \"command\", \"run\": \"make build\"}}]}"
   -- Act
@@ -17,7 +17,7 @@ def testParseVerifyModeSpec : IO Bool := do
     IO.eprintln s!"  parse error: {e}"
     return false
 
-def testParseWorkerLoopSpec : IO Bool := do
+def testParseJsonReturnsWorkerLoopWithDefaults : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"loop-test\", \"worker\": {\"command\": \"run agent\"}, \"criteria\": [{\"description\": \"passes\", \"verify\": {\"type\": \"command\", \"run\": \"make test\"}}]}"
   -- Act
@@ -36,7 +36,7 @@ def testParseWorkerLoopSpec : IO Bool := do
     IO.eprintln s!"  parse error: {e}"
     return false
 
-def testParseWorkerLoopCustomConfig : IO Bool := do
+def testParseJsonAppliesCustomLoopConfig : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"custom\", \"worker\": {\"command\": \"agent\", \"workdir\": \"src\", \"timeout\": 1800}, \"maxIterations\": 5, \"stuckThreshold\": 2, \"criteria\": [{\"description\": \"ok\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
   -- Act
@@ -56,7 +56,7 @@ def testParseWorkerLoopCustomConfig : IO Bool := do
     IO.eprintln s!"  parse error: {e}"
     return false
 
-def testParseCommandVerifyType : IO Bool := do
+def testParseJsonExtractsCommandFields : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"make\", \"timeout\": 60}}]}"
   -- Act
@@ -72,7 +72,7 @@ def testParseCommandVerifyType : IO Bool := do
     | none => return false
   | .error _ => return false
 
-def testParseAgentReviewVerifyType : IO Bool := do
+def testParseJsonExtractsAgentReviewFields : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agentReview\", \"prompt\": \"check it\", \"model\": \"claude-opus-4-6\"}}]}"
   -- Act
@@ -88,7 +88,7 @@ def testParseAgentReviewVerifyType : IO Bool := do
     | none => return false
   | .error _ => return false
 
-def testParseAgentReviewDefaultModel : IO Bool := do
+def testParseJsonDefaultsAgentReviewModelToSonnet : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agentReview\", \"prompt\": \"check\"}}]}"
   -- Act
@@ -104,7 +104,7 @@ def testParseAgentReviewDefaultModel : IO Bool := do
     | none => return false
   | .error _ => return false
 
-def testParseProofVerifyType : IO Bool := do
+def testParseJsonExtractsProofFields : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"proof\", \"prover\": \"lean4\", \"target\": \"Qed.Proofs.T\"}}]}"
   -- Act
@@ -120,7 +120,7 @@ def testParseProofVerifyType : IO Bool := do
     | none => return false
   | .error _ => return false
 
-def testParsePropertyVerifyType : IO Bool := do
+def testParseJsonExtractsPropertyFieldsWithDefault : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"property\", \"run\": \"hypothesis\"}}]}"
   -- Act
@@ -136,7 +136,7 @@ def testParsePropertyVerifyType : IO Bool := do
     | none => return false
   | .error _ => return false
 
-def testParseHumanVerifyType : IO Bool := do
+def testParseJsonExtractsHumanInstruction : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"human\", \"instruction\": \"look at it\"}}]}"
   -- Act
@@ -152,7 +152,7 @@ def testParseHumanVerifyType : IO Bool := do
     | none => return false
   | .error _ => return false
 
-def testParseCiScheduleOverride : IO Bool := do
+def testParseJsonAppliesCiScheduleOverride : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}, \"ci\": \"trunk\"}]}"
   -- Act
@@ -165,7 +165,7 @@ def testParseCiScheduleOverride : IO Bool := do
     | none => return false
   | .error _ => return false
 
-def testParseHumanDefaultCiIsManual : IO Bool := do
+def testParseJsonDefaultsHumanCiToManual : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"human\", \"instruction\": \"check\"}}]}"
   -- Act
@@ -178,47 +178,7 @@ def testParseHumanDefaultCiIsManual : IO Bool := do
     | none => return false
   | .error _ => return false
 
-def testParseErrorMissingName : IO Bool := do
-  -- Arrange
-  let json := "{\"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok _ => return false
-  | .error e => return e.contains "name"
-
-def testParseErrorMissingCriteria : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\"}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok _ => return false
-  | .error e => return e.contains "criteria"
-
-def testParseErrorVerifyModeNoCriteria : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": []}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok _ => return false
-  | .error e => return e.contains "at least one"
-
-def testParseErrorUnknownVerifyType : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"magic\"}}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok _ => return false
-  | .error e => return e.contains "magic"
-
-def testParseMultipleCriteria : IO Bool := do
+def testParseJsonPreservesMultipleCriteria : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"multi\", \"criteria\": [{\"description\": \"builds\", \"verify\": {\"type\": \"command\", \"run\": \"make\"}}, {\"description\": \"proven\", \"verify\": {\"type\": \"proof\", \"prover\": \"lean4\", \"target\": \"T\"}}, {\"description\": \"reviewed\", \"verify\": {\"type\": \"agentReview\", \"prompt\": \"check\"}}]}"
   -- Act
@@ -237,7 +197,7 @@ def testParseMultipleCriteria : IO Bool := do
     IO.eprintln s!"  parse error: {e}"
     return false
 
-def testParseWorkerLoopEmptyCriteriaAllowed : IO Bool := do
+def testParseJsonAllowsEmptyCriteriaInWorkerLoop : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"no-criteria\", \"worker\": {\"command\": \"agent\"}, \"criteria\": []}"
   -- Act
@@ -253,7 +213,47 @@ def testParseWorkerLoopEmptyCriteriaAllowed : IO Bool := do
     IO.eprintln s!"  parse error: {e}"
     return false
 
-def testParseErrorMissingVerifyField : IO Bool := do
+def testParseJsonErrorsOnMissingName : IO Bool := do
+  -- Arrange
+  let json := "{\"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok _ => return false
+  | .error e => return e.contains "name"
+
+def testParseJsonErrorsOnMissingCriteria : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\"}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok _ => return false
+  | .error e => return e.contains "criteria"
+
+def testParseJsonErrorsOnEmptyCriteriaInVerifyMode : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": []}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok _ => return false
+  | .error e => return e.contains "at least one"
+
+def testParseJsonErrorsOnUnknownVerifyType : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"magic\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok _ => return false
+  | .error e => return e.contains "magic"
+
+def testParseJsonErrorsOnMissingVerifyField : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\"}]}"
   -- Act
@@ -263,7 +263,7 @@ def testParseErrorMissingVerifyField : IO Bool := do
   | .ok _ => return false
   | .error e => return e.contains "verify"
 
-def testParseErrorMissingCommandRun : IO Bool := do
+def testParseJsonErrorsOnMissingCommandRun : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\"}}]}"
   -- Act
@@ -273,7 +273,7 @@ def testParseErrorMissingCommandRun : IO Bool := do
   | .ok _ => return false
   | .error e => return e.contains "run"
 
-def testParseErrorInvalidCiSchedule : IO Bool := do
+def testParseJsonErrorsOnInvalidCiSchedule : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}, \"ci\": \"nightly\"}]}"
   -- Act
@@ -284,24 +284,24 @@ def testParseErrorInvalidCiSchedule : IO Bool := do
   | .error e => return e.contains "nightly"
 
 def parserTests : List (String × IO Bool) := [
-  ("testParseVerifyModeSpec", testParseVerifyModeSpec),
-  ("testParseWorkerLoopSpec", testParseWorkerLoopSpec),
-  ("testParseWorkerLoopCustomConfig", testParseWorkerLoopCustomConfig),
-  ("testParseCommandVerifyType", testParseCommandVerifyType),
-  ("testParseAgentReviewVerifyType", testParseAgentReviewVerifyType),
-  ("testParseAgentReviewDefaultModel", testParseAgentReviewDefaultModel),
-  ("testParseProofVerifyType", testParseProofVerifyType),
-  ("testParsePropertyVerifyType", testParsePropertyVerifyType),
-  ("testParseHumanVerifyType", testParseHumanVerifyType),
-  ("testParseCiScheduleOverride", testParseCiScheduleOverride),
-  ("testParseHumanDefaultCiIsManual", testParseHumanDefaultCiIsManual),
-  ("testParseErrorMissingName", testParseErrorMissingName),
-  ("testParseErrorMissingCriteria", testParseErrorMissingCriteria),
-  ("testParseErrorVerifyModeNoCriteria", testParseErrorVerifyModeNoCriteria),
-  ("testParseErrorUnknownVerifyType", testParseErrorUnknownVerifyType),
-  ("testParseMultipleCriteria", testParseMultipleCriteria),
-  ("testParseWorkerLoopEmptyCriteriaAllowed", testParseWorkerLoopEmptyCriteriaAllowed),
-  ("testParseErrorMissingVerifyField", testParseErrorMissingVerifyField),
-  ("testParseErrorMissingCommandRun", testParseErrorMissingCommandRun),
-  ("testParseErrorInvalidCiSchedule", testParseErrorInvalidCiSchedule)
+  ("testParseJsonReturnsVerifyModeWhenNoWorker", testParseJsonReturnsVerifyModeWhenNoWorker),
+  ("testParseJsonReturnsWorkerLoopWithDefaults", testParseJsonReturnsWorkerLoopWithDefaults),
+  ("testParseJsonAppliesCustomLoopConfig", testParseJsonAppliesCustomLoopConfig),
+  ("testParseJsonExtractsCommandFields", testParseJsonExtractsCommandFields),
+  ("testParseJsonExtractsAgentReviewFields", testParseJsonExtractsAgentReviewFields),
+  ("testParseJsonDefaultsAgentReviewModelToSonnet", testParseJsonDefaultsAgentReviewModelToSonnet),
+  ("testParseJsonExtractsProofFields", testParseJsonExtractsProofFields),
+  ("testParseJsonExtractsPropertyFieldsWithDefault", testParseJsonExtractsPropertyFieldsWithDefault),
+  ("testParseJsonExtractsHumanInstruction", testParseJsonExtractsHumanInstruction),
+  ("testParseJsonAppliesCiScheduleOverride", testParseJsonAppliesCiScheduleOverride),
+  ("testParseJsonDefaultsHumanCiToManual", testParseJsonDefaultsHumanCiToManual),
+  ("testParseJsonPreservesMultipleCriteria", testParseJsonPreservesMultipleCriteria),
+  ("testParseJsonAllowsEmptyCriteriaInWorkerLoop", testParseJsonAllowsEmptyCriteriaInWorkerLoop),
+  ("testParseJsonErrorsOnMissingName", testParseJsonErrorsOnMissingName),
+  ("testParseJsonErrorsOnMissingCriteria", testParseJsonErrorsOnMissingCriteria),
+  ("testParseJsonErrorsOnEmptyCriteriaInVerifyMode", testParseJsonErrorsOnEmptyCriteriaInVerifyMode),
+  ("testParseJsonErrorsOnUnknownVerifyType", testParseJsonErrorsOnUnknownVerifyType),
+  ("testParseJsonErrorsOnMissingVerifyField", testParseJsonErrorsOnMissingVerifyField),
+  ("testParseJsonErrorsOnMissingCommandRun", testParseJsonErrorsOnMissingCommandRun),
+  ("testParseJsonErrorsOnInvalidCiSchedule", testParseJsonErrorsOnInvalidCiSchedule)
 ]

@@ -2,7 +2,7 @@ import Qed
 
 open Qed
 
-def testTomlToJsonBasic : IO Bool := do
+def testTomlToJsonConvertsValidToml : IO Bool := do
   -- Arrange
   let toml := "name = \"hello\"\n\n[[criteria]]\ndescription = \"builds\"\n\n[criteria.verify]\ntype = \"command\"\nrun = \"make\"\n"
   -- Act
@@ -15,7 +15,7 @@ def testTomlToJsonBasic : IO Bool := do
     IO.eprintln s!"  toml error: {e}"
     return false
 
-def testTomlToJsonInvalidToml : IO Bool := do
+def testTomlToJsonErrorsOnInvalidToml : IO Bool := do
   -- Arrange
   let toml := "[[[invalid toml"
   -- Act
@@ -25,7 +25,7 @@ def testTomlToJsonInvalidToml : IO Bool := do
   | .ok _ => return false
   | .error _ => return true
 
-def testLoadSpecFromJsonFile : IO Bool := do
+def testLoadSpecParsesJsonFile : IO Bool := do
   -- Arrange / Act
   let result ← SpecLoader.loadSpec "specs/build.spec.json"
   -- Assert
@@ -36,7 +36,7 @@ def testLoadSpecFromJsonFile : IO Bool := do
     IO.eprintln s!"  load error: {e}"
     return false
 
-def testLoadSpecFromTomlFile : IO Bool := do
+def testLoadSpecParsesTomlFile : IO Bool := do
   -- Arrange / Act
   let result ← SpecLoader.loadSpec "specs/state-machine.spec.toml"
   -- Assert
@@ -49,7 +49,7 @@ def testLoadSpecFromTomlFile : IO Bool := do
     IO.eprintln s!"  load error: {e}"
     return false
 
-def testListAllSpecs : IO Bool := do
+def testListAllSpecsReturnsBothFormats : IO Bool := do
   -- Arrange / Act
   let result ← SpecLoader.listAllSpecs "specs"
   -- Assert
@@ -62,7 +62,7 @@ def testListAllSpecs : IO Bool := do
     IO.eprintln s!"  list error: {e}"
     return false
 
-def testTomlMultiLineStringRoundtrip : IO Bool := do
+def testTomlMultiLineStringPreservesContent : IO Bool := do
   -- Arrange — multi-line strings are the main reason TOML exists for specs
   let toml := "name = \"review\"\n\n[[criteria]]\ndescription = \"code review\"\n\n[criteria.verify]\ntype = \"agentReview\"\nprompt = \"\"\"\nReview the code.\nCheck for:\n1. Correctness\n2. Style\n\"\"\"\n"
   -- Act
@@ -85,10 +85,10 @@ def testTomlMultiLineStringRoundtrip : IO Bool := do
       | none => return false
 
 def integrationTests : List (String × IO Bool) := [
-  ("testTomlToJsonBasic", testTomlToJsonBasic),
-  ("testTomlToJsonInvalidToml", testTomlToJsonInvalidToml),
-  ("testLoadSpecFromJsonFile", testLoadSpecFromJsonFile),
-  ("testLoadSpecFromTomlFile", testLoadSpecFromTomlFile),
-  ("testListAllSpecs", testListAllSpecs),
-  ("testTomlMultiLineStringRoundtrip", testTomlMultiLineStringRoundtrip)
+  ("testTomlToJsonConvertsValidToml", testTomlToJsonConvertsValidToml),
+  ("testTomlToJsonErrorsOnInvalidToml", testTomlToJsonErrorsOnInvalidToml),
+  ("testLoadSpecParsesJsonFile", testLoadSpecParsesJsonFile),
+  ("testLoadSpecParsesTomlFile", testLoadSpecParsesTomlFile),
+  ("testListAllSpecsReturnsBothFormats", testListAllSpecsReturnsBothFormats),
+  ("testTomlMultiLineStringPreservesContent", testTomlMultiLineStringPreservesContent)
 ]
