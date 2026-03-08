@@ -4,9 +4,11 @@
 
 # qed
 
-**Typed acceptance criteria. Deterministic verification. Formally proven orchestration.**
+**AI agents are non-deterministic. Your verification shouldn't be.**
 
-Define what "done" means with typed specs. Two modes:
+*Typed acceptance criteria. Deterministic verification. Formally proven orchestration.*
+
+When an AI writes your code *and* your tests, passing tests prove nothing — they inherit the same blind spots as the implementation. Define what "done" means with typed specs — verified independently of the agent that did the work. Two modes:
 
 - **Worker loop** — run a worker, verify each criterion, feed failures back, repeat until everything passes or the loop terminates. The orchestration is a formally proven state machine.
 - **Verify** — run each criterion once and report results. No worker, no loop — just verification. Used for CI and standalone checks.
