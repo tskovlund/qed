@@ -12,6 +12,7 @@ Qed/
   Types.lean           Core types (VerifyType, SpecMode, Spec, LoopState)
   SpecLoader.lean      Load and list spec files from disk
   Parser.lean          JSON spec parser (Lean.Json → Spec)
+  TomlConverter.lean   TOML → JSON conversion via Python's tomllib
   StateMachine.lean    Pure transition function (proven core)
   Verifier.lean        Verification dispatch (command, agent_review, property, proof)
   Output.lean          JSON result serialization
@@ -22,7 +23,10 @@ Qed/Proofs/
   FinalStates.lean     Terminal states are absorbing
   Monotonic.lean       Iteration count is non-decreasing
 Tests/
-  Main.lean            Test driver
+  Main.lean            Test runner (imports all test modules)
+  Types.lean           isTerminal behavior tests
+  Parser.lean          JSON parser tests (all verify types, error cases)
+  Integration.lean     TOML converter and SpecLoader end-to-end tests
 specs/                 qed's own specs (dogfooding)
   build.spec.json      Build integrity — verify mode (no worker)
   verify-mode.spec.toml    Verify mode correctness — command + agentReview

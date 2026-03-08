@@ -117,6 +117,7 @@ Specs are files in the repo — version-controlled, schema-validated, colocated 
 ```lean
 def loadSpec (path : System.FilePath) : IO (Except String Spec)
 def listSpecs (directory : System.FilePath) (extension : String) : IO (Except String (List System.FilePath))
+def listAllSpecs (directory : System.FilePath) : IO (Except String (List System.FilePath))
 ```
 
 ## Pure core, IO shell
@@ -126,7 +127,7 @@ The architecture follows a strict separation:
 | Layer | IO? | What lives here |
 |-------|-----|-----------------|
 | **Pure core** | No | Types, StateMachine, Proofs |
-| **IO shell** | Yes | Parser, Verifier, SpecLoader, CLI |
+| **IO shell** | Yes | Parser, TomlConverter, Verifier, SpecLoader, CLI |
 
 The pure core is where all proofs live. It has no side effects, no process spawning, no file access. The IO shell wraps the pure core with real-world effects — parsing files, running commands, reporting results.
 
