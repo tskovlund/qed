@@ -2,94 +2,142 @@ import Qed
 
 open Qed
 
-def main : IO UInt32 := do
-  let mut failed : Nat := 0
+/-- Run a named test, print result, return whether it passed. -/
+def runTest (name : String) (test : IO Bool) : IO Bool := do
+  let passed ← test
+  if passed then
+    IO.println s!"PASS: {name}"
+  else
+    IO.eprintln s!"FAIL: {name}"
+  return passed
 
-  -- Test: VerifyType constructors
-  let cmd := VerifyType.command "make test"
-  match cmd with
-  | .command run _ =>
-    if run != "make test" then
-      IO.eprintln "FAIL: command run should be 'make test'"
-      failed := failed + 1
-    else
-      IO.println "PASS: VerifyType.command construction"
-  | _ =>
-    IO.eprintln "FAIL: expected VerifyType.command"
-    failed := failed + 1
+def testVerifyTypeCommandHasCorrectRun : IO Bool := do
+  -- Arrange
+  let verifyType := VerifyType.command "make test"
+  -- Act
+  let commandRun := match verifyType with
+    | .command run _ => some run
+    | _ => none
+  -- Assert
+  return commandRun == some "make test"
 
-  -- Test: AcceptanceCriterion construction
+def testAcceptanceCriterionStoresDescription : IO Bool := do
+  -- Arrange
   let criterion : AcceptanceCriterion := {
     description := "All tests pass"
     verify := VerifyType.command "make test"
   }
-  if criterion.description != "All tests pass" then
-    IO.eprintln "FAIL: criterion description mismatch"
-    failed := failed + 1
-  else
-    IO.println "PASS: AcceptanceCriterion construction"
+  -- Act / Assert
+  return criterion.description == "All tests pass"
 
-  -- Test: Spec construction with defaults
+def testSpecDefaultMaxIterationsIsTen : IO Bool := do
+  -- Arrange
+  let criterion : AcceptanceCriterion := {
+    description := "test"
+    verify := VerifyType.command "echo"
+  }
   let spec : Spec := {
     name := "test-task"
     worker := { command := "echo hello" }
     criteria := [criterion]
   }
-  if spec.maxIterations != 10 then
-    IO.eprintln s!"FAIL: default maxIterations should be 10, got {spec.maxIterations}"
-    failed := failed + 1
-  else
-    IO.println "PASS: Spec default maxIterations"
+  -- Act / Assert
+  return spec.maxIterations == 10
 
-  if spec.stuckThreshold != 3 then
-    IO.eprintln s!"FAIL: default stuckThreshold should be 3, got {spec.stuckThreshold}"
-    failed := failed + 1
-  else
-    IO.println "PASS: Spec default stuckThreshold"
+def testSpecDefaultStuckThresholdIsThree : IO Bool := do
+  -- Arrange
+  let criterion : AcceptanceCriterion := {
+    description := "test"
+    verify := VerifyType.command "echo"
+  }
+  let spec : Spec := {
+    name := "test-task"
+    worker := { command := "echo hello" }
+    criteria := [criterion]
+  }
+  -- Act / Assert
+  return spec.stuckThreshold == 3
 
-  -- Test: LoopState.isTerminal
-  if !LoopState.isTerminal (.passed 3) then
-    IO.eprintln "FAIL: passed should be terminal"
-    failed := failed + 1
-  else
-    IO.println "PASS: passed is terminal"
+def testLoopStatePassedIsTerminal : IO Bool := do
+  -- Arrange
+  let state := LoopState.passed 3
+  -- Act / Assert
+  return state.isTerminal
 
-  if !LoopState.isTerminal (.stuck 3 ["test"]) then
-    IO.eprintln "FAIL: stuck should be terminal"
-    failed := failed + 1
-  else
-    IO.println "PASS: stuck is terminal"
+def testLoopStateStuckIsTerminal : IO Bool := do
+  -- Arrange
+  let state := LoopState.stuck 3 ["test"]
+  -- Act / Assert
+  return state.isTerminal
 
-  if LoopState.isTerminal (.ready) then
-    IO.eprintln "FAIL: ready should not be terminal"
-    failed := failed + 1
-  else
-    IO.println "PASS: ready is not terminal"
+def testLoopStateReadyIsNotTerminal : IO Bool := do
+  -- Arrange
+  let state := LoopState.ready
+  -- Act / Assert
+  return !state.isTerminal
 
-  if LoopState.isTerminal (.workerRunning 1) then
-    IO.eprintln "FAIL: workerRunning should not be terminal"
-    failed := failed + 1
-  else
-    IO.println "PASS: workerRunning is not terminal"
+def testLoopStateWorkerRunningIsNotTerminal : IO Bool := do
+  -- Arrange
+  let state := LoopState.workerRunning 1
+  -- Act / Assert
+  return !state.isTerminal
 
-  -- Test: VerificationResult helpers
-  if !VerificationResult.isPassed (.pass "ok") then
-    IO.eprintln "FAIL: pass should isPassed"
-    failed := failed + 1
-  else
-    IO.println "PASS: VerificationResult.isPassed"
+def testVerificationResultPassIsPassed : IO Bool := do
+  -- Arrange
+  let result := VerificationResult.pass "ok"
+  -- Act / Assert
+  return result.isPassed
 
-  if !VerificationResult.isFailed (.fail "error") then
-    IO.eprintln "FAIL: fail should isFailed"
-    failed := failed + 1
-  else
-    IO.println "PASS: VerificationResult.isFailed"
+def testVerificationResultFailIsFailed : IO Bool := do
+  -- Arrange
+  let result := VerificationResult.fail "error"
+  -- Act / Assert
+  return result.isFailed
 
-  -- Summary
+def testCiScheduleDefaultsToAlwaysForCommand : IO Bool := do
+  -- Arrange
+  let criterion : AcceptanceCriterion := {
+    description := "test"
+    verify := VerifyType.command "echo"
+  }
+  -- Act / Assert
+  return criterion.ci == CiSchedule.always
+
+def testCiScheduleDefaultsToManualForHuman : IO Bool := do
+  -- Arrange
+  let criterion : AcceptanceCriterion := {
+    description := "test"
+    verify := VerifyType.human "check visually"
+  }
+  -- Act / Assert
+  return criterion.ci == CiSchedule.manual
+
+def main : IO UInt32 := do
+  let tests : List (String × IO Bool) := [
+    ("testVerifyTypeCommandHasCorrectRun", testVerifyTypeCommandHasCorrectRun),
+    ("testAcceptanceCriterionStoresDescription", testAcceptanceCriterionStoresDescription),
+    ("testSpecDefaultMaxIterationsIsTen", testSpecDefaultMaxIterationsIsTen),
+    ("testSpecDefaultStuckThresholdIsThree", testSpecDefaultStuckThresholdIsThree),
+    ("testLoopStatePassedIsTerminal", testLoopStatePassedIsTerminal),
+    ("testLoopStateStuckIsTerminal", testLoopStateStuckIsTerminal),
+    ("testLoopStateReadyIsNotTerminal", testLoopStateReadyIsNotTerminal),
+    ("testLoopStateWorkerRunningIsNotTerminal", testLoopStateWorkerRunningIsNotTerminal),
+    ("testVerificationResultPassIsPassed", testVerificationResultPassIsPassed),
+    ("testVerificationResultFailIsFailed", testVerificationResultFailIsFailed),
+    ("testCiScheduleDefaultsToAlwaysForCommand", testCiScheduleDefaultsToAlwaysForCommand),
+    ("testCiScheduleDefaultsToManualForHuman", testCiScheduleDefaultsToManualForHuman)
+  ]
+
+  let mut failedCount : Nat := 0
+  for (name, test) in tests do
+    let passed ← runTest name test
+    if !passed then
+      failedCount := failedCount + 1
+
   IO.println ""
-  if failed > 0 then
-    IO.eprintln s!"{failed} test(s) failed"
+  if failedCount > 0 then
+    IO.eprintln s!"{failedCount} test(s) failed"
     return 1
   else
-    IO.println "All tests passed"
+    IO.println s!"All {tests.length} tests passed"
     return 0
