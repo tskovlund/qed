@@ -12,35 +12,35 @@ The core loop is a state machine written in Lean 4 with formally proven terminat
 
 ## Example
 
-```json
-{
-  "name": "add-auth",
-  "worker": { "command": "claude -p 'implement auth middleware'" },
-  "criteria": [
-    {
-      "description": "All tests pass",
-      "verify": { "type": "command", "run": "make test" }
-    },
-    {
-      "description": "No credentials in source",
-      "verify": { "type": "command", "run": "! grep -r 'password' src/" }
-    },
-    {
-      "description": "Auth flow handles edge cases",
-      "verify": {
-        "type": "agentReview",
-        "prompt": "Review the auth middleware. Check: expired tokens, missing headers, concurrent sessions."
-      }
-    }
-  ]
-}
+```toml
+#:schema docs/spec.schema.json
+name = "state-machine"
+
+[worker]
+command = "claude -p 'implement the state machine transition function'"
+
+[[criteria]]
+description = "Project builds and tests pass"
+verify = { type = "command", run = "lake build && lake test" }
+
+[[criteria]]
+description = "Transition function terminates within maxIterations"
+verify = { type = "proof", prover = "lean4", target = "Qed.Proofs.Termination.transitionTerminates" }
+
+[[criteria]]
+description = "Terminal states are absorbing — no further transitions"
+verify = { type = "proof", prover = "lean4", target = "Qed.Proofs.FinalStates.terminalStatesAbsorbing" }
+
+[[criteria]]
+description = "Code follows conventions and handles edge cases"
+verify = { type = "agentReview", prompt = "Check: pure functions have no IO, all pattern matches are exhaustive, variable names are descriptive." }
 ```
+
+The worker runs. Each criterion is verified with its typed strategy — including asking Lean's kernel to check mathematical proofs. Failures feed back to the worker. The loop terminates — guaranteed.
 
 ```bash
-qed run spec.json
+qed run state-machine.spec.toml
 ```
-
-The worker runs. Each criterion is verified with its typed strategy. Failures feed back to the worker. The loop terminates — guaranteed.
 
 ## Verification spectrum
 
