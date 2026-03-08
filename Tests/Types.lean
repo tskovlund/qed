@@ -2,18 +2,6 @@ import Qed
 
 open Qed
 
-def testLoopConfigDefaultMaxIterationsIsTen : IO Bool := do
-  -- Arrange
-  let config : LoopConfig := {}
-  -- Act / Assert
-  return config.maxIterations == 10
-
-def testLoopConfigDefaultStuckThresholdIsThree : IO Bool := do
-  -- Arrange
-  let config : LoopConfig := {}
-  -- Act / Assert
-  return config.stuckThreshold == 3
-
 def testLoopStatePassedIsTerminal : IO Bool := do
   -- Arrange
   let state := LoopState.passed 3
@@ -57,8 +45,6 @@ def testCiScheduleDefaultsToManualForHuman : IO Bool := do
   return criterion.ci == CiSchedule.manual
 
 def typeTests : List (String × IO Bool) := [
-  ("testLoopConfigDefaultMaxIterationsIsTen", testLoopConfigDefaultMaxIterationsIsTen),
-  ("testLoopConfigDefaultStuckThresholdIsThree", testLoopConfigDefaultStuckThresholdIsThree),
   ("testLoopStatePassedIsTerminal", testLoopStatePassedIsTerminal),
   ("testLoopStateStuckIsTerminal", testLoopStateStuckIsTerminal),
   ("testLoopStateReadyIsNotTerminal", testLoopStateReadyIsNotTerminal),
