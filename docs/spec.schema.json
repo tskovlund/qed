@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qed.skovlund.dev/spec.schema.json",
+  "title": "qed spec",
+  "description": "Typed spec-driven development — acceptance criteria with deterministic verification.",
+  "type": "object",
+  "required": ["name", "worker", "criteria"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique identifier for this spec."
+    },
+    "worker": {
+      "type": "object",
+      "description": "Configuration for the worker agent that attempts to satisfy the criteria.",
+      "required": ["command"],
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "Shell command to run the worker."
+        },
+        "workdir": {
+          "type": "string",
+          "description": "Working directory for the worker.",
+          "default": "."
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Worker timeout in seconds.",
+          "default": 3600,
+          "minimum": 1
+        }
+      }
+    },
+    "criteria": {
+      "type": "array",
+      "description": "Acceptance criteria — each verified independently.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["description", "verify"],
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of what this criterion verifies."
+          },
+          "verify": {
+            "description": "How to verify this criterion. Discriminated by the 'type' field.",
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "Run a shell command and check the exit code.",
+                "required": ["type", "run"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "const": "command" },
+                  "run": { "type": "string", "description": "Shell command to execute." },
+                  "timeout": { "type": "integer", "default": 300, "minimum": 1, "description": "Timeout in seconds." }
+                }
+              },
+              {
+                "type": "object",
+                "description": "Spawn an independent LLM agent to review against a prompt.",
+                "required": ["type", "prompt"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "const": "agentReview" },
+                  "prompt": { "type": "string", "description": "Review prompt for the agent." },
+                  "model": { "type": "string", "default": "claude-sonnet-4-6", "description": "Model to use for the review." }
+                }
+              },
+              {
+                "type": "object",
+                "description": "Run property-based tests.",
+                "required": ["type", "run"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "const": "property" },
+                  "run": { "type": "string", "description": "Shell command to run property tests." },
+                  "timeout": { "type": "integer", "default": 600, "minimum": 1, "description": "Timeout in seconds." }
+                }
+              },
+              {
+                "type": "object",
+                "description": "Verify a formal proof target.",
+                "required": ["type", "prover", "target"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "const": "proof" },
+                  "prover": { "type": "string", "description": "Proof system (e.g. lean4, coq, agda)." },
+                  "target": { "type": "string", "description": "Fully qualified name of the theorem to verify." }
+                }
+              },
+              {
+                "type": "object",
+                "description": "Ask a human to verify. Cannot run in CI (ci defaults to 'manual').",
+                "required": ["type", "instruction"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "const": "human" },
+                  "instruction": { "type": "string", "description": "What the human should verify." }
+                }
+              }
+            ]
+          },
+          "ci": {
+            "type": "string",
+            "description": "When this criterion runs in CI. Defaults: 'always' for automatable types, 'manual' for human.",
+            "enum": ["always", "trunk", "manual"],
+            "default": "always"
+          }
+        }
+      }
+    },
+    "maxIterations": {
+      "type": "integer",
+      "description": "Maximum worker iterations before giving up.",
+      "default": 10,
+      "minimum": 1
+    },
+    "stuckThreshold": {
+      "type": "integer",
+      "description": "Consecutive identical failures before declaring stuck.",
+      "default": 3,
+      "minimum": 1
+    }
+  }
+}
