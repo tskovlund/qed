@@ -17,34 +17,34 @@ private def writeTempSpec (content : String) : IO System.FilePath := do
   IO.FS.writeFile path content
   return path
 
-def testCliVersionPrintsVersion : IO Bool := do
+def testVersionPrintsVersionString : IO Bool := do
   -- Arrange / Act
   let (exitCode, stdout, _) ← runQed ["version"]
   -- Assert
-  return exitCode == 0 && stdout.trimAscii.toString.startsWith "qed " &&
+  return exitCode == 0 && stdout.trimAscii.startsWith "qed " &&
     stdout.contains "0.1.0"
 
-def testCliHelpPrintsUsage : IO Bool := do
+def testHelpPrintsUsageInfo : IO Bool := do
   -- Arrange / Act
   let (exitCode, stdout, _) ← runQed ["help"]
   -- Assert
   return exitCode == 0 && stdout.contains "Usage:" &&
     stdout.contains "verify" && stdout.contains "parse"
 
-def testCliParseValidSpec : IO Bool := do
+def testParseReturnsSuccessForValidSpec : IO Bool := do
   -- Arrange / Act
   let (exitCode, stdout, _) ← runQed ["parse", "specs/build.spec.json"]
   -- Assert
   return exitCode == 0 && stdout.contains "build"
 
-def testCliParseInvalidFile : IO Bool := do
+def testParseReturnsErrorForMissingFile : IO Bool := do
   -- Arrange / Act
   let (exitCode, _, stderr) ← runQed ["parse", "nonexistent.json"]
   -- Assert
   return exitCode == 1 && stderr.length > 0
 
-def testCliVerifyPassingSpec : IO Bool := do
-  -- Arrange — use a minimal spec with a trivially passing command
+def testVerifyReturnsPassForPassingSpec : IO Bool := do
+  -- Arrange
   let specContent := "{\"name\": \"cli-test\", \"criteria\": [{\"description\": \"trivial pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
   let specPath ← writeTempSpec specContent
   -- Act
@@ -52,17 +52,73 @@ def testCliVerifyPassingSpec : IO Bool := do
   -- Assert
   return exitCode == 0 && stdout.contains "Verifying:" && stdout.contains "cli-test"
 
-def testCliUnknownCommandFails : IO Bool := do
+def testVerifyReturnsFailForFailingSpec : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"fail-test\", \"criteria\": [{\"description\": \"always fails\", \"verify\": {\"type\": \"command\", \"run\": \"false\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, stderr) ← runQed ["verify", specPath.toString]
+  -- Assert
+  return exitCode == 1 && stdout.contains "FAIL" && stderr.contains "failed"
+
+def testVerifyJsonOutputReturnsValidJson : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"json-test\", \"criteria\": [{\"description\": \"trivial pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", "--json", specPath.toString]
+  -- Assert — output must be valid JSON with expected structure
+  match Lean.Json.parse stdout with
+  | .error _ => return false
+  | .ok json =>
+    let specOk := match json.getObjValAs? String "spec" with
+      | .ok "json-test" => true | _ => false
+    let passedOk := match json.getObjValAs? Bool "passed" with
+      | .ok true => true | _ => false
+    let hasCriteria := (json.getObjVal? "criteria").isOk
+    return exitCode == 0 && specOk && passedOk && hasCriteria
+
+def testVerifyJsonErrorReturnsJsonOnMissingFile : IO Bool := do
+  -- Arrange / Act
+  let (exitCode, stdout, _) ← runQed ["verify", "--json", "nonexistent.json"]
+  -- Assert — error output should be valid JSON with error field
+  match Lean.Json.parse stdout with
+  | .error _ => return false
+  | .ok json =>
+    let hasError := (json.getObjValAs? String "error").isOk
+    return exitCode == 1 && hasError
+
+def testRunDispatchesToVerifyMode : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"run-verify-test\", \"criteria\": [{\"description\": \"trivial pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["run", specPath.toString]
+  -- Assert
+  return exitCode == 0 && stdout.contains "run-verify-test"
+
+def testNoArgsShowsHelp : IO Bool := do
+  -- Arrange / Act
+  let (exitCode, stdout, _) ← runQed []
+  -- Assert
+  return exitCode == 0 && stdout.contains "Usage:" && stdout.contains "verify"
+
+def testUnknownCommandReturnsError : IO Bool := do
   -- Arrange / Act
   let (exitCode, _, stderr) ← runQed ["foo"]
   -- Assert
   return exitCode == 1 && stderr.contains "unknown command"
 
 def cliTests : List (String × IO Bool) := [
-  ("testCliVersionPrintsVersion", testCliVersionPrintsVersion),
-  ("testCliHelpPrintsUsage", testCliHelpPrintsUsage),
-  ("testCliParseValidSpec", testCliParseValidSpec),
-  ("testCliParseInvalidFile", testCliParseInvalidFile),
-  ("testCliVerifyPassingSpec", testCliVerifyPassingSpec),
-  ("testCliUnknownCommandFails", testCliUnknownCommandFails)
+  ("testVersionPrintsVersionString", testVersionPrintsVersionString),
+  ("testHelpPrintsUsageInfo", testHelpPrintsUsageInfo),
+  ("testParseReturnsSuccessForValidSpec", testParseReturnsSuccessForValidSpec),
+  ("testParseReturnsErrorForMissingFile", testParseReturnsErrorForMissingFile),
+  ("testVerifyReturnsPassForPassingSpec", testVerifyReturnsPassForPassingSpec),
+  ("testVerifyReturnsFailForFailingSpec", testVerifyReturnsFailForFailingSpec),
+  ("testVerifyJsonOutputReturnsValidJson", testVerifyJsonOutputReturnsValidJson),
+  ("testVerifyJsonErrorReturnsJsonOnMissingFile", testVerifyJsonErrorReturnsJsonOnMissingFile),
+  ("testRunDispatchesToVerifyMode", testRunDispatchesToVerifyMode),
+  ("testNoArgsShowsHelp", testNoArgsShowsHelp),
+  ("testUnknownCommandReturnsError", testUnknownCommandReturnsError)
 ]

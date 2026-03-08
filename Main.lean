@@ -38,11 +38,20 @@ def loadSpecSafe (path : String) : IO (Except String Spec) := do
   catch error =>
     return .error s!"cannot read '{path}': {error}"
 
+/-- Report an error, using JSON format when --json is active. -/
+private def reportError (message : String) (jsonOutput : Bool) : IO Unit := do
+  if jsonOutput then
+    IO.println (Lean.Json.mkObj [
+      ("error", Lean.Json.str message)
+    ] |>.pretty 2)
+  else
+    IO.eprintln s!"error: {message}"
+
 /-- Load a spec and run single-pass verification. -/
 def runVerify (path : String) (jsonOutput : Bool) : IO UInt32 := do
   match ← loadSpecSafe path with
   | .error message =>
-    IO.eprintln s!"error: {message}"
+    reportError message jsonOutput
     return 1
   | .ok spec => verifySpec spec jsonOutput
 
@@ -50,7 +59,7 @@ def runVerify (path : String) (jsonOutput : Bool) : IO UInt32 := do
 def runParse (path : String) (jsonOutput : Bool) : IO UInt32 := do
   match ← loadSpecSafe path with
   | .error message =>
-    IO.eprintln s!"error: {message}"
+    reportError message jsonOutput
     return 1
   | .ok spec =>
     if jsonOutput then
@@ -103,7 +112,7 @@ def main (args : List String) : IO UInt32 := do
   | ["run", path] =>
     match ← loadSpecSafe path with
     | .error message =>
-      IO.eprintln s!"error: {message}"
+      reportError message jsonOutput
       return 1
     | .ok spec =>
       match spec.mode with
