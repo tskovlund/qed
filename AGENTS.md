@@ -24,9 +24,11 @@ Qed/Proofs/
 Tests/
   Main.lean            Test driver
 specs/                 qed's own specs (dogfooding)
-  build.spec.json      Build integrity — verify mode (no worker)
-  verify-mode.spec.toml    Verify mode correctness — command + agentReview
+  build.spec.json          Build integrity — compile, test, no sorry, docs fresh
   state-machine.spec.toml  State machine correctness — proof + agentReview
+  parser.spec.toml         Parser correctness — tests + agentReview
+  verify-mode.spec.toml    Verify mode correctness — command + agentReview
+  docs.spec.toml           Documentation accuracy — freshness + agentReview
 DocGen/
   Schema.lean          JSON Schema generation (exhaustive matches on Types)
   Markdown.lean        JSON Schema → markdown transformation
@@ -35,6 +37,7 @@ docs/                  Auto-generated + hand-written documentation
   spec.schema.json     JSON Schema (auto-generated, CI-checked)
   spec-format.md       Spec format reference (auto-generated from schema)
   architecture.md      System design, state machine, mermaid diagrams
+  specs.md             Spec design philosophy and layer organization
 ```
 
 ## Spec format

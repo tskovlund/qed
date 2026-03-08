@@ -84,6 +84,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
 | Document | Description |
 |----------|-------------|
 | [Architecture](docs/architecture.md) | Execution modes, state machine, verification dispatch |
+| [Spec design](docs/specs.md) | Why these specs exist and how they're organized |
 | [Spec format](docs/spec-format.md) | Complete reference for spec files (auto-generated) |
 | [JSON Schema](docs/spec.schema.json) | Machine-readable schema for editor autocomplete |
 

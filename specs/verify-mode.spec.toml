@@ -1,17 +1,10 @@
 #:schema ../docs/spec.schema.json
 
-# Verify mode — no worker, single-pass verification.
-# This spec verifies itself: it runs in verify mode and checks that
-# verify mode is correctly modeled in the type system and schema.
+# Verify mode — the simpler of qed's two execution modes.
+# This spec verifies that verify mode is correctly modeled at the type
+# level, enforced by the schema, and documented accurately.
 
 name = "verify-mode"
-
-[[criteria]]
-description = "SpecMode.verify exists as a constructor (the type system models verify mode)"
-
-[criteria.verify]
-type = "command"
-run = "grep -q '| verify' Qed/Types.lean"
 
 [[criteria]]
 description = "SpecMode has exactly two constructors: workerLoop and verify"
@@ -28,7 +21,7 @@ type = "command"
 run = "grep -q 'minItems' docs/spec.schema.json"
 
 [[criteria]]
-description = "Verify mode is documented in architecture.md"
+description = "Verify mode is documented as a separate execution path in architecture.md"
 
 [criteria.verify]
 type = "command"
@@ -36,25 +29,24 @@ run = "grep -q 'SpecMode.verify' docs/architecture.md"
 
 [[criteria]]
 description = """
-Verify mode implementation is correct and complete — single-pass \
-verification with no worker, no loop, no state machine dependency."""
+Verify mode design is correct and complete — single-pass verification \
+with no worker, no loop, no state machine dependency."""
 
 [criteria.verify]
 type = "agentReview"
 prompt = """
 Review the verify mode design across these files:
 
-1. Qed/Types.lean — SpecMode.verify constructor exists, Spec uses SpecMode
-2. DocGen/Schema.lean — JSON Schema makes worker optional, conditional
-   validation enforces ≥1 criteria when no worker
-3. docs/architecture.md — verify mode is documented as a separate execution
-   path from the worker loop
+1. Qed/Types.lean — SpecMode.verify constructor, Spec uses SpecMode
+2. DocGen/Schema.lean — worker is optional, conditional validation
+   enforces ≥1 criteria when no worker
+3. docs/architecture.md — verify mode documented as separate path
 
 Verify that:
-- The type system makes the two modes explicit (not implicit via Option)
-- LoopConfig (maxIterations, stuckThreshold) cannot exist without a worker
-- The verify mode path does not depend on StateMachine.lean at all
+- The two modes are explicit at the type level (sum type, not Option)
+- LoopConfig only exists inside workerLoop (cannot leak to verify mode)
+- The verify mode path does not depend on StateMachine.lean
 - Documentation accurately describes both modes
 
-Report any inconsistencies or missing pieces.
+Report any inconsistencies.
 """

@@ -12,8 +12,8 @@ type = "command"
 run = "lake build Qed.StateMachine"
 
 # --- Proof criteria ---
-# These verify the mathematical properties of the transition function.
 # Each corresponds to a theorem in Qed/Proofs/.
+# These are the mathematical guarantees that make the loop trustworthy.
 
 [[criteria]]
 description = "Terminal states are absorbing — transitioning from a terminal state always returns the same state unchanged"
@@ -55,7 +55,7 @@ type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.Termination.loop_terminates"
 
-# --- Agent review criterion ---
+# --- Agent review ---
 
 [[criteria]]
 description = "Transition function is correct, total, and deterministic"
