@@ -21,6 +21,7 @@ Qed/Proofs/
   StuckDetection.lean  Stuck iff same failures for stuckThreshold iterations
   NoSkip.lean          Cannot skip verification phase
   FinalStates.lean     Terminal states are absorbing
+  Invariants.lean      Determinism, ready transience, phase ordering, iteration bound
   Monotonic.lean       Iteration count is non-decreasing
   VerifyMode.lean      Verify mode type-level separation proofs
 Tests/
@@ -112,6 +113,10 @@ The `Qed/Proofs/` directory contains formal proofs about the state machine trans
 | `Termination.lean` | `fuel_decreases_on_retry` | The fuel measure (maxIterations - iteration) strictly decreases on retry |
 | `Termination.lean` | `loop_progress` | Each non-terminal step either terminates or increments iteration (bounded by maxIterations) |
 | `Termination.lean` | `loop_terminates` | Full termination: each step terminates or strictly decreases fuel (maxIterations - iteration) |
+| `Invariants.lean` | `transition_deterministic` | Equal inputs produce equal outputs — the transition function is deterministic |
+| `Invariants.lean` | `ready_unreachable` | No non-terminal transition produces `ready` — the initial state is visited exactly once |
+| `Invariants.lean` | `phase_monotonic` | State lifecycle phase (initial → working → terminal) never decreases |
+| `Invariants.lean` | `iteration_bounded` | Iteration count never exceeds `maxIterations` (given `maxIterations ≥ 1`) |
 | `VerifyMode.lean` | `verify_has_no_worker` | `SpecMode.verify` cannot carry a `WorkerConfig` or `LoopConfig` |
 | `VerifyMode.lean` | `verify_independent_of_loop` | Verify mode is independent of the worker loop machinery |
 

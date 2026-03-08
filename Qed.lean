@@ -9,4 +9,5 @@ import Qed.Proofs.Monotonic
 import Qed.Proofs.NoSkip
 import Qed.Proofs.StuckDetection
 import Qed.Proofs.Termination
+import Qed.Proofs.Invariants
 import Qed.Proofs.VerifyMode
