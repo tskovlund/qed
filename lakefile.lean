@@ -18,3 +18,9 @@ lean_exe «qed» where
 @[test_driver]
 lean_exe «tests» where
   root := `Tests.Main
+
+lean_lib «DocGen» where
+  roots := #[`DocGen.Schema, `DocGen.Markdown]
+
+lean_exe «docgen» where
+  root := `DocGen.Main
