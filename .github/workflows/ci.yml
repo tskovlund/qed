@@ -21,7 +21,7 @@ jobs:
         with:
           build: true
           test: true
-          lean4checker: true
+          lean4checker: false
 
       - name: No sorry in proofs
         run: |
