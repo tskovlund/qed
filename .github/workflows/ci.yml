@@ -33,6 +33,9 @@ jobs:
           fi
           echo "No sorry found"
 
+      - name: Build docgen
+        run: lake build docgen
+
       - name: Docs freshness
         run: |
           .lake/build/bin/docgen schema > /tmp/spec.schema.json
