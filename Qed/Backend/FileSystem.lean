@@ -14,26 +14,26 @@ structure FileSystemBackend where
   deriving Repr, BEq
 
 instance : Backend FileSystemBackend where
-  name fs := s!"filesystem({fs.baseDir})"
+  name backend := s!"filesystem({backend.baseDir})"
 
-  fetchSpec _fs specId := do
+  fetchSpec _backend specId := do
     let path := specId.value
     let contents ← IO.FS.readFile ⟨path⟩
     -- TODO: parse JSON into Spec once Parser is implemented (TSK-154)
     return .error s!"JSON parsing not yet implemented for: {contents.take 50}..."
 
-  reportResult _fs specId state := do
+  reportResult _backend specId state := do
     let resultPath := specId.value ++ ".result"
     IO.FS.writeFile ⟨resultPath⟩ (toString (repr state))
     return .ok
 
-  listSpecs fs := do
-    let baseDir := fs.baseDir
-    let entries ← System.FilePath.readDir ⟨baseDir⟩
-    let specs := entries.filter fun entry =>
-      entry.fileName.endsWith fs.extension
-    let ids := specs.map fun entry =>
-      SpecId.mk (baseDir ++ "/" ++ entry.fileName)
-    return .ok ids.toList
+  listSpecs backend := do
+    let baseDirectory := backend.baseDir
+    let entries ← System.FilePath.readDir ⟨baseDirectory⟩
+    let specFiles := entries.filter fun entry =>
+      entry.fileName.endsWith backend.extension
+    let identifiers := specFiles.map fun entry =>
+      SpecId.mk (baseDirectory ++ "/" ++ entry.fileName)
+    return .ok identifiers.toList
 
 end Qed.Backend
