@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Run build and tests before push.
 
+# Ensure lake is available (via devbox/elan)
+if ! command -v lake &>/dev/null; then
+  if command -v devbox &>/dev/null; then
+    eval "$(devbox shellenv 2>/dev/null)"
+  fi
+fi
+
 echo "pre-push: building..."
 lake build || exit 1
 
