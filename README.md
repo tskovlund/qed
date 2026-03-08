@@ -46,11 +46,11 @@ qed run state-machine.spec.toml
 
 | Type | Strategy | Guarantee |
 |------|----------|-----------|
-| `command` | Shell command, exit code | Deterministic |
-| `agentReview` | Independent LLM review | Probabilistic |
-| `property` | Hypothesis / QuickCheck | Probabilistic |
-| `proof` | Lean 4 / Coq / Agda | Mathematical |
 | `human` | Manual sign-off | Human judgment |
+| `agentReview` | Independent LLM review | Probabilistic |
+| `command` | Shell command, exit code | Deterministic |
+| `property` | Hypothesis / QuickCheck | Statistical |
+| `proof` | Lean 4 / Coq / Agda | Mathematical |
 
 ## Proven properties
 
