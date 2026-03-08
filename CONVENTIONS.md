@@ -1,6 +1,6 @@
 # Code Conventions
 
-Shared conventions for all tskovlund repositories, plus Lean 4 specifics for qed.
+Shared conventions for all tskovlund repositories.
 
 ## Code Quality
 
@@ -75,7 +75,7 @@ Shared conventions for all tskovlund repositories, plus Lean 4 specifics for qed
 ## Dependencies & Security
 
 - **Lockfiles always committed** — `uv.lock`, `package-lock.json`,
-  `flake.lock`, `lake-manifest.json`, etc. Reproducible builds
+  `flake.lock`, etc. Reproducible builds
 - **Pin direct dependencies to compatible ranges with major version upper
   bounds** — allow minor/patch updates, block major version bumps. Automated
   dependency tools (Dependabot, Renovate) handle bumps; upper bounds ensure they
@@ -106,12 +106,32 @@ Shared conventions for all tskovlund repositories, plus Lean 4 specifics for qed
 
 ### Universal Rules
 
-- **`lake build` as build gate** — must pass before any commit is merged
-- **`lake test` for fast feedback** — runs the test driver
+- **`make check` as universal validation gate** — lint + typecheck + test. Must
+  pass before any commit is merged. Same command runs locally and in CI
+- **`make test` for fast feedback** — unit tests only, runs in seconds
+- **`make test-integration` for container-based tests** — separated from unit
+  tests so the fast loop stays fast
 - **Offline-capable unit tests** — no network calls, mock external APIs. Unit
   tests must work on a plane
 - **CI parity** — developers run the exact same commands locally that CI runs.
-  Devbox ensures identical tooling everywhere
+  Devbox or Nix dev shells ensure identical tooling everywhere. No "works on my
+  machine" gaps
+
+### Per-Archetype Minimum Test Types
+
+| Archetype                              | Test types                                                                                                                            |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Python library/tool (cambr, mcp-score) | Unit (pytest), property-based (hypothesis) for pure functions                                                                         |
+| Static website (skovlund.dev)          | A11y (Playwright + axe-core, blocking), E2E navigation (Playwright), visual regression (`toHaveScreenshot()`, non-blocking initially) |
+| Nix configuration (nix-config)         | `nix flake check --all-systems`                                                                                                       |
+
+### Integration Test Infrastructure
+
+- **Testcontainers for container-based integration tests** — add only when repos
+  interact with external services (databases, message brokers, APIs)
+- **Dev shells set Podman env vars** — `DOCKER_HOST`,
+  `TESTCONTAINERS_RYUK_DISABLED` configured in Nix dev shells so Testcontainers
+  works with Podman out of the box
 
 ## Git & Workflow
 
@@ -125,14 +145,15 @@ Shared conventions for all tskovlund repositories, plus Lean 4 specifics for qed
 - **Diataxis framework** — tutorials, how-to guides, reference, explanation.
   Use it as a thinking tool when writing docs, not a rigid filing system
 - **README as landing page** — what the project is, why it matters, quick start
-  (3-5 commands). Keep it lean. The README sells, `docs/` teaches
+  (3–5 commands). Keep it lean. The README sells, `docs/` teaches
 - **Detailed docs in `docs/`** — getting started, architecture, reference, and
   how-to guides live in `docs/` and are linked from the README. For small repos
   where the README already covers everything, `docs/` is not required
 - **CONTRIBUTING.md** when external contributors are expected — references
   CONVENTIONS.md for standards, covers dev setup and PR process
-- **Author section at the bottom of every README** — always present. Licensed
-  repos also have a License section (linking to the LICENSE file) after it
+- **Author section at the bottom of every README** — always present. Format:
+  `Name — [site](url) · [email](mailto:email)`. Licensed repos also have a
+  License section (linking to the LICENSE file) after it
 
 ## Project Structure
 
@@ -140,11 +161,16 @@ Shared conventions for all tskovlund repositories, plus Lean 4 specifics for qed
   Python, standard framework structures elsewhere
 - **AGENTS.md in every repo** with a CLAUDE.md symlink — the canonical file for
   AI agent instructions
+- **Shared CI via `tskovlund/.github`** — reusable workflows for common
+  patterns. Repos reference shared workflows instead of duplicating CI
+  configuration
 - **Automate enforcement** — CI checks, pre-commit/pre-push hooks, linting,
   and type checking should enforce every rule that can be checked automatically
 - **Conventions belong in the repo** — each repo includes the relevant subset
   of these conventions in its own docs. Redundancy across repos is intentional
   so that every contributor picks them up
+
+<!-- Language-specific conventions are appended per-repo by the sync workflow -->
 
 ## Lean 4
 
