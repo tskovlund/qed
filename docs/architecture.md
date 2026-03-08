@@ -119,18 +119,6 @@ def loadSpec (path : System.FilePath) : IO (Except String Spec)
 def listSpecs (directory : System.FilePath) (extension : String) : IO (Except String (List System.FilePath))
 ```
 
-## Proven properties
-
-The transition function has formal proofs verified by Lean 4's kernel:
-
-| Property | File | Statement |
-|----------|------|-----------|
-| Terminal states are absorbing | `Qed/Proofs/FinalStates.lean` | Transitioning from a terminal state always returns the same state |
-| Monotonic iteration count | `Qed/Proofs/Monotonic.lean` | Iteration count never decreases across transitions |
-| No skipped verification | `Qed/Proofs/NoSkip.lean` | Cannot reach `passed` without going through `verifying` |
-| Stuck detection correctness | `Qed/Proofs/StuckDetection.lean` | `stuck` iff same failures for `stuckThreshold` consecutive iterations |
-| Termination | `Qed/Proofs/Termination.lean` | The loop always reaches a terminal state within `maxIterations` steps |
-
 ## Pure core, IO shell
 
 The architecture follows a strict separation:
@@ -138,7 +126,7 @@ The architecture follows a strict separation:
 | Layer | IO? | What lives here |
 |-------|-----|-----------------|
 | **Pure core** | No | Types, StateMachine, Proofs |
-| **IO shell** | Yes | Parser, Verifier, Backend instances, CLI |
+| **IO shell** | Yes | Parser, Verifier, SpecLoader, CLI |
 
 The pure core is where all proofs live. It has no side effects, no process spawning, no file access. The IO shell wraps the pure core with real-world effects — parsing files, running commands, reporting results.
 
