@@ -29,7 +29,7 @@ def transition (config : LoopConfig) (state : LoopState) (context : LoopContext)
     (event : LoopEvent) : LoopState × LoopContext
 ```
 
-All proofs reason about this function. IO (process spawning, file reading) lives in the outer shell.
+Worker loop proofs (termination, stuck detection, transition correctness) reason about this function. IO (process spawning, file reading) lives in the outer shell.
 
 ### State diagram
 
