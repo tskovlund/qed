@@ -7,7 +7,7 @@ Follow the code standards in [CONVENTIONS.md](CONVENTIONS.md).
 ## Architecture
 
 ```
-Main.lean              CLI entry point (qed run, qed parse, qed version)
+Main.lean              CLI entry point (qed run, qed verify, qed parse, qed version, qed help)
 Qed/
   Types.lean           Core types (VerifyType, SpecMode, Spec, LoopState)
   SpecLoader.lean      Load and list spec files from disk
@@ -15,7 +15,7 @@ Qed/
   TomlConverter.lean   TOML → JSON conversion via Python's tomllib
   StateMachine.lean    Pure transition function (proven core)
   Verifier.lean        Verification dispatch (command, agent_review, property, proof)
-  Output.lean          JSON result serialization
+  Output.lean          JSON result serialization (--json flag support)
 Qed/Proofs/
   Termination.lean     Loop termination, progress, and fuel decrease
   StuckDetection.lean  Stuck iff same failures for stuckThreshold iterations
@@ -30,6 +30,7 @@ Tests/
   Parser.lean          JSON parser tests (all verify types, error cases)
   Integration.lean     TOML converter and SpecLoader end-to-end tests
   Verifier.lean        Command verifier tests (shell execution, exit codes, output capture)
+  Cli.lean             End-to-end CLI tests (invoke built binary, check output/exit codes)
 specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry
   cli.spec.toml            CLI + verifier + output correctness — agentReview
