@@ -46,8 +46,8 @@ theorem ready_unreachable (config : LoopConfig) (state : LoopState)
   unfold transition newFailureCount
   simp only [hnonterm, Bool.false_eq_true, ↓reduceIte]
   cases state with
-  | ready => cases event <;> simp [LoopState.isTerminal]
-  | workerRunning n => cases event <;> simp [LoopState.isTerminal]
+  | ready => cases event <;> simp
+  | workerRunning n => cases event <;> simp
   | verifying n =>
     cases event with
     | allPassed => simp

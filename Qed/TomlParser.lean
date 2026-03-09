@@ -9,23 +9,23 @@ open Lean
 /-- Skip spaces and tabs from position, return new position. -/
 partial def skipWs (s : String) (i : Nat) : Nat :=
   if i < s.utf8ByteSize then
-    let c := s.get ⟨i⟩
+    let c := String.Pos.Raw.get s ⟨i⟩
     if c == ' ' || c == '\t' then skipWs s (i + 1) else i
   else i
 
 /-- Skip whitespace including newlines. -/
 partial def skipWsNl (s : String) (i : Nat) : Nat :=
   if i < s.utf8ByteSize then
-    let c := s.get ⟨i⟩
+    let c := String.Pos.Raw.get s ⟨i⟩
     if c == ' ' || c == '\t' || c == '\n' || c == '\r' then skipWsNl s (i + 1) else i
   else i
 
 /-- Skip from # to end of line. -/
 partial def skipComment (s : String) (i : Nat) : Nat :=
-  if i < s.utf8ByteSize && s.get ⟨i⟩ == '#' then
+  if i < s.utf8ByteSize && String.Pos.Raw.get s ⟨i⟩ == '#' then
     let rec go (j : Nat) : Nat :=
       if j < s.utf8ByteSize then
-        if s.get ⟨j⟩ == '\n' then j + 1 else go (j + 1)
+        if String.Pos.Raw.get s ⟨j⟩ == '\n' then j + 1 else go (j + 1)
       else j
     go i
   else i
@@ -39,7 +39,7 @@ partial def skipBlank (s : String) (i : Nat) : Nat :=
 partial def parseBareKey (s : String) (i : Nat) : Except String (String × Nat) :=
   let rec go (j : Nat) (acc : String) : Except String (String × Nat) :=
     if j < s.utf8ByteSize then
-      let c := s.get ⟨j⟩
+      let c := String.Pos.Raw.get s ⟨j⟩
       if c.isAlphanum || c == '-' || c == '_' then go (j + 1) (acc.push c)
       else if acc.isEmpty then .error s!"expected key at byte {j}"
       else .ok (acc, j)
@@ -49,25 +49,25 @@ partial def parseBareKey (s : String) (i : Nat) : Except String (String × Nat) 
 
 /-- Parse a basic (double-quoted) string with escapes and multi-line support. -/
 partial def parseString (s : String) (i : Nat) : Except String (String × Nat) :=
-  if i >= s.utf8ByteSize || s.get ⟨i⟩ != '"' then .error "expected '\"'"
+  if i >= s.utf8ByteSize || String.Pos.Raw.get s ⟨i⟩ != '"' then .error "expected '\"'"
   else
     -- Check for multi-line """
-    let isMulti := i + 2 < s.utf8ByteSize && s.get ⟨i + 1⟩ == '"' && s.get ⟨i + 2⟩ == '"'
+    let isMulti := i + 2 < s.utf8ByteSize && String.Pos.Raw.get s ⟨i + 1⟩ == '"' && String.Pos.Raw.get s ⟨i + 2⟩ == '"'
     if isMulti then
       -- Skip opening """ and optional first newline
       let start := i + 3
-      let start := if start < s.utf8ByteSize && s.get ⟨start⟩ == '\n' then start + 1
-        else if start < s.utf8ByteSize && s.get ⟨start⟩ == '\r' then
-          if start + 1 < s.utf8ByteSize && s.get ⟨start + 1⟩ == '\n' then start + 2 else start + 1
+      let start := if start < s.utf8ByteSize && String.Pos.Raw.get s ⟨start⟩ == '\n' then start + 1
+        else if start < s.utf8ByteSize && String.Pos.Raw.get s ⟨start⟩ == '\r' then
+          if start + 1 < s.utf8ByteSize && String.Pos.Raw.get s ⟨start + 1⟩ == '\n' then start + 2 else start + 1
         else start
       let rec go (j : Nat) (acc : String) : Except String (String × Nat) :=
         if j >= s.utf8ByteSize then .error "unterminated multi-line string"
         else
-          let c := s.get ⟨j⟩
-          if c == '"' && j + 2 < s.utf8ByteSize && s.get ⟨j + 1⟩ == '"' && s.get ⟨j + 2⟩ == '"' then
+          let c := String.Pos.Raw.get s ⟨j⟩
+          if c == '"' && j + 2 < s.utf8ByteSize && String.Pos.Raw.get s ⟨j + 1⟩ == '"' && String.Pos.Raw.get s ⟨j + 2⟩ == '"' then
             .ok (acc, j + 3)
           else if c == '\\' && j + 1 < s.utf8ByteSize then
-            let ec := s.get ⟨j + 1⟩
+            let ec := String.Pos.Raw.get s ⟨j + 1⟩
             match ec with
             | 'n' => go (j + 2) (acc.push '\n')
             | 't' => go (j + 2) (acc.push '\t')
@@ -78,7 +78,7 @@ partial def parseString (s : String) (i : Nat) : Except String (String × Nat) :
               -- Line-ending backslash: skip whitespace
               let rec skipLws (k : Nat) : Nat :=
                 if k < s.utf8ByteSize then
-                  let ch := s.get ⟨k⟩
+                  let ch := String.Pos.Raw.get s ⟨k⟩
                   if ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' then skipLws (k + 1) else k
                 else k
               go (skipLws (j + 2)) acc
@@ -90,11 +90,11 @@ partial def parseString (s : String) (i : Nat) : Except String (String × Nat) :
       let rec goSingle (j : Nat) (acc : String) : Except String (String × Nat) :=
         if j >= s.utf8ByteSize then .error "unterminated string"
         else
-          let c := s.get ⟨j⟩
+          let c := String.Pos.Raw.get s ⟨j⟩
           if c == '"' then .ok (acc, j + 1)
           else if c == '\n' then .error "newline in single-line string"
           else if c == '\\' && j + 1 < s.utf8ByteSize then
-            let ec := s.get ⟨j + 1⟩
+            let ec := String.Pos.Raw.get s ⟨j + 1⟩
             match ec with
             | 'n' => goSingle (j + 2) (acc.push '\n')
             | 't' => goSingle (j + 2) (acc.push '\t')
@@ -107,7 +107,7 @@ partial def parseString (s : String) (i : Nat) : Except String (String × Nat) :
 
 /-- Parse a key (bare or quoted). -/
 def parseKey (s : String) (i : Nat) : Except String (String × Nat) :=
-  if i < s.utf8ByteSize && s.get ⟨i⟩ == '"' then parseString s i
+  if i < s.utf8ByteSize && String.Pos.Raw.get s ⟨i⟩ == '"' then parseString s i
   else parseBareKey s i
 
 /-- Parse a dotted key like `criteria.verify`. -/
@@ -117,7 +117,7 @@ partial def parseDottedKey (s : String) (i : Nat) : Except String (List String �
   | .ok (first, j) =>
     let rec go (j : Nat) (acc : List String) : Except String (List String × Nat) :=
       let j := skipWs s j
-      if j < s.utf8ByteSize && s.get ⟨j⟩ == '.' then
+      if j < s.utf8ByteSize && String.Pos.Raw.get s ⟨j⟩ == '.' then
         let j := skipWs s (j + 1)
         match parseKey s j with
         | .error e => .error e
@@ -128,14 +128,14 @@ partial def parseDottedKey (s : String) (i : Nat) : Except String (List String �
 /-- Parse an integer (optional sign, underscores allowed). -/
 partial def parseInteger (s : String) (i : Nat) : Except String (Int × Nat) :=
   let (neg, i) := if i < s.utf8ByteSize then
-    match s.get ⟨i⟩ with
+    match String.Pos.Raw.get s ⟨i⟩ with
     | '+' => (false, i + 1)
     | '-' => (true, i + 1)
     | _ => (false, i)
   else (false, i)
   let rec go (j : Nat) (acc : String) : Except String (Int × Nat) :=
     if j < s.utf8ByteSize then
-      let c := s.get ⟨j⟩
+      let c := String.Pos.Raw.get s ⟨j⟩
       if c.isDigit then go (j + 1) (acc.push c)
       else if c == '_' then go (j + 1) acc
       else match acc.toInt? with
@@ -158,16 +158,16 @@ inductive TomlValue where
 def parseValue (s : String) (i : Nat) : Except String (TomlValue × Nat) :=
   if i >= s.utf8ByteSize then .error "unexpected end of input"
   else
-    let c := s.get ⟨i⟩
+    let c := String.Pos.Raw.get s ⟨i⟩
     if c == '"' then
       match parseString s i with
       | .ok (v, j) => .ok (.str v, j)
       | .error e => .error e
     else if c == 't' && i + 3 < s.utf8ByteSize &&
-        s.get ⟨i + 1⟩ == 'r' && s.get ⟨i + 2⟩ == 'u' && s.get ⟨i + 3⟩ == 'e' then
+        String.Pos.Raw.get s ⟨i + 1⟩ == 'r' && String.Pos.Raw.get s ⟨i + 2⟩ == 'u' && String.Pos.Raw.get s ⟨i + 3⟩ == 'e' then
       .ok (.bool true, i + 4)
     else if c == 'f' && i + 4 < s.utf8ByteSize &&
-        s.get ⟨i + 1⟩ == 'a' && s.get ⟨i + 2⟩ == 'l' && s.get ⟨i + 3⟩ == 's' && s.get ⟨i + 4⟩ == 'e' then
+        String.Pos.Raw.get s ⟨i + 1⟩ == 'a' && String.Pos.Raw.get s ⟨i + 2⟩ == 'l' && String.Pos.Raw.get s ⟨i + 3⟩ == 's' && String.Pos.Raw.get s ⟨i + 4⟩ == 'e' then
       .ok (.bool false, i + 5)
     else if c.isDigit || c == '+' || c == '-' then
       match parseInteger s i with
@@ -180,10 +180,10 @@ def skipToEol (s : String) (i : Nat) : Except String Nat :=
   let i := skipComment s (skipWs s i)
   if i >= s.utf8ByteSize then .ok i
   else
-    let c := s.get ⟨i⟩
+    let c := String.Pos.Raw.get s ⟨i⟩
     if c == '\n' then .ok (i + 1)
     else if c == '\r' then
-      if i + 1 < s.utf8ByteSize && s.get ⟨i + 1⟩ == '\n' then .ok (i + 2) else .ok (i + 1)
+      if i + 1 < s.utf8ByteSize && String.Pos.Raw.get s ⟨i + 1⟩ == '\n' then .ok (i + 2) else .ok (i + 1)
     else .error s!"expected end of line at byte {i}, got '{c}'"
 
 /-- Set a value at a dotted key path, creating intermediate tables. -/
@@ -270,19 +270,19 @@ inductive Ctx where
 
 /-- Parse a full TOML document. -/
 partial def parseDoc (s : String) : Except String (List (String × TomlValue)) :=
-  let rec go (i : Nat) (pairs : List (String × TomlValue)) (ctx : Ctx)
+  let rec go (i : Nat) (pairs : List (String × TomlValue)) (context : Ctx)
       : Except String (List (String × TomlValue)) :=
     let i := skipBlank s i
     if i >= s.utf8ByteSize then .ok pairs
-    else if s.get ⟨i⟩ == '[' then
-      if i + 1 < s.utf8ByteSize && s.get ⟨i + 1⟩ == '[' then
+    else if String.Pos.Raw.get s ⟨i⟩ == '[' then
+      if i + 1 < s.utf8ByteSize && String.Pos.Raw.get s ⟨i + 1⟩ == '[' then
         -- [[array.of.tables]]
         let j := skipWs s (i + 2)
         match parseDottedKey s j with
         | .error e => .error e
         | .ok (keys, j) =>
           let j := skipWs s j
-          if j + 1 < s.utf8ByteSize && s.get ⟨j⟩ == ']' && s.get ⟨j + 1⟩ == ']' then
+          if j + 1 < s.utf8ByteSize && String.Pos.Raw.get s ⟨j⟩ == ']' && String.Pos.Raw.get s ⟨j + 1⟩ == ']' then
             match skipToEol s (j + 2) with
             | .error e => .error e
             | .ok j =>
@@ -297,14 +297,14 @@ partial def parseDoc (s : String) : Except String (List (String × TomlValue)) :
         | .error e => .error e
         | .ok (keys, j) =>
           let j := skipWs s j
-          if j < s.utf8ByteSize && s.get ⟨j⟩ == ']' then
+          if j < s.utf8ByteSize && String.Pos.Raw.get s ⟨j⟩ == ']' then
             match skipToEol s (j + 1) with
             | .error e => .error e
             | .ok j =>
               -- Check if this table is a sub-table of the current array context.
               -- e.g., [criteria.verify] after [[criteria]] means we're setting
               -- into the last entry of the criteria array.
-              match ctx with
+              match context with
               | .arr arrKeys _ =>
                 if keys.length > arrKeys.length &&
                    keys.take arrKeys.length == arrKeys then
@@ -326,7 +326,7 @@ partial def parseDoc (s : String) : Except String (List (String × TomlValue)) :
       | .error e => .error e
       | .ok (keys, j) =>
         let j := skipWs s j
-        if j < s.utf8ByteSize && s.get ⟨j⟩ == '=' then
+        if j < s.utf8ByteSize && String.Pos.Raw.get s ⟨j⟩ == '=' then
           let j := skipWs s (j + 1)
           match parseValue s j with
           | .error e => .error e
@@ -334,13 +334,13 @@ partial def parseDoc (s : String) : Except String (List (String × TomlValue)) :
             match skipToEol s j with
             | .error e => .error e
             | .ok j =>
-              let result := match ctx with
+              let result := match context with
                 | .root => setNested pairs keys value
-                | .tbl tk => setNested pairs (tk ++ keys) value
-                | .arr ak sk => setInLastArray pairs ak (sk ++ keys) value
+                | .tbl tableKeys => setNested pairs (tableKeys ++ keys) value
+                | .arr arrayKeys subKeys => setInLastArray pairs arrayKeys (subKeys ++ keys) value
               match result with
               | .error e => .error e
-              | .ok p => go j p ctx
+              | .ok p => go j p context
         else .error s!"expected '=' at byte {j}"
   go 0 [] .root
 

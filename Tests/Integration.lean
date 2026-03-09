@@ -6,7 +6,7 @@ def testTomlToJsonConvertsValidToml : IO Bool := do
   -- Arrange
   let toml := "name = \"hello\"\n\n[[criteria]]\ndescription = \"builds\"\n\n[criteria.verify]\ntype = \"command\"\nrun = \"make\"\n"
   -- Act
-  let result ← TomlConverter.tomlToJson toml
+  let result := TomlConverter.tomlToJson toml
   -- Assert
   match result with
   | .ok json =>
@@ -19,7 +19,7 @@ def testTomlToJsonErrorsOnInvalidToml : IO Bool := do
   -- Arrange
   let toml := "[[[invalid toml"
   -- Act
-  let result ← TomlConverter.tomlToJson toml
+  let result := TomlConverter.tomlToJson toml
   -- Assert
   match result with
   | .ok _ => return false
@@ -66,7 +66,7 @@ def testTomlMultiLineStringPreservesContent : IO Bool := do
   -- Arrange — multi-line strings are the main reason TOML exists for specs
   let toml := "name = \"review\"\n\n[[criteria]]\ndescription = \"code review\"\n\n[criteria.verify]\ntype = \"agentReview\"\nprompt = \"\"\"\nReview the code.\nCheck for:\n1. Correctness\n2. Style\n\"\"\"\n"
   -- Act
-  match ← TomlConverter.tomlToJson toml with
+  match TomlConverter.tomlToJson toml with
   | .error e =>
     IO.eprintln s!"  toml error: {e}"
     return false

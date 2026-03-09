@@ -49,7 +49,6 @@ stateDiagram-v2
     passed --> [*]
     stuck --> [*]
     maxIterationsReached --> [*]
-    escalated --> [*]
 ```
 
 ### Events
@@ -59,7 +58,6 @@ stateDiagram-v2
 | `workerDone` | Worker has completed its run |
 | `allPassed` | All auto-verifiable criteria passed |
 | `someFailed` | Some criteria failed (carries the failing descriptions) |
-| `escalate` | External request for human intervention |
 
 ### Terminal states
 
@@ -70,7 +68,7 @@ Terminal states are **absorbing** — once reached, all events are ignored. This
 | `passed` | All criteria satisfied |
 | `stuck` | Same failures repeated for `stuckThreshold` consecutive iterations |
 | `maxIterationsReached` | Hit the iteration cap |
-| `escalated` | Escalated for human intervention |
+| `escalated` | Reserved for future human-in-the-loop escalation |
 
 ### Stuck detection
 
@@ -126,8 +124,8 @@ The architecture follows a strict separation:
 
 | Layer | IO? | What lives here |
 |-------|-----|-----------------|
-| **Pure core** | No | Types, StateMachine, Proofs |
-| **IO shell** | Yes | Parser, TomlConverter, Verifier, SpecLoader, CLI |
+| **Pure core** | No | Types, StateMachine, Parser, TomlParser, Output, Proofs |
+| **IO shell** | Yes | Verifier, SpecLoader, TomlConverter, CLI |
 
 The pure core is where all proofs live. It has no side effects, no process spawning, no file access. The IO shell wraps the pure core with real-world effects — parsing files, running commands, reporting results.
 
