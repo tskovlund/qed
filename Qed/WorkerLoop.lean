@@ -2,24 +2,18 @@ import Lean.Data.Json
 import Qed.Types
 import Qed.StateMachine
 import Qed.Verifier
+import Qed.Output
 
 namespace Qed.WorkerLoop
 
 open Qed
 
-/-- Status indicator for a verification result. -/
-def statusIndicator : VerificationResult → String
-  | .pass _ => "PASS"
-  | .fail _ => "FAIL"
-  | .needsHuman _ => "NEEDS-HUMAN"
-  | .skipped _ => "SKIP"
-
-/-- Extract the detail string from a VerificationResult. -/
-def resultDetails : VerificationResult → String
-  | .pass details => details
-  | .fail details => details
-  | .needsHuman instruction => instruction
-  | .skipped reason => reason
+/-- Thin wrapper around StateMachine.transition. The worker loop calls this
+    exclusively — never StateMachine.transition directly. This lets us prove
+    that the loop drives the proven state machine and nothing else. -/
+def step (config : LoopConfig) (state : LoopState) (context : StateMachine.LoopContext)
+    (event : StateMachine.LoopEvent) : LoopState × StateMachine.LoopContext :=
+  StateMachine.transition config state context event
 
 /-- Build the full prompt for a worker iteration, appending failure feedback. -/
 def buildPrompt (basePrompt : String)
@@ -28,7 +22,7 @@ def buildPrompt (basePrompt : String)
     basePrompt
   else
     let failureLines := failures.map fun (desc, result) =>
-      s!"- {desc}: {resultDetails result}"
+      s!"- {desc}: {Output.resultDetails result}"
     basePrompt ++ s!"\n\n## Previous failures (iteration {iteration})\n\nThe following criteria failed. Fix these issues:\n\n" ++
       String.intercalate "\n" failureLines
 
@@ -39,8 +33,8 @@ private def writeFailuresFile (failures : List (String × VerificationResult))
   let entries := failures.map fun (desc, result) =>
     Lean.Json.mkObj [
       ("description", Lean.Json.str desc),
-      ("status", Lean.Json.str (statusIndicator result)),
-      ("details", Lean.Json.str (resultDetails result))]
+      ("status", Lean.Json.str (Output.statusIndicator result)),
+      ("details", Lean.Json.str (Output.resultDetails result))]
   let json := Lean.Json.arr entries.toArray
   IO.FS.writeFile path (json.pretty 2)
   return path
@@ -50,7 +44,7 @@ private def shellCmd : String × String :=
   if System.Platform.isWindows then ("cmd", "/c") else ("/bin/sh", "-c")
 
 /-- Quote a string for shell use (single-quote wrapping with escape). -/
-private def shellQuote (s : String) : String :=
+def shellQuote (s : String) : String :=
   "'" ++ s.replace "'" "'\\''" ++ "'"
 
 /-- Spawn a worker process with the appropriate env vars and prompt handling. -/
@@ -84,7 +78,7 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
   let mut lastFailures : List (String × VerificationResult) := []
   let mut allResults : List (String × VerificationResult) := []
   -- Transition from ready to workerRunning
-  let (newState, newContext) := StateMachine.transition loopConfig state context .workerDone
+  let (newState, newContext) := step loopConfig state context .workerDone
   state := newState
   context := newContext
   if !jsonOutput then
@@ -106,7 +100,7 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
         if !stderr.isEmpty then
           IO.println s!"  Worker stderr: {stderr.trimAscii.take 200}"
       -- Worker done → transition to verifying
-      let (s, c) := StateMachine.transition loopConfig state context .workerDone
+      let (s, c) := step loopConfig state context .workerDone
       state := s
       context := c
     | .verifying _ =>
@@ -117,15 +111,15 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
       let failed := results.filter fun (_, result) => result.isFailed
       if !jsonOutput then
         for (description, result) in results do
-          IO.println s!"    [{statusIndicator result}] {description}"
+          IO.println s!"    [{Output.statusIndicator result}] {description}"
       if failed.isEmpty then
-        let (s, c) := StateMachine.transition loopConfig state context .allPassed
+        let (s, c) := step loopConfig state context .allPassed
         state := s
         context := c
       else
         lastFailures := failed
         let failureDescs := failed.map fun (desc, _) => desc
-        let (s, c) := StateMachine.transition loopConfig state context (.someFailed failureDescs)
+        let (s, c) := step loopConfig state context (.someFailed failureDescs)
         state := s
         context := c
         if !jsonOutput && !state.isTerminal then
@@ -147,8 +141,8 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
       ("criteria", Lean.Json.arr (allResults.map fun (desc, result) =>
         Lean.Json.mkObj [
           ("description", Lean.Json.str desc),
-          ("status", Lean.Json.str (statusIndicator result)),
-          ("details", Lean.Json.str (resultDetails result))
+          ("status", Lean.Json.str (Output.statusIndicator result)),
+          ("details", Lean.Json.str (Output.resultDetails result))
         ]).toArray)]
     IO.println (resultJson.pretty 2)
   else

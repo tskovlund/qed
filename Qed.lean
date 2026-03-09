@@ -14,3 +14,4 @@ import Qed.Proofs.StuckDetection
 import Qed.Proofs.Termination
 import Qed.Proofs.Invariants
 import Qed.Proofs.VerifyMode
+import Qed.Proofs.WorkerLoopProperties

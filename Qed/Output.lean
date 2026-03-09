@@ -5,15 +5,22 @@ namespace Qed.Output
 
 open Lean Qed
 
+/-- Human-readable status indicator for display output (PASS/FAIL/etc). -/
+def statusIndicator : VerificationResult → String
+  | .pass _ => "PASS"
+  | .fail _ => "FAIL"
+  | .needsHuman _ => "NEEDS-HUMAN"
+  | .skipped _ => "SKIP"
+
 /-- Serialize a VerificationResult status to a JSON-friendly string. -/
-private def resultStatus : VerificationResult → String
+def resultStatus : VerificationResult → String
   | .pass _ => "pass"
   | .fail _ => "fail"
   | .needsHuman _ => "needs-human"
   | .skipped _ => "skipped"
 
 /-- Extract the detail/message string from a VerificationResult. -/
-private def resultDetails : VerificationResult → String
+def resultDetails : VerificationResult → String
   | .pass details => details
   | .fail details => details
   | .needsHuman instruction => instruction
