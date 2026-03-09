@@ -29,11 +29,12 @@ def buildPrompt (basePrompt : String)
 /-- Write failures to a JSON file for Tier 2 workers. Returns the file path. -/
 private def writeFailuresFile (failures : List (String × VerificationResult))
     (iteration : Nat) : IO String := do
-  let path := s!"/tmp/qed-failures-{iteration}.json"
+  let pid ← IO.Process.getPID
+  let path := s!"/tmp/qed-failures-{pid}-{iteration}.json"
   let entries := failures.map fun (desc, result) =>
     Lean.Json.mkObj [
       ("description", Lean.Json.str desc),
-      ("status", Lean.Json.str (Output.statusIndicator result)),
+      ("status", Lean.Json.str (Output.resultStatus result)),
       ("details", Lean.Json.str (Output.resultDetails result))]
   let json := Lean.Json.arr entries.toArray
   IO.FS.writeFile path (json.pretty 2)
@@ -77,7 +78,9 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
   let mut context : StateMachine.LoopContext := StateMachine.LoopContext.initial
   let mut lastFailures : List (String × VerificationResult) := []
   let mut allResults : List (String × VerificationResult) := []
-  -- Transition from ready to workerRunning
+  -- Transition from ready to workerRunning. The event is irrelevant here:
+  -- the state machine treats ready as a catch-all (| .ready, _ =>), so any
+  -- event triggers the transition. We use .workerDone as a convention.
   let (newState, newContext) := step loopConfig state context .workerDone
   state := newState
   context := newContext
@@ -141,7 +144,7 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
       ("criteria", Lean.Json.arr (allResults.map fun (desc, result) =>
         Lean.Json.mkObj [
           ("description", Lean.Json.str desc),
-          ("status", Lean.Json.str (Output.statusIndicator result)),
+          ("status", Lean.Json.str (Output.resultStatus result)),
           ("details", Lean.Json.str (Output.resultDetails result))
         ]).toArray)]
     IO.println (resultJson.pretty 2)
