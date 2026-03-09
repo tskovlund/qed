@@ -11,12 +11,13 @@ Main.lean              CLI entry point (qed run, qed verify, qed parse, qed vers
 Qed/
   Types.lean           Core types (VerifyType, SpecMode, Spec, LoopState)
   SpecLoader.lean      Load and list spec files from disk
-  Parser.lean          JSON spec parser (Lean.Json → Spec)
+  Parser.lean          JSON spec parser (Lean.Json → Spec, parseFromJson for roundtrip proofs)
   TomlParser.lean      Pure Lean TOML parser (no external dependencies)
   TomlConverter.lean   TOML → JSON conversion (thin wrapper around TomlParser)
   StateMachine.lean    Pure transition function (proven core)
   Verifier.lean        Verification dispatch (command, agent, property, proof)
   Output.lean          JSON result serialization (--json flag support)
+  Serializer.lean      Spec → JSON serialization (roundtrip-proven against Parser)
 Qed/Proofs/
   Termination.lean     Loop termination, progress, and fuel decrease
   StuckDetection.lean  Stuck iff same failures for stuckThreshold iterations
@@ -30,6 +31,7 @@ Qed/Proofs/
   ParserProperties.lean   parseCiSchedule completeness and rejection
   TomlProperties.lean     setNested/appendArray structural integrity
   TomlJsonValidity.lean   TOML→JSON pipeline totality and error propagation
+  Roundtrip.lean          Serializer↔parser roundtrip (specToJson ∘ parseFromJson = id)
 Tests/
   Main.lean            Test runner (imports all test modules)
   Types.lean           isTerminal behavior tests
@@ -42,7 +44,7 @@ specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry
   cli.spec.toml            CLI + verifier + output correctness — 1 proof + agent
   state-machine.spec.toml  State machine correctness — 5 proofs + agent
-  parser.spec.toml         Parser correctness — 2 proofs + agent
+  parser.spec.toml         Parser correctness — 3 proofs + agent
   verify-mode.spec.toml    Verify mode correctness — 2 proofs + command + agent
   docs.spec.toml           Documentation accuracy — freshness + agent
 DocGen/
@@ -158,6 +160,12 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `TomlJsonValidity.lean` | `toJson_array` | Arrays map to JSON arrays via toJsonList |
 | `TomlJsonValidity.lean` | `toJson_empty_table` | Empty table produces empty JSON object |
 | `TomlJsonValidity.lean` | `toJson_empty_array` | Empty array produces empty JSON array |
+| `Roundtrip.lean` | `ciSchedule_roundtrip` | parseCiSchedule inverts ciScheduleToString |
+| `Roundtrip.lean` | `verifyType_roundtrip` | parseVerifyType inverts verifyTypeToJson for every constructor |
+| `Roundtrip.lean` | `criterion_roundtrip` | parseCriterion inverts criterionToJson |
+| `Roundtrip.lean` | `workerConfig_roundtrip` | parseWorkerConfig inverts workerConfigToJson |
+| `Roundtrip.lean` | `criteria_list_roundtrip` | Element-wise roundtrip lifts to list-level mapM roundtrip |
+| `Roundtrip.lean` | `spec_roundtrip` | **Main theorem:** parseFromJson inverts specToJson for all well-formed specs |
 
 ## Repo-specific conventions
 

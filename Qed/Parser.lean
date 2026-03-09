@@ -6,19 +6,19 @@ namespace Qed.Parser
 open Lean Qed
 
 /-- Helper: get a required string field from a JSON object. -/
-private def requireString (json : Json) (field : String) : Except String String :=
+def requireString (json : Json) (field : String) : Except String String :=
   match json.getObjValAs? String field with
   | .ok value => .ok value
   | .error _ => .error s!"missing or invalid field '{field}': expected string"
 
 /-- Helper: get an optional string field with a default. -/
-private def optionalString (json : Json) (field : String) (default : String) : String :=
+def optionalString (json : Json) (field : String) (default : String) : String :=
   match json.getObjValAs? String field with
   | .ok value => value
   | .error _ => default
 
 /-- Helper: get an optional natural number field with a default. -/
-private def optionalNat (json : Json) (field : String) (default : Nat) : Except String Nat :=
+def optionalNat (json : Json) (field : String) (default : Nat) : Except String Nat :=
   match json.getObjValAs? Nat field with
   | .ok value => .ok value
   | .error _ =>
@@ -83,9 +83,8 @@ def parseWorkerConfig (json : Json) : Except String WorkerConfig := do
   let timeout ← optionalNat json "timeout" 3600
   .ok { command, workdir, timeout }
 
-/-- Parse a Spec from a JSON string. -/
-def parseJson (input : String) : Except String Spec := do
-  let json ← Json.parse input
+/-- Parse a Spec from a parsed JSON value. -/
+def parseFromJson (json : Json) : Except String Spec := do
   let name ← requireString json "name"
 
   -- Parse criteria
@@ -110,5 +109,10 @@ def parseJson (input : String) : Except String Spec := do
         .ok SpecMode.verify
 
   .ok { name, mode, criteria }
+
+/-- Parse a Spec from a JSON string. -/
+def parseJson (input : String) : Except String Spec := do
+  let json ← Json.parse input
+  parseFromJson json
 
 end Qed.Parser
