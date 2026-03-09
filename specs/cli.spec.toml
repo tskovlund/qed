@@ -8,7 +8,7 @@ name = "cli-correctness"
 description = "CLI argument parsing, dispatch, and error handling are correct"
 
 [criteria.verify]
-type = "agentReview"
+type = "agent"
 prompt = """
 Review Main.lean and Qed/Output.lean. Verify:
 
@@ -30,7 +30,7 @@ Report any unreachable code paths, missing error handling, or UX issues.
 description = "Verifier handles all verification types and shell execution safely"
 
 [criteria.verify]
-type = "agentReview"
+type = "agent"
 prompt = """
 Review Qed/Verifier.lean. Verify:
 

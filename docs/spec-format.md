@@ -1,3 +1,4 @@
+Info: Running script ".lake/build/bin/docgen" on /Users/thomas/repos/qed
 # Spec Format Reference
 
 > **Auto-generated** from the Lean types in [`Qed/Types.lean`](../Qed/Types.lean) via JSON Schema.
@@ -60,7 +61,7 @@ Run a shell command and check the exit code.
 | `timeout` | integer | no | 300 |
 | `type` | `"command"` | yes | — |
 
-### `agentReview`
+### `agent`
 
 Spawn an independent LLM agent to review against a prompt.
 
@@ -68,7 +69,7 @@ Spawn an independent LLM agent to review against a prompt.
 |-------|------|----------|---------|
 | `model` | string | no | `"claude-sonnet-4-6"` |
 | `prompt` | string | yes | — |
-| `type` | `"agentReview"` | yes | — |
+| `type` | `"agent"` | yes | — |
 
 ### `property`
 

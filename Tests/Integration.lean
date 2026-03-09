@@ -64,7 +64,7 @@ def testListAllSpecsReturnsBothFormats : IO Bool := do
 
 def testTomlMultiLineStringPreservesContent : IO Bool := do
   -- Arrange — multi-line strings are the main reason TOML exists for specs
-  let toml := "name = \"review\"\n\n[[criteria]]\ndescription = \"code review\"\n\n[criteria.verify]\ntype = \"agentReview\"\nprompt = \"\"\"\nReview the code.\nCheck for:\n1. Correctness\n2. Style\n\"\"\"\n"
+  let toml := "name = \"review\"\n\n[[criteria]]\ndescription = \"code review\"\n\n[criteria.verify]\ntype = \"agent\"\nprompt = \"\"\"\nReview the code.\nCheck for:\n1. Correctness\n2. Style\n\"\"\"\n"
   -- Act
   match TomlConverter.tomlToJson toml with
   | .error e =>
@@ -80,7 +80,7 @@ def testTomlMultiLineStringPreservesContent : IO Bool := do
       match spec.criteria.head? with
       | some criterion =>
         return match criterion.verify with
-          | .agentReview prompt _ => prompt.contains "Correctness" && prompt.contains "Style"
+          | .agent prompt _ => prompt.contains "Correctness" && prompt.contains "Style"
           | _ => false
       | none => return false
 

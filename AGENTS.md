@@ -15,7 +15,7 @@ Qed/
   TomlParser.lean      Pure Lean TOML parser (no external dependencies)
   TomlConverter.lean   TOML → JSON conversion (thin wrapper around TomlParser)
   StateMachine.lean    Pure transition function (proven core)
-  Verifier.lean        Verification dispatch (command, agent_review, property, proof)
+  Verifier.lean        Verification dispatch (command, agent, property, proof)
   Output.lean          JSON result serialization (--json flag support)
 Qed/Proofs/
   Termination.lean     Loop termination, progress, and fuel decrease
@@ -35,11 +35,11 @@ Tests/
   Cli.lean             End-to-end CLI tests (invoke built binary, check output/exit codes)
 specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry
-  cli.spec.toml            CLI + verifier + output correctness — agentReview
-  state-machine.spec.toml  State machine correctness — 10 proofs + agentReview
-  parser.spec.toml         Parser correctness — tests + agentReview
-  verify-mode.spec.toml    Verify mode correctness — command + agentReview
-  docs.spec.toml           Documentation accuracy — freshness + agentReview
+  cli.spec.toml            CLI + verifier + output correctness — agent
+  state-machine.spec.toml  State machine correctness — 10 proofs + agent
+  parser.spec.toml         Parser correctness — tests + agent
+  verify-mode.spec.toml    Verify mode correctness — command + agent
+  docs.spec.toml           Documentation accuracy — freshness + agent
 DocGen/
   Schema.lean          JSON Schema generation (exhaustive matches on Types)
   Markdown.lean        JSON Schema → markdown transformation
@@ -56,7 +56,7 @@ docs/                  Auto-generated + hand-written documentation
 Two formats, used by context:
 
 - **`.spec.json`** — for simple command-only specs. Parsed via `Lean.Json` (built-in, zero deps).
-- **`.spec.toml`** — for specs with multi-line strings (agentReview prompts, human instructions). TOML's `"""..."""` and comments make these readable.
+- **`.spec.toml`** — for specs with multi-line strings (agent prompts, human instructions). TOML's `"""..."""` and comments make these readable.
 
 Both parse into the same `Spec` type. The `specs/` directory contains qed's own specs — qed verifies itself.
 

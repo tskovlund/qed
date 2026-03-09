@@ -92,7 +92,7 @@ Each acceptance criterion has a typed verification strategy:
 flowchart LR
     criterion --> verify{verify type}
     verify -->|human| human[Human judgment\nmanual sign-off]
-    verify -->|agentReview| agent[LLM agent\nprompt-based review]
+    verify -->|agent| agent[LLM agent\nprompt-based review]
     verify -->|command| shell[Shell command\nexit code check]
     verify -->|property| prop[Property tests\nHypothesis / QuickCheck]
     verify -->|proof| prover[Formal proof\nLean 4 / Coq / Agda]
@@ -103,7 +103,7 @@ The verification type determines both **what runs** and **what guarantee you get
 | Type | Runs | Guarantee | CI default |
 |------|------|-----------|------------|
 | `human` | Nothing (waits) | Human judgment | `manual` |
-| `agentReview` | LLM agent | Probabilistic | `always` |
+| `agent` | LLM agent | Probabilistic | `always` |
 | `command` | Shell command | Deterministic | `always` |
 | `property` | Test framework | Statistical | `always` |
 | `proof` | Proof checker | Mathematical | `always` |

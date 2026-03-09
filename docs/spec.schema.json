@@ -1,3 +1,4 @@
+Info: Running script ".lake/build/bin/docgen" on /Users/thomas/repos/qed
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://qed.skovlund.dev/spec.schema.json",
@@ -66,7 +67,7 @@
                 "required": ["type", "prompt"],
                 "additionalProperties": false,
                 "properties": {
-                  "type": { "const": "agentReview" },
+                  "type": { "const": "agent" },
                   "prompt": { "type": "string", "description": "Review prompt for the agent." },
                   "model": { "type": "string", "default": "claude-sonnet-4-6", "description": "Model to use for the review." }
                 }

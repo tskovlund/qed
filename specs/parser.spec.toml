@@ -15,7 +15,7 @@ silent defaults where explicit values should be required, no ambiguous \
 error messages."""
 
 [criteria.verify]
-type = "agentReview"
+type = "agent"
 prompt = """
 Review Qed/Parser.lean. Verify:
 
@@ -37,7 +37,7 @@ used in qed specs — arrays of tables with sub-tables, multi-line \
 strings, non-ASCII content, and duplicate key rejection."""
 
 [criteria.verify]
-type = "agentReview"
+type = "agent"
 prompt = """
 Review Qed/TomlParser.lean. Verify:
 

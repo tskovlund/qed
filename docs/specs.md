@@ -14,7 +14,7 @@ qed's verification spectrum maps directly to these:
 |-----------|----------|-------------|
 | Mathematical property | Formal proof | `proof` |
 | Observable behavior | Deterministic test | `command` |
-| Design quality | Expert judgment | `agentReview` |
+| Design quality | Expert judgment | `agent` |
 
 The specs use the strongest verification type that fits each claim. Proofs where the property is provable, tests where behavior is observable, agent review where judgment is needed.
 

@@ -48,7 +48,7 @@ Verify mode design is correct and complete — single-pass verification \
 with no worker, no loop, no state machine dependency."""
 
 [criteria.verify]
-type = "agentReview"
+type = "agent"
 prompt = """
 Review the verify mode design across these files:
 

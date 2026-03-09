@@ -22,7 +22,7 @@ run = "lake build docgen && .lake/build/bin/docgen markdown | diff docs/spec-for
 description = "Architecture docs accurately describe the system"
 
 [criteria.verify]
-type = "agentReview"
+type = "agent"
 prompt = """
 Compare docs/architecture.md against the actual codebase. Check:
 
@@ -43,14 +43,14 @@ but missing from the docs, or documented but not in the code.
 description = "README verification spectrum matches Types.lean"
 
 [criteria.verify]
-type = "agentReview"
+type = "agent"
 prompt = """
 Compare the verification spectrum table in README.md against the
 VerifyType constructors in Qed/Types.lean. Check:
 
 1. Every VerifyType constructor has a row in the table
 2. No rows reference types that don't exist in the code
-3. The ordering matches (human → agentReview → command → property → proof)
+3. The ordering matches (human → agent → command → property → proof)
 4. The guarantee names are accurate and consistent with docs/architecture.md
 
 Report any mismatches.

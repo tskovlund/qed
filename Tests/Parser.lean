@@ -74,7 +74,7 @@ def testParseJsonExtractsCommandFields : IO Bool := do
 
 def testParseJsonExtractsAgentReviewFields : IO Bool := do
   -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agentReview\", \"prompt\": \"check it\", \"model\": \"claude-opus-4-6\"}}]}"
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check it\", \"model\": \"claude-opus-4-6\"}}]}"
   -- Act
   let result := Parser.parseJson json
   -- Assert
@@ -83,14 +83,14 @@ def testParseJsonExtractsAgentReviewFields : IO Bool := do
     match spec.criteria.head? with
     | some criterion =>
       return match criterion.verify with
-        | .agentReview prompt model => prompt == "check it" && model == "claude-opus-4-6"
+        | .agent prompt model => prompt == "check it" && model == "claude-opus-4-6"
         | _ => false
     | none => return false
   | .error _ => return false
 
 def testParseJsonDefaultsAgentReviewModelToSonnet : IO Bool := do
   -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agentReview\", \"prompt\": \"check\"}}]}"
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check\"}}]}"
   -- Act
   let result := Parser.parseJson json
   -- Assert
@@ -99,7 +99,7 @@ def testParseJsonDefaultsAgentReviewModelToSonnet : IO Bool := do
     match spec.criteria.head? with
     | some criterion =>
       return match criterion.verify with
-        | .agentReview _ model => model == "claude-sonnet-4-6"
+        | .agent _ model => model == "claude-sonnet-4-6"
         | _ => false
     | none => return false
   | .error _ => return false
@@ -180,7 +180,7 @@ def testParseJsonDefaultsHumanCiToManual : IO Bool := do
 
 def testParseJsonPreservesMultipleCriteria : IO Bool := do
   -- Arrange
-  let json := "{\"name\": \"multi\", \"criteria\": [{\"description\": \"builds\", \"verify\": {\"type\": \"command\", \"run\": \"make\"}}, {\"description\": \"proven\", \"verify\": {\"type\": \"proof\", \"prover\": \"lean4\", \"target\": \"T\"}}, {\"description\": \"reviewed\", \"verify\": {\"type\": \"agentReview\", \"prompt\": \"check\"}}]}"
+  let json := "{\"name\": \"multi\", \"criteria\": [{\"description\": \"builds\", \"verify\": {\"type\": \"command\", \"run\": \"make\"}}, {\"description\": \"proven\", \"verify\": {\"type\": \"proof\", \"prover\": \"lean4\", \"target\": \"T\"}}, {\"description\": \"reviewed\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check\"}}]}"
   -- Act
   let result := Parser.parseJson json
   -- Assert
@@ -190,9 +190,9 @@ def testParseJsonPreservesMultipleCriteria : IO Bool := do
     let types := spec.criteria.map fun c => match c.verify with
       | .command _ _ => "command"
       | .proof _ _ => "proof"
-      | .agentReview _ _ => "agentReview"
+      | .agent _ _ => "agent"
       | _ => "other"
-    return types == ["command", "proof", "agentReview"]
+    return types == ["command", "proof", "agent"]
   | .error e =>
     IO.eprintln s!"  parse error: {e}"
     return false

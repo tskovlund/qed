@@ -38,7 +38,7 @@ verify = { type = "proof", prover = "lean4", target = "Qed.Proofs.FinalStates.te
 
 [[criteria]]
 description = "Code follows conventions and handles edge cases"
-verify = { type = "agentReview", prompt = "Check: pure functions have no IO, all pattern matches are exhaustive, variable names are descriptive." }
+verify = { type = "agent", prompt = "Check: pure functions have no IO, all pattern matches are exhaustive, variable names are descriptive." }
 ```
 
 The worker runs. Each criterion is verified with its typed strategy — including asking Lean's kernel to check mathematical proofs. Failures feed back to the worker. The loop terminates — guaranteed.
@@ -52,7 +52,7 @@ qed run state-machine.spec.toml
 | Type | Strategy | Guarantee |
 |------|----------|-----------|
 | `human` | Manual sign-off | Human judgment |
-| `agentReview` | Independent LLM review | Probabilistic |
+| `agent` | Independent LLM review | Probabilistic |
 | `command` | Shell command, exit code | Deterministic |
 | `property` | Hypothesis / QuickCheck | Statistical |
 | `proof` | Lean 4 / Coq / Agda | Mathematical |

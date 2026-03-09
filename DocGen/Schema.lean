@@ -14,11 +14,11 @@ namespace DocGen.Schema
 def verifyTypeConstructors : List String :=
   let _ : VerifyType → Unit := fun
     | .command _ _ => ()
-    | .agentReview _ _ => ()
+    | .agent _ _ => ()
     | .property _ _ => ()
     | .proof _ _ => ()
     | .human _ => ()
-  ["command", "agentReview", "property", "proof", "human"]
+  ["command", "agent", "property", "proof", "human"]
 
 -- Exhaustive match on CiSchedule — compile error if constructors change
 def ciScheduleValues : List String :=

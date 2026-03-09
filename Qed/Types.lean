@@ -5,7 +5,7 @@ inductive VerifyType where
   /-- Run a shell command, check exit code. -/
   | command (run : String) (timeout : Nat := 300)
   /-- Spawn an independent LLM agent to review the diff. -/
-  | agentReview (prompt : String) (model : String := "claude-sonnet-4-6")
+  | agent (prompt : String) (model : String := "claude-sonnet-4-6")
   /-- Run property-based tests. -/
   | property (run : String) (timeout : Nat := 600)
   /-- Run a formal proof checker. -/

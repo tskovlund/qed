@@ -100,7 +100,7 @@ target = "Qed.Proofs.Invariants.iteration_bounded"
 description = "Transition function is correct, total, and deterministic"
 
 [criteria.verify]
-type = "agentReview"
+type = "agent"
 prompt = """
 Review Qed/StateMachine.lean. Verify:
 

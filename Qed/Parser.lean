@@ -43,10 +43,10 @@ def parseVerifyType (json : Json) : Except String VerifyType := do
     let run ← requireString json "run"
     let timeout ← optionalNat json "timeout" 300
     .ok (.command run timeout)
-  | "agentReview" =>
+  | "agent" =>
     let prompt ← requireString json "prompt"
     let model := optionalString json "model" "claude-sonnet-4-6"
-    .ok (.agentReview prompt model)
+    .ok (.agent prompt model)
   | "property" =>
     let run ← requireString json "run"
     let timeout ← optionalNat json "timeout" 600

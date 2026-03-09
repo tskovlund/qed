@@ -38,8 +38,8 @@ private def verifyCommand (command : String) (_timeout : Nat) : IO VerificationR
 def verifyCriterion (criterion : AcceptanceCriterion) : IO VerificationResult := do
   match criterion.verify with
   | .command run timeout => verifyCommand run timeout
-  | .agentReview prompt model =>
-    return .skipped s!"agentReview not yet implemented (model: {model}, prompt length: {prompt.length})"
+  | .agent prompt model =>
+    return .skipped s!"agent not yet implemented (model: {model}, prompt length: {prompt.length})"
   | .property run timeout =>
     return .skipped s!"property testing not yet implemented (run: {run}, timeout: {timeout})"
   | .proof prover target =>
