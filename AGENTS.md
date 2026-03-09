@@ -31,7 +31,7 @@ Qed/Proofs/
   ParserProperties.lean   parseCiSchedule completeness and rejection
   TomlProperties.lean     setNested/appendArray structural integrity
   TomlJsonValidity.lean   TOML→JSON pipeline totality and error propagation
-  Roundtrip.lean          Serializer↔parser roundtrip (specToJson ∘ parseFromJson = id)
+  Roundtrip.lean          Serializer↔parser roundtrip (parseFromJson ∘ specToJson = ok)
 Tests/
   Main.lean            Test runner (imports all test modules)
   Types.lean           isTerminal behavior tests
