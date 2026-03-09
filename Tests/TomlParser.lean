@@ -137,7 +137,8 @@ def testParseNonAsciiInMultiLineString : IO Bool := do
   -- Act
   let json ← parseOrFail toml
   -- Assert
-  return json.contains "pure" && json.contains "no side effects"
+  -- Verify the em dash itself is preserved, not just the ASCII parts
+  return json.contains "pure \u2014 no" && json.contains "no side effects"
 
 def testParseErrorOnUnterminatedString : IO Bool := do
   -- Arrange
@@ -158,6 +159,12 @@ def testParseIntegerWithUnderscores : IO Bool := do
   let json ← parseOrFail toml
   -- Assert
   return json.contains "\"big\": 1000000"
+
+def testParseErrorOnDuplicateKey : IO Bool := do
+  -- Arrange — TOML forbids redefining keys
+  let toml := "name = \"first\"\nname = \"second\"\n"
+  -- Act / Assert
+  expectParseError toml
 
 def testParseEmptyDocument : IO Bool := do
   -- Arrange
@@ -186,5 +193,6 @@ def tomlParserTests : List (String × IO Bool) := [
   ("testParseErrorOnUnterminatedString", testParseErrorOnUnterminatedString),
   ("testParseErrorOnInvalidTableHeader", testParseErrorOnInvalidTableHeader),
   ("testParseIntegerWithUnderscores", testParseIntegerWithUnderscores),
+  ("testParseErrorOnDuplicateKey", testParseErrorOnDuplicateKey),
   ("testParseEmptyDocument", testParseEmptyDocument)
 ]

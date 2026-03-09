@@ -83,7 +83,7 @@ partial def parseString (s : String) (i : Nat) : Except String (String × Nat) :
                 else k
               go (skipLws (j + 2)) acc
             | _ => go (j + 2) (acc.push '\\' |>.push ec)
-          else go (j + 1) (acc.push c)
+          else go (j + c.utf8Size) (acc.push c)
       go start ""
     else
       -- Single-line string
@@ -102,7 +102,7 @@ partial def parseString (s : String) (i : Nat) : Except String (String × Nat) :
             | '"' => goSingle (j + 2) (acc.push '"')
             | '\\' => goSingle (j + 2) (acc.push '\\')
             | _ => goSingle (j + 2) (acc.push '\\' |>.push ec)
-          else goSingle (j + 1) (acc.push c)
+          else goSingle (j + c.utf8Size) (acc.push c)
       goSingle (i + 1) ""
 
 /-- Parse a key (bare or quoted). -/
@@ -191,7 +191,11 @@ def setNested (pairs : List (String × TomlValue)) (keys : List String) (value :
     : Except String (List (String × TomlValue)) :=
   match keys with
   | [] => .error "empty key path"
-  | [key] => .ok (pairs ++ [(key, value)])
+  | [key] =>
+    if pairs.any (fun (k, _) => k == key) then
+      .error s!"duplicate key '{key}'"
+    else
+      .ok (pairs ++ [(key, value)])
   | key :: rest =>
     match pairs.find? (fun (k, _) => k == key) with
     | some (_, .table inner) =>
