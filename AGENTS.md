@@ -44,7 +44,8 @@ Tests/
   Cli.lean             End-to-end CLI tests (invoke built binary, check output/exit codes)
 specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry
-  cli.spec.toml            CLI + verifier + output correctness — 1 proof + agent
+  cli.spec.toml            CLI + output correctness — 1 proof + agent
+  verifier.spec.toml       Verifier dispatch and shell execution — agent
   worker-loop.spec.toml    Worker loop correctness — 5 proofs + agent
   state-machine.spec.toml  State machine correctness — 5 proofs + agent
   parser.spec.toml         Parser correctness — 3 proofs + agent

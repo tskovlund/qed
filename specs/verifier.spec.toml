@@ -1,0 +1,27 @@
+#:schema ../docs/spec.schema.json
+
+# Verifier — verification dispatch and shell execution safety.
+# Owns Qed/Verifier.lean.
+
+name = "verifier-correctness"
+
+# --- Agent review ---
+
+[[criteria]]
+description = "Verifier handles all verification types and shell execution safely"
+
+[criteria.verify]
+type = "agent"
+prompt = """
+Review Qed/Verifier.lean. Verify:
+
+1. Every VerifyType constructor is handled in verifyCriterion (exhaustive match)
+2. Shell execution uses platform detection (Unix vs Windows)
+3. Output truncation preserves the LAST 2000 chars (most recent output is
+   most useful for debugging)
+4. Exit code 0 maps to pass, non-zero maps to fail — no edge cases missed
+5. Unimplemented verification types return .skipped, not .fail or .pass
+6. Human verification returns .needsHuman, not .skipped
+
+Report any safety concerns, missing edge cases, or incorrect result mappings.
+"""
