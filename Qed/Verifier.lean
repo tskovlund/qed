@@ -17,8 +17,8 @@ private def shellCmd : String × String :=
 
 /-- Run a shell command and return pass/fail based on exit code.
     Captures stdout and stderr, truncates to last 2000 chars.
-    Note: `timeout` is parsed and stored but not yet enforced — process-level
-    timeout requires `IO.Process.spawn` + async kill (see GitHub issue). -/
+    TODO: `timeout` is parsed and stored but not yet enforced. Process-level
+    timeout requires `IO.Process.spawn` + async kill, tracked for a future PR. -/
 private def verifyCommand (command : String) (_timeout : Nat) : IO VerificationResult := do
   let (cmd, flag) := shellCmd
   let result ← IO.Process.output {
