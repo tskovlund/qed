@@ -44,7 +44,7 @@ def testLoadSpecParsesTomlFile : IO Bool := do
   | .ok spec =>
     return spec.name == "state-machine-correctness" &&
       spec.mode == SpecMode.verify &&
-      spec.criteria.length == 7
+      spec.criteria.length == 11
   | .error e =>
     IO.eprintln s!"  load error: {e}"
     return false

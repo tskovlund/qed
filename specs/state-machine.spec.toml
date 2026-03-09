@@ -60,6 +60,40 @@ type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.StuckDetection.stuck_iff_threshold"
 
+# Invariants: structural guarantees
+
+[[criteria]]
+description = "The transition function is deterministic — equal inputs always produce equal outputs"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.Invariants.transition_deterministic"
+
+[[criteria]]
+description = "The initial state (ready) is never revisited after leaving it"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.Invariants.ready_unreachable"
+
+[[criteria]]
+description = "State lifecycle phase (initial → working → terminal) never decreases"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.Invariants.phase_monotonic"
+
+[[criteria]]
+description = "Iteration count never exceeds maxIterations"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.Invariants.iteration_bounded"
+
 # --- Agent review ---
 
 [[criteria]]

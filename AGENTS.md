@@ -32,7 +32,8 @@ Tests/
   Verifier.lean        Command verifier tests (shell execution, exit codes, output capture)
 specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry
-  state-machine.spec.toml  State machine correctness — proof + agentReview
+  cli.spec.toml            CLI + verifier + output correctness — agentReview
+  state-machine.spec.toml  State machine correctness — 10 proofs + agentReview
   parser.spec.toml         Parser correctness — tests + agentReview
   verify-mode.spec.toml    Verify mode correctness — command + agentReview
   docs.spec.toml           Documentation accuracy — freshness + agentReview

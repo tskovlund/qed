@@ -1,0 +1,65 @@
+#:schema ../docs/spec.schema.json
+
+name = "cli-correctness"
+
+# --- Agent review ---
+
+[[criteria]]
+description = "CLI argument parsing and dispatch is correct and complete"
+
+[criteria.verify]
+type = "agentReview"
+prompt = """
+Review Main.lean. Verify:
+
+1. Every subcommand (run, verify, parse, version, help) is handled
+2. Unknown commands produce a clear error on stderr with exit code 1
+3. The --json flag is position-independent and works with all subcommands
+4. Error output respects --json mode (JSON to stdout vs plain text to stderr)
+5. `qed run` dispatches correctly: verify-mode specs run verification,
+   worker-loop specs produce a clear "not yet implemented" error
+6. No command loads the spec file more than once
+7. Help text documents all available commands and options
+
+Report any unreachable code paths, missing error handling, or UX issues.
+"""
+
+[[criteria]]
+description = "Verifier handles all verification types and shell execution safely"
+
+[criteria.verify]
+type = "agentReview"
+prompt = """
+Review Qed/Verifier.lean. Verify:
+
+1. Every VerifyType constructor is handled in verifyCriterion (exhaustive match)
+2. Shell commands are invoked safely — no command injection beyond the
+   intentional `sh -c` execution model
+3. Output truncation preserves the LAST 2000 chars (most recent output is
+   most useful for debugging)
+4. Exit code 0 maps to pass, non-zero maps to fail — no edge cases missed
+5. Unimplemented verification types (agentReview, property, proof) return
+   .skipped with a descriptive reason, not .fail or .pass
+6. Human verification returns .needsHuman, not .skipped
+
+Report any safety concerns, missing edge cases, or incorrect result mappings.
+"""
+
+[[criteria]]
+description = "JSON output serialization is correct and complete"
+
+[criteria.verify]
+type = "agentReview"
+prompt = """
+Review Qed/Output.lean. Verify:
+
+1. Every VerificationResult constructor is handled in resultStatus and
+   resultDetails (exhaustive matches)
+2. The JSON structure is consistent: every criterion has description,
+   status, and details fields
+3. The top-level JSON has spec, passed, and criteria fields
+4. The passed field correctly reflects whether ALL criteria passed
+5. Status strings are lowercase and kebab-case (pass, fail, needs-human, skipped)
+
+Report any serialization bugs or inconsistencies.
+"""
