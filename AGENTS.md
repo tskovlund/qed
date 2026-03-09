@@ -74,6 +74,24 @@ A spec runs in one of two modes, determined by whether `worker` is present:
 - **Worker loop** (`SpecMode.workerLoop`) — run the worker, verify criteria, feed failures back, repeat. Uses the state machine. `maxIterations` and `stuckThreshold` control termination.
 - **Verify** (`SpecMode.verify`) — run each criterion once and report results. No state machine, no loop. Requires at least one criterion.
 
+## Worker configuration
+
+Two tiers:
+
+- **Tier 1 (prompt present):** qed manages the prompt. On retries, failure feedback is appended. The command receives the full prompt via `$QED_PROMPT` env var and qed runs `{command} "$QED_PROMPT"` through the shell.
+- **Tier 2 (no prompt):** full control. qed runs the command as-is with env vars (`QED_ITERATION`, `QED_FAILURES_FILE`) available for optional use.
+
+```toml
+# Tier 1: qed manages the prompt
+[worker]
+command = "claude -p"
+prompt = "Implement the feature"
+
+# Tier 2: full control
+[worker]
+command = "./scripts/worker.sh"
+```
+
 ## Key design principle
 
 The worker loop orchestrator is a **deterministic state machine**. LLMs are tools used by the orchestrator (as workers and reviewers), never the control plane. The pure transition function (`Qed.StateMachine.transition`) has no IO — all proofs reason about this function.

@@ -213,6 +213,40 @@ def testParseJsonAllowsEmptyCriteriaInWorkerLoop : IO Bool := do
     IO.eprintln s!"  parse error: {e}"
     return false
 
+def testParseJsonWorkerWithPrompt : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"worker\": {\"command\": \"claude -p\", \"prompt\": \"Implement feature X\"}, \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    return match spec.mode with
+      | .workerLoop worker _ =>
+        worker.command == "claude -p" &&
+        worker.prompt == some "Implement feature X"
+      | .verify => false
+  | .error e =>
+    IO.eprintln s!"  parse error: {e}"
+    return false
+
+def testParseJsonWorkerWithoutPrompt : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"worker\": {\"command\": \"./run.sh\"}, \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    return match spec.mode with
+      | .workerLoop worker _ =>
+        worker.command == "./run.sh" &&
+        worker.prompt == none
+      | .verify => false
+  | .error e =>
+    IO.eprintln s!"  parse error: {e}"
+    return false
+
 def testParseJsonErrorsOnMissingName : IO Bool := do
   -- Arrange
   let json := "{\"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
@@ -297,6 +331,8 @@ def parserTests : List (String × IO Bool) := [
   ("testParseJsonDefaultsHumanCiToManual", testParseJsonDefaultsHumanCiToManual),
   ("testParseJsonPreservesMultipleCriteria", testParseJsonPreservesMultipleCriteria),
   ("testParseJsonAllowsEmptyCriteriaInWorkerLoop", testParseJsonAllowsEmptyCriteriaInWorkerLoop),
+  ("testParseJsonWorkerWithPrompt", testParseJsonWorkerWithPrompt),
+  ("testParseJsonWorkerWithoutPrompt", testParseJsonWorkerWithoutPrompt),
   ("testParseJsonErrorsOnMissingName", testParseJsonErrorsOnMissingName),
   ("testParseJsonErrorsOnMissingCriteria", testParseJsonErrorsOnMissingCriteria),
   ("testParseJsonErrorsOnEmptyCriteriaInVerifyMode", testParseJsonErrorsOnEmptyCriteriaInVerifyMode),

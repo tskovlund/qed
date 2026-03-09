@@ -41,11 +41,15 @@ def criterionToJson (criterion : AcceptanceCriterion) : Json := Json.mkObj [
   ("verify", verifyTypeToJson criterion.verify),
   ("ci", Json.str (ciScheduleToString criterion.ci))]
 
-/-- Serialize a WorkerConfig to JSON. -/
-def workerConfigToJson (worker : WorkerConfig) : Json := Json.mkObj [
-  ("command", Json.str worker.command),
-  ("workdir", Json.str worker.workdir),
-  ("timeout", Lean.toJson worker.timeout)]
+/-- Serialize a WorkerConfig to JSON. Prompt is only emitted when present. -/
+def workerConfigToJson (worker : WorkerConfig) : Json :=
+  let base := [
+    ("command", Json.str worker.command),
+    ("workdir", Json.str worker.workdir),
+    ("timeout", Lean.toJson worker.timeout)]
+  match worker.prompt with
+  | some p => Json.mkObj (("prompt", Json.str p) :: base)
+  | none => Json.mkObj base
 
 /-- Serialize a Spec to JSON. All fields are always emitted (including defaults)
 to simplify roundtrip proofs. -/

@@ -79,9 +79,12 @@ def parseCriterion (json : Json) : Except String AcceptanceCriterion := do
 /-- Parse a WorkerConfig from a JSON object. -/
 def parseWorkerConfig (json : Json) : Except String WorkerConfig := do
   let command ← requireString json "command"
+  let prompt := match json.getObjValAs? String "prompt" with
+    | .ok value => some value
+    | .error _ => none
   let workdir := optionalString json "workdir" "."
   let timeout ← optionalNat json "timeout" 3600
-  .ok { command, workdir, timeout }
+  .ok { command, prompt, workdir, timeout }
 
 /-- Parse a Spec from a parsed JSON value. -/
 def parseFromJson (json : Json) : Except String Spec := do
