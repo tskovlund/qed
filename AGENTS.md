@@ -12,7 +12,8 @@ Qed/
   Types.lean           Core types (VerifyType, SpecMode, Spec, LoopState)
   SpecLoader.lean      Load and list spec files from disk
   Parser.lean          JSON spec parser (Lean.Json → Spec)
-  TomlConverter.lean   TOML → JSON conversion via Python's tomllib
+  TomlParser.lean      Pure Lean TOML parser (no external dependencies)
+  TomlConverter.lean   TOML → JSON conversion (thin wrapper around TomlParser)
   StateMachine.lean    Pure transition function (proven core)
   Verifier.lean        Verification dispatch (command, agent_review, property, proof)
   Output.lean          JSON result serialization (--json flag support)
@@ -28,6 +29,7 @@ Tests/
   Main.lean            Test runner (imports all test modules)
   Types.lean           isTerminal behavior tests
   Parser.lean          JSON parser tests (all verify types, error cases)
+  TomlParser.lean      TOML parser unit tests (values, tables, arrays, multi-line, non-ASCII)
   Integration.lean     TOML converter and SpecLoader end-to-end tests
   Verifier.lean        Command verifier tests (shell execution, exit codes, output capture)
   Cli.lean             End-to-end CLI tests (invoke built binary, check output/exit codes)

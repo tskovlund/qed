@@ -32,11 +32,12 @@ The foundation. Everything compiles, tests pass, no incomplete proofs. If this f
 
 ### 2. State machine correctness (`state-machine.spec.toml`)
 
-Six formal proofs verify the state machine's mathematical properties, organized by what they guarantee:
+Ten formal proofs verify the state machine's mathematical properties, organized by what they guarantee:
 
 - **Safety:** terminal states are absorbing, no skipped verification, worker runs before verification
 - **Liveness:** the loop terminates within maxIterations
 - **Correctness:** iteration count is monotonic, stuck detection fires iff repeated
+- **Invariants:** transition determinism, ready transience, phase monotonicity, iteration bound
 
 An agent review checks design quality (exhaustive matches, purity, edge cases).
 
@@ -48,7 +49,11 @@ Two formal proofs verify the type-level separation between modes: verify mode ca
 
 An agent review checks that the parser faithfully maps JSON to the Spec type — no data loss, correct defaults, clear error messages. Build and test coverage is owned by the build spec.
 
-### 5. Documentation accuracy (`docs.spec.toml`)
+### 5. CLI and verifier correctness (`cli.spec.toml`)
+
+Agent reviews verify the CLI dispatch logic and verifier safety: correct argument parsing, error handling with `--json`, exit codes, and that the verifier safely sandboxes shell commands.
+
+### 6. Documentation accuracy (`docs.spec.toml`)
 
 Generated docs (schema, format reference) must be fresh. Hand-written docs (architecture, README) must be consistent with the actual codebase. Agent reviews cross-reference docs against source.
 

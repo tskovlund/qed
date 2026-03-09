@@ -12,7 +12,7 @@ def loadSpec (path : System.FilePath) : IO (Except String Spec) := do
   let contents ← IO.FS.readFile path
   let pathStr := path.toString
   if pathStr.endsWith ".toml" then
-    match ← TomlConverter.tomlToJson contents with
+    match TomlConverter.tomlToJson contents with
     | .error e => return .error e
     | .ok json => return Parser.parseJson json
   else
