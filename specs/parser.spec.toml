@@ -10,7 +10,7 @@ name = "parser-correctness"
 
 [[criteria]]
 description = """
-Parser faithfully maps JSON to the Spec type — no data loss, no \
+JSON parser faithfully maps JSON to the Spec type — no data loss, no \
 silent defaults where explicit values should be required, no ambiguous \
 error messages."""
 
@@ -27,9 +27,29 @@ Review Qed/Parser.lean. Verify:
    - worker present → SpecMode.workerLoop with LoopConfig
    - worker absent → SpecMode.verify with ≥1 criteria validation
 
-Also review Qed/TomlConverter.lean:
-6. TOML content is passed via stdin (not command-line arg interpolation)
-7. Error output from Python is surfaced, not swallowed
-
 Report any parsing bugs, missing validation, or data loss risks.
+"""
+
+[[criteria]]
+description = """
+TOML parser correctly handles all value types and structural features \
+used in qed specs — arrays of tables with sub-tables, multi-line \
+strings, non-ASCII content, and duplicate key rejection."""
+
+[criteria.verify]
+type = "agentReview"
+prompt = """
+Review Qed/TomlParser.lean. Verify:
+
+1. Byte-based indexing is correct throughout (utf8ByteSize for bounds,
+   c.utf8Size for multi-byte character advancement)
+2. Array-of-tables with sub-table context ([criteria.verify] after
+   [[criteria]]) routes key-values into the last array entry
+3. Multi-line string parsing handles first-newline trimming, escape
+   sequences, and line-ending backslash continuation
+4. Duplicate key detection catches redefinitions at all nesting levels
+5. The Ctx state machine correctly tracks root, table, and array context
+6. Edge cases: empty document, comments, bare vs quoted keys, dotted keys
+
+Report any parse errors, data corruption risks, or TOML spec violations.
 """
