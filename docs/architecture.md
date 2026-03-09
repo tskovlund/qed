@@ -125,7 +125,7 @@ The architecture follows a strict separation:
 | Layer | IO? | What lives here |
 |-------|-----|-----------------|
 | **Pure core** | No | Types, StateMachine, Parser, TomlParser, TomlConverter, Output, Proofs |
-| **IO shell** | Yes | Verifier, SpecLoader, CLI |
+| **IO shell** | Yes | WorkerLoop, Verifier, SpecLoader, CLI |
 
 The pure core is where all proofs live. It has no side effects, no process spawning, no file access. The IO shell wraps the pure core with real-world effects — parsing files, running commands, reporting results.
 
