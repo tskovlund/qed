@@ -42,6 +42,22 @@ type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.TomlProperties.appendArray_creates_new"
 
+[[criteria]]
+description = "Successful TOML→JSON conversion implies successful parse"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.TomlJsonValidity.tomlToJson_ok_implies_parseDoc_ok"
+
+[[criteria]]
+description = "TOML parse failure propagates to conversion failure"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.TomlJsonValidity.parseDoc_error_implies_tomlToJson_error"
+
 # --- Agent review ---
 
 [[criteria]]

@@ -29,6 +29,7 @@ Qed/Proofs/
   OutputCorrectness.lean  allPassed correctness, JSON output contract
   ParserProperties.lean   parseCiSchedule completeness and rejection
   TomlProperties.lean     setNested/appendArray structural integrity
+  TomlJsonValidity.lean   TOML→JSON pipeline totality and error propagation
 Tests/
   Main.lean            Test runner (imports all test modules)
   Types.lean           isTerminal behavior tests
@@ -41,7 +42,7 @@ specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry
   cli.spec.toml            CLI + verifier + output correctness — 2 proofs + agent
   state-machine.spec.toml  State machine correctness — 10 proofs + agent
-  parser.spec.toml         Parser correctness — 4 proofs + agent
+  parser.spec.toml         Parser correctness — 6 proofs + agent
   verify-mode.spec.toml    Verify mode correctness — 4 proofs + command + agent
   docs.spec.toml           Documentation accuracy — freshness + agent
 DocGen/
@@ -147,6 +148,9 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `TomlProperties.lean` | `setNested_empty_keys` | Empty key path is always rejected |
 | `TomlProperties.lean` | `appendArray_empty_keys` | Empty key path is always rejected |
 | `TomlProperties.lean` | `appendArray_creates_new` | Absent key creates new single-element array |
+| `TomlJsonValidity.lean` | `tomlToJson_total` | tomlToJson always returns Ok or Error (never diverges) |
+| `TomlJsonValidity.lean` | `tomlToJson_ok_implies_parseDoc_ok` | Successful conversion implies successful parse |
+| `TomlJsonValidity.lean` | `parseDoc_error_implies_tomlToJson_error` | Parse failure propagates to conversion failure |
 
 ## Repo-specific conventions
 

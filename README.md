@@ -78,6 +78,7 @@ Formal proofs verified by Lean 4's kernel:
 - **JSON output contract** — output always contains "spec", "passed", "criteria" fields
 - **CI schedule parser completeness** — accepts exactly "always", "trunk", "manual"
 - **TOML key integrity** — `setNested` rejects duplicate keys, `appendArray` creates correctly
+- **TOML→JSON pipeline** — successful conversion implies successful parse; parse errors propagate
 
 ## Status
 
