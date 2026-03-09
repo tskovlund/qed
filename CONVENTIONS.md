@@ -125,6 +125,7 @@ Shared conventions for all tskovlund repositories.
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Python library/tool (cambr, mcp-score) | Unit (pytest), property-based (hypothesis) for pure functions                                                                         |
 | Static website (skovlund.dev)          | A11y (Playwright + axe-core, blocking), E2E navigation (Playwright), visual regression (`toHaveScreenshot()`, non-blocking initially) |
+| Lean 4 (qed)                           | Unit tests (`lake test`), formal proofs (`Qed/Proofs/`), no `sorry` check in CI                                                      |
 | Nix configuration (nix-config)         | `nix flake check --all-systems`                                                                                                       |
 
 ### Integration Test Infrastructure
@@ -176,6 +177,8 @@ Shared conventions for all tskovlund repositories.
 
 ## Lean 4
 
+### Language
+
 - **`autoImplicit` off** — all variables explicitly declared. Prevents
   accidental implicit arguments in theorem statements
 - **Pure core, IO shell** — state machine transition functions are pure and
@@ -188,3 +191,76 @@ Shared conventions for all tskovlund repositories.
   about
 - **`lake-manifest.json` committed** — this is the lockfile for Lake
   dependencies. Always commit it
+- **No `partial` when avoidable** — `partial` functions are opaque to the
+  kernel and cannot be unfolded in proofs. Use mutual recursion for termination
+  through nested inductives (e.g., `List` inside an inductive type)
+
+### Naming
+
+- **Full variable names in signatures** — `config` not `cfg`, `context` not
+  `ctx`, `iteration` not `iter`. Hypothesis bindings may be shorter when scope
+  is narrow
+- **`h` prefix for hypotheses** — with descriptors: `hterm` (terminality),
+  `hbound` (bound), `hiter` (iteration). Plain `h` only when there is exactly
+  one hypothesis in scope
+- **snake_case for theorems** — descriptive: `terminal_absorbing`,
+  `stuck_iff_threshold`, `loop_terminates`
+- **Proof file names match module** — `FinalStates.lean` for proofs about
+  final states, `Termination.lean` for termination proofs
+
+### Proof style
+
+- **`unfold` over `simp only [f]`** for unfolding definitions — `unfold` is
+  explicit about intent and doesn't reduce further. Use `simp` for rewriting,
+  not unfolding
+- **Structured proofs** — prefer `cases ... with | constructor => ...` over
+  tactic chains. Each case should be readable independently
+- **Extract lemmas when reused** — if two theorems need the same intermediate
+  result, extract it. Inline when used once
+- **Mutual recursion for nested inductives** — when a type contains `List T`
+  where `T` is the type itself, define functions as a mutual block
+  (`toJson`/`toJsonList`) so Lean can verify structural termination
+
+## qed Specs
+
+Conventions for repositories using qed as their spec framework.
+
+### Spec design
+
+- **Specs contain top-level results only** — building-block lemmas and helper
+  theorems live in proof files but are not spec criteria. A spec criterion
+  should be a guarantee a stakeholder cares about, not an intermediate step
+- **Use the strongest verification type available** — `proof` for mathematical
+  properties, `command` for observable behavior, `agent` for design judgment.
+  Don't settle for a test when a proof is possible
+- **No overlap between specs** — each criterion appears in exactly one spec.
+  One spec owns one concern
+- **Every spec must answer: why should I trust this?** — if you can't explain
+  what trust a criterion provides, it doesn't belong in the spec
+
+### Spec format
+
+- **`.spec.toml`** for specs with multi-line strings (agent prompts, human
+  instructions). TOML's `"""..."""` and comments make these readable
+- **`.spec.json`** for simple command-only specs with no multi-line content
+- **Schema reference** — every spec file starts with
+  `#:schema ../docs/spec.schema.json` (TOML) or `"$schema"` (JSON)
+
+### Proof criteria
+
+- **Target fully qualified theorem names** — e.g.,
+  `Qed.Proofs.Termination.loop_terminates`
+- **Description states the guarantee, not the implementation** — "The loop
+  always reaches a terminal state within maxIterations transitions" not
+  "loop_terminates theorem passes"
+- **Group by property type** — safety (bad things don't happen), liveness
+  (good things eventually happen), correctness (the right things happen)
+
+### Agent criteria
+
+- **Prompts are review checklists** — numbered items, each independently
+  verifiable
+- **Reference specific files** — "Review Qed/StateMachine.lean" not "Review
+  the state machine code"
+- **Ask for negative findings** — "Report any unreachable code paths, missing
+  error handling, or UX issues"
