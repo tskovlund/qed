@@ -1,5 +1,6 @@
 import Tests.Types
 import Tests.Parser
+import Tests.TomlParser
 import Tests.Integration
 import Tests.Verifier
 import Tests.Cli
@@ -15,7 +16,7 @@ def runTest (name : String) (test : IO Bool) : IO Bool := do
 
 def main : IO UInt32 := do
   let tests : List (String × IO Bool) :=
-    typeTests ++ parserTests ++ integrationTests ++ verifierTests ++ cliTests
+    typeTests ++ parserTests ++ tomlParserTests ++ integrationTests ++ verifierTests ++ cliTests
 
   let mut failedCount : Nat := 0
   for (name, test) in tests do
