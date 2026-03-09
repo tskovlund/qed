@@ -22,7 +22,23 @@ type = "command"
 run = "grep -q 'minItems' docs/spec.schema.json"
 
 # --- Proof criteria ---
-# These formalize the type-level separation between modes.
+# Type-level properties and mode separation.
+
+[[criteria]]
+description = "Every LoopState is either terminal or not (decidability)"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.TypeProperties.isTerminal_decidable"
+
+[[criteria]]
+description = "isPassed and isFailed are mutually exclusive"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.TypeProperties.passed_and_failed_exclusive"
 
 [[criteria]]
 description = "Verify mode cannot carry a WorkerConfig or LoopConfig"

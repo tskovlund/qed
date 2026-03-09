@@ -4,9 +4,45 @@
 # If the parser misparses, the wrong thing gets verified.
 #
 # Build and test coverage is owned by build.spec.json.
-# This spec adds the design review layer.
+# This spec adds formal proofs and design review.
 
 name = "parser-correctness"
+
+# --- Proof criteria ---
+
+[[criteria]]
+description = "CI schedule parser accepts exactly the three valid strings"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.ParserProperties.parseCiSchedule_complete"
+
+[[criteria]]
+description = "CI schedule parser rejects all invalid strings"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.ParserProperties.parseCiSchedule_rejects_invalid"
+
+[[criteria]]
+description = "TOML setNested rejects duplicate keys at the leaf level"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.TomlProperties.setNested_rejects_duplicate"
+
+[[criteria]]
+description = "TOML appendArray creates a new array when key is absent"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.TomlProperties.appendArray_creates_new"
+
+# --- Agent review ---
 
 [[criteria]]
 description = """

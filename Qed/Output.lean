@@ -28,7 +28,7 @@ def resultToJson (description : String) (result : VerificationResult) : Json :=
   ]
 
 /-- Whether all results passed (no failures). -/
-private def allPassed (results : List (String × VerificationResult)) : Bool :=
+def allPassed (results : List (String × VerificationResult)) : Bool :=
   results.all fun (_, result) => !result.isFailed
 
 /-- Serialize all verification results with spec name and overall pass/fail. -/

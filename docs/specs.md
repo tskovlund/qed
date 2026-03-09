@@ -43,15 +43,15 @@ An agent review checks design quality (exhaustive matches, purity, edge cases).
 
 ### 3. Verify mode correctness (`verify-mode.spec.toml`)
 
-Two formal proofs verify the type-level separation between modes: verify mode cannot carry a WorkerConfig or LoopConfig, and verify mode is independent of the state machine. Structural assertions check the schema and documentation.
+Four formal proofs verify type-level properties: isTerminal decidability, isPassed/isFailed mutual exclusivity, and the type-level separation between modes (verify mode cannot carry a WorkerConfig or LoopConfig, and is independent of the state machine). Structural assertions check the schema and documentation.
 
 ### 4. Parser correctness (`parser.spec.toml`)
 
-An agent review checks that the parser faithfully maps JSON to the Spec type — no data loss, correct defaults, clear error messages. Build and test coverage is owned by the build spec.
+Four formal proofs verify parser structural integrity: CI schedule parsing completeness (accepts exactly three valid strings, rejects all others), TOML duplicate key rejection, and array creation correctness. Agent reviews check the JSON and TOML parsers for data loss, correct defaults, and spec compliance.
 
 ### 5. CLI and verifier correctness (`cli.spec.toml`)
 
-Agent reviews verify the CLI dispatch logic and verifier safety: correct argument parsing, error handling with `--json`, exit codes, and that the verifier safely sandboxes shell commands.
+Two formal proofs verify output correctness: the pass/fail decision is correct (allPassed iff no failures), and the JSON output always contains the required fields. Agent reviews verify the CLI dispatch logic and verifier safety.
 
 ### 6. Documentation accuracy (`docs.spec.toml`)
 

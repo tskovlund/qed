@@ -73,6 +73,12 @@ Formal proofs verified by Lean 4's kernel:
 - **No worker or loop config** — verify mode cannot carry worker loop state
 - **Independent of state machine** — verify mode does not use the transition function
 
+**Types, output, and parsing:**
+- **Pass/fail decision correctness** — `allPassed` returns true iff no result is `.fail`
+- **JSON output contract** — output always contains "spec", "passed", "criteria" fields
+- **CI schedule parser completeness** — accepts exactly "always", "trunk", "manual"
+- **TOML key integrity** — `setNested` rejects duplicate keys, `appendArray` creates correctly
+
 ## Status
 
 Under active development — building the MVP. qed eats its own dogfood: the repo's own acceptance criteria are defined as [specs](specs/).
