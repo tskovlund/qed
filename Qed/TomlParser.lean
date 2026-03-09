@@ -348,13 +348,24 @@ partial def parseDoc (s : String) : Except String (List (String × TomlValue)) :
         else .error s!"expected '=' at byte {j}"
   go 0 [] .root
 
-/-- Convert a TomlValue to Lean.Json. -/
-partial def toJson : TomlValue → Json
+mutual
+/-- Convert a TomlValue to Lean.Json. Uses mutual recursion to prove
+termination through the nested inductive (List inside TomlValue). -/
+def toJson : TomlValue → Json
   | .str v => Json.str v
   | .int v => Json.num v
   | .bool v => Json.bool v
-  | .table pairs => Json.mkObj (pairs.map fun (k, v) => (k, toJson v))
-  | .array items => Json.arr (items.map toJson).toArray
+  | .table pairs => Json.mkObj (toJsonPairs pairs)
+  | .array items => Json.arr (toJsonList items).toArray
+
+def toJsonPairs : List (String × TomlValue) → List (String × Json)
+  | [] => []
+  | (k, v) :: rest => (k, toJson v) :: toJsonPairs rest
+
+def toJsonList : List TomlValue → List Json
+  | [] => []
+  | v :: rest => toJson v :: toJsonList rest
+end
 
 /-- Parse TOML and return JSON string. Pure Lean — no external dependencies. -/
 def tomlToJson (tomlContent : String) : Except String String :=

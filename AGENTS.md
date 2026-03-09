@@ -151,6 +151,13 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `TomlJsonValidity.lean` | `tomlToJson_total` | tomlToJson always returns Ok or Error (never diverges) |
 | `TomlJsonValidity.lean` | `tomlToJson_ok_implies_parseDoc_ok` | Successful conversion implies successful parse |
 | `TomlJsonValidity.lean` | `parseDoc_error_implies_tomlToJson_error` | Parse failure propagates to conversion failure |
+| `TomlJsonValidity.lean` | `toJson_str` | String values map to JSON strings |
+| `TomlJsonValidity.lean` | `toJson_int` | Integer values map to JSON numbers |
+| `TomlJsonValidity.lean` | `toJson_bool` | Boolean values map to JSON booleans |
+| `TomlJsonValidity.lean` | `toJson_table` | Tables map to JSON objects via toJsonPairs |
+| `TomlJsonValidity.lean` | `toJson_array` | Arrays map to JSON arrays via toJsonList |
+| `TomlJsonValidity.lean` | `toJson_empty_table` | Empty table produces empty JSON object |
+| `TomlJsonValidity.lean` | `toJson_empty_array` | Empty array produces empty JSON array |
 
 ## Repo-specific conventions
 
