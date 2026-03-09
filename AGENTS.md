@@ -16,6 +16,7 @@ Qed/
   TomlConverter.lean   TOML → JSON conversion (thin wrapper around TomlParser)
   StateMachine.lean    Pure transition function (proven core)
   Verifier.lean        Verification dispatch (command, agent, property, proof)
+  WorkerLoop.lean      Worker loop execution (spawn worker, verify, feed failures, repeat)
   Output.lean          JSON result serialization (--json flag support)
   Serializer.lean      Spec → JSON serialization (roundtrip-proven against Parser)
 Qed/Proofs/

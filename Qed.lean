@@ -5,6 +5,7 @@ import Qed.TomlParser
 import Qed.TomlConverter
 import Qed.SpecLoader
 import Qed.Verifier
+import Qed.WorkerLoop
 import Qed.Output
 import Qed.Proofs.FinalStates
 import Qed.Proofs.Monotonic
