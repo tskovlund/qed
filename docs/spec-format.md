@@ -1,4 +1,3 @@
-Info: Running script ".lake/build/bin/docgen" on /Users/thomas/repos/qed
 # Spec Format Reference
 
 > **Auto-generated** from the Lean types in [`Qed/Types.lean`](../Qed/Types.lean) via JSON Schema.

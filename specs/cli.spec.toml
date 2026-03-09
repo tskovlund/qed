@@ -2,6 +2,16 @@
 
 name = "cli-correctness"
 
+# --- Proof criteria ---
+
+[[criteria]]
+description = "Pass/fail decision is correct: allPassed returns true iff no result is .fail"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.OutputCorrectness.allPassed_iff_no_failures"
+
 # --- Agent review ---
 
 [[criteria]]

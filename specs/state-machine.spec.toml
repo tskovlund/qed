@@ -3,8 +3,10 @@
 name = "state-machine-correctness"
 
 # --- Proof criteria ---
-# Each corresponds to a theorem in Qed/Proofs/.
-# These are the mathematical guarantees that make the loop trustworthy.
+# Top-level guarantees about the worker loop state machine.
+# Building-block lemmas (fuel measures, monotonicity helpers, phase tracking)
+# live in the proof files but are not spec criteria — they exist to support
+# these results, not as independent guarantees.
 
 # Safety: bad things don't happen
 
@@ -24,14 +26,6 @@ type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.NoSkip.no_skip_verification"
 
-[[criteria]]
-description = "Worker runs before verification — verifying(n) is only reachable from workerRunning(n)"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.NoSkip.worker_before_verification"
-
 # Liveness: good things eventually happen
 
 [[criteria]]
@@ -45,30 +39,12 @@ target = "Qed.Proofs.Termination.loop_terminates"
 # Correctness: the right things happen
 
 [[criteria]]
-description = "Iteration count never decreases across transitions"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.Monotonic.iteration_monotonic"
-
-[[criteria]]
 description = "Stuck detection fires iff the same failures repeat for stuckThreshold consecutive iterations"
 
 [criteria.verify]
 type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.StuckDetection.stuck_iff_threshold"
-
-# Invariants: structural guarantees
-
-[[criteria]]
-description = "The transition function is deterministic — equal inputs always produce equal outputs"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.Invariants.transition_deterministic"
 
 [[criteria]]
 description = "The initial state (ready) is never revisited after leaving it"
@@ -77,22 +53,6 @@ description = "The initial state (ready) is never revisited after leaving it"
 type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.Invariants.ready_unreachable"
-
-[[criteria]]
-description = "State lifecycle phase (initial → working → terminal) never decreases"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.Invariants.phase_monotonic"
-
-[[criteria]]
-description = "Iteration count never exceeds maxIterations"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.Invariants.iteration_bounded"
 
 # --- Agent review ---
 

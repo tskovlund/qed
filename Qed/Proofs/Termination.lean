@@ -105,12 +105,12 @@ either terminates immediately or produces `workerRunning` with a strictly
 higher iteration bounded by maxIterations. Combined with `fuel_decreases_on_retry`,
 this gives termination by well-founded induction on (maxIterations - iteration). -/
 theorem loop_progress (config : LoopConfig) (iteration : Nat)
-    (ctx : LoopContext) (failures : List String)
+    (context : LoopContext) (failures : List String)
     (hiter : iteration < config.maxIterations) :
-    (transition config (.verifying iteration) ctx (.someFailed failures)).1.isTerminal = true ∨
+    (transition config (.verifying iteration) context (.someFailed failures)).1.isTerminal = true ∨
     ∃ (n : Nat), n = iteration + 1 ∧ n ≤ config.maxIterations ∧
-      (transition config (.verifying iteration) ctx (.someFailed failures)).1 = .workerRunning n := by
-  have key := verify_someFailed_terminates_or_increments config iteration ctx failures
+      (transition config (.verifying iteration) context (.someFailed failures)).1 = .workerRunning n := by
+  have key := verify_someFailed_terminates_or_increments config iteration context failures
   cases key with
   | inl hterm => left; exact hterm
   | inr hworker =>

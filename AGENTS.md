@@ -25,6 +25,11 @@ Qed/Proofs/
   Invariants.lean      Determinism, ready transience, phase ordering, iteration bound
   Monotonic.lean       Iteration count is non-decreasing
   VerifyMode.lean      Verify mode type-level separation proofs
+  TypeProperties.lean  isTerminal decidability, isPassed/isFailed characterization
+  OutputCorrectness.lean  allPassed correctness, JSON output contract
+  ParserProperties.lean   parseCiSchedule completeness and rejection
+  TomlProperties.lean     setNested/appendArray structural integrity
+  TomlJsonValidity.lean   TOML→JSON pipeline totality and error propagation
 Tests/
   Main.lean            Test runner (imports all test modules)
   Types.lean           isTerminal behavior tests
@@ -35,10 +40,10 @@ Tests/
   Cli.lean             End-to-end CLI tests (invoke built binary, check output/exit codes)
 specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry
-  cli.spec.toml            CLI + verifier + output correctness — agent
-  state-machine.spec.toml  State machine correctness — 10 proofs + agent
-  parser.spec.toml         Parser correctness — tests + agent
-  verify-mode.spec.toml    Verify mode correctness — command + agent
+  cli.spec.toml            CLI + verifier + output correctness — 1 proof + agent
+  state-machine.spec.toml  State machine correctness — 5 proofs + agent
+  parser.spec.toml         Parser correctness — 2 proofs + agent
+  verify-mode.spec.toml    Verify mode correctness — 2 proofs + command + agent
   docs.spec.toml           Documentation accuracy — freshness + agent
 DocGen/
   Schema.lean          JSON Schema generation (exhaustive matches on Types)
@@ -101,7 +106,9 @@ lake test             # run tests
 
 ## Proven properties
 
-The `Qed/Proofs/` directory contains formal proofs about the state machine transition function. All proofs are complete (no `sorry`).
+The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. All proofs are complete (no `sorry`).
+
+**State machine (worker loop):**
 
 | File | Theorem | Property |
 |------|---------|----------|
@@ -123,6 +130,34 @@ The `Qed/Proofs/` directory contains formal proofs about the state machine trans
 | `Invariants.lean` | `iteration_bounded` | Iteration count never exceeds `maxIterations` (given `maxIterations ≥ 1`) |
 | `VerifyMode.lean` | `verify_has_no_worker` | `SpecMode.verify` cannot carry a `WorkerConfig` or `LoopConfig` |
 | `VerifyMode.lean` | `verify_independent_of_loop` | Verify mode is independent of the worker loop machinery |
+
+**Types, output, parser, and TOML parser:**
+
+| File | Theorem | Property |
+|------|---------|----------|
+| `TypeProperties.lean` | `isTerminal_decidable` | Every LoopState is either terminal or not |
+| `TypeProperties.lean` | `isPassed_iff_pass` | `isPassed` returns true iff the result is `.pass` |
+| `TypeProperties.lean` | `isFailed_iff_fail` | `isFailed` returns true iff the result is `.fail` |
+| `TypeProperties.lean` | `passed_and_failed_exclusive` | No result is both passed and failed |
+| `OutputCorrectness.lean` | `allPassed_iff_no_failures` | Pass/fail decision is correct: true iff no result is `.fail` |
+| `OutputCorrectness.lean` | `resultsToJson_has_required_fields` | JSON output always contains "spec", "passed", "criteria" fields |
+| `ParserProperties.lean` | `parseCiSchedule_complete` | If parseCiSchedule succeeds, input was "always", "trunk", or "manual" |
+| `ParserProperties.lean` | `parseCiSchedule_rejects_invalid` | Any other string produces an error |
+| `TomlProperties.lean` | `setNested_no_duplicate_at_leaf` | setNested inserts without duplicates when key is absent |
+| `TomlProperties.lean` | `setNested_rejects_duplicate` | setNested returns error when key already exists |
+| `TomlProperties.lean` | `setNested_empty_keys` | Empty key path is always rejected |
+| `TomlProperties.lean` | `appendArray_empty_keys` | Empty key path is always rejected |
+| `TomlProperties.lean` | `appendArray_creates_new` | Absent key creates new single-element array |
+| `TomlJsonValidity.lean` | `tomlToJson_total` | tomlToJson always returns Ok or Error (never diverges) |
+| `TomlJsonValidity.lean` | `tomlToJson_ok_implies_parseDoc_ok` | Successful conversion implies successful parse |
+| `TomlJsonValidity.lean` | `parseDoc_error_implies_tomlToJson_error` | Parse failure propagates to conversion failure |
+| `TomlJsonValidity.lean` | `toJson_str` | String values map to JSON strings |
+| `TomlJsonValidity.lean` | `toJson_int` | Integer values map to JSON numbers |
+| `TomlJsonValidity.lean` | `toJson_bool` | Boolean values map to JSON booleans |
+| `TomlJsonValidity.lean` | `toJson_table` | Tables map to JSON objects via toJsonPairs |
+| `TomlJsonValidity.lean` | `toJson_array` | Arrays map to JSON arrays via toJsonList |
+| `TomlJsonValidity.lean` | `toJson_empty_table` | Empty table produces empty JSON object |
+| `TomlJsonValidity.lean` | `toJson_empty_array` | Empty array produces empty JSON array |
 
 ## Repo-specific conventions
 
