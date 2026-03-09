@@ -79,6 +79,7 @@ Formal proofs verified by Lean 4's kernel:
 - **CI schedule parser completeness** — accepts exactly "always", "trunk", "manual"
 - **TOML key integrity** — `setNested` rejects duplicate keys, `appendArray` creates correctly
 - **TOML→JSON pipeline** — successful conversion implies successful parse; parse errors propagate
+- **Serializer↔parser roundtrip** — parsing serialized JSON recovers the original spec exactly
 
 ## Status
 

@@ -46,7 +46,7 @@ Two formal proofs verify the type-level separation between modes: verify mode ca
 
 ### 4. Parser correctness (`parser.spec.toml`)
 
-Two formal proofs verify CI schedule parsing: completeness (accepts exactly the three valid strings) and rejection (all other strings produce errors). Building-block proofs (TOML duplicate key rejection, array creation) live in the proof files. Agent reviews check the JSON and TOML parsers for data loss, correct defaults, and spec compliance.
+Three formal proofs verify parser correctness: CI schedule completeness (accepts exactly the three valid strings), CI schedule rejection (all other strings produce errors), and the serializer↔parser roundtrip (parsing serialized JSON recovers the original spec exactly). Building-block proofs (TOML duplicate key rejection, array creation, per-type roundtrips) live in the proof files. Agent reviews check the JSON and TOML parsers for data loss, correct defaults, and spec compliance.
 
 ### 5. CLI and verifier correctness (`cli.spec.toml`)
 

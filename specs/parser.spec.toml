@@ -26,6 +26,14 @@ type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.ParserProperties.parseCiSchedule_rejects_invalid"
 
+[[criteria]]
+description = "Serializer→parser roundtrip: parsing serialized JSON recovers the original spec exactly"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.Roundtrip.spec_roundtrip"
+
 # --- Agent review ---
 
 [[criteria]]
