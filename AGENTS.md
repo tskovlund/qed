@@ -40,10 +40,10 @@ Tests/
   Cli.lean             End-to-end CLI tests (invoke built binary, check output/exit codes)
 specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry
-  cli.spec.toml            CLI + verifier + output correctness — 2 proofs + agent
-  state-machine.spec.toml  State machine correctness — 10 proofs + agent
-  parser.spec.toml         Parser correctness — 6 proofs + agent
-  verify-mode.spec.toml    Verify mode correctness — 4 proofs + command + agent
+  cli.spec.toml            CLI + verifier + output correctness — 1 proof + agent
+  state-machine.spec.toml  State machine correctness — 5 proofs + agent
+  parser.spec.toml         Parser correctness — 2 proofs + agent
+  verify-mode.spec.toml    Verify mode correctness — 2 proofs + command + agent
   docs.spec.toml           Documentation accuracy — freshness + agent
 DocGen/
   Schema.lean          JSON Schema generation (exhaustive matches on Types)

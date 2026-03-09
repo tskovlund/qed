@@ -32,26 +32,25 @@ The foundation. Everything compiles, tests pass, no incomplete proofs. If this f
 
 ### 2. State machine correctness (`state-machine.spec.toml`)
 
-Ten formal proofs verify the state machine's mathematical properties, organized by what they guarantee:
+Five top-level formal proofs verify the state machine's mathematical properties, organized by what they guarantee:
 
-- **Safety:** terminal states are absorbing, no skipped verification, worker runs before verification
+- **Safety:** terminal states are absorbing, no skipped verification
 - **Liveness:** the loop terminates within maxIterations
-- **Correctness:** iteration count is monotonic, stuck detection fires iff repeated
-- **Invariants:** transition determinism, ready transience, phase monotonicity, iteration bound
+- **Correctness:** stuck detection fires iff repeated failures reach the threshold, ready state is never revisited
 
-An agent review checks design quality (exhaustive matches, purity, edge cases).
+Building-block lemmas (fuel measures, monotonicity, phase tracking, determinism) live in the proof files but are not spec criteria — they exist to support these results, not as independent guarantees. An agent review checks design quality (exhaustive matches, purity, edge cases).
 
 ### 3. Verify mode correctness (`verify-mode.spec.toml`)
 
-Four formal proofs verify type-level properties: isTerminal decidability, isPassed/isFailed mutual exclusivity, and the type-level separation between modes (verify mode cannot carry a WorkerConfig or LoopConfig, and is independent of the state machine). Structural assertions check the schema and documentation.
+Two formal proofs verify the type-level separation between modes: verify mode cannot carry a WorkerConfig or LoopConfig, and is independent of the state machine. Building-block proofs (isTerminal decidability, isPassed/isFailed mutual exclusivity) live in the proof files but are not spec criteria. Structural assertions check the schema and documentation.
 
 ### 4. Parser correctness (`parser.spec.toml`)
 
-Four formal proofs verify parser structural integrity: CI schedule parsing completeness (accepts exactly three valid strings, rejects all others), TOML duplicate key rejection, and array creation correctness. Agent reviews check the JSON and TOML parsers for data loss, correct defaults, and spec compliance.
+Two formal proofs verify CI schedule parsing: completeness (accepts exactly the three valid strings) and rejection (all other strings produce errors). Building-block proofs (TOML duplicate key rejection, array creation) live in the proof files. Agent reviews check the JSON and TOML parsers for data loss, correct defaults, and spec compliance.
 
 ### 5. CLI and verifier correctness (`cli.spec.toml`)
 
-Two formal proofs verify output correctness: the pass/fail decision is correct (allPassed iff no failures), and the JSON output always contains the required fields. Agent reviews verify the CLI dispatch logic and verifier safety.
+One formal proof verifies output correctness: the pass/fail decision is correct (allPassed iff no failures). The JSON structure proof lives in the proof file but is not a spec criterion. Agent reviews verify the CLI dispatch logic and verifier safety.
 
 ### 6. Documentation accuracy (`docs.spec.toml`)
 

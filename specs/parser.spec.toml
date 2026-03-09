@@ -26,38 +26,6 @@ type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.ParserProperties.parseCiSchedule_rejects_invalid"
 
-[[criteria]]
-description = "TOML setNested rejects duplicate keys at the leaf level"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.TomlProperties.setNested_rejects_duplicate"
-
-[[criteria]]
-description = "TOML appendArray creates a new array when key is absent"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.TomlProperties.appendArray_creates_new"
-
-[[criteria]]
-description = "Successful TOML→JSON conversion implies successful parse"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.TomlJsonValidity.tomlToJson_ok_implies_parseDoc_ok"
-
-[[criteria]]
-description = "TOML parse failure propagates to conversion failure"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.TomlJsonValidity.parseDoc_error_implies_tomlToJson_error"
-
 # --- Agent review ---
 
 [[criteria]]
