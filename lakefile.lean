@@ -3,7 +3,11 @@ open Lake DSL
 
 package «qed» where
   leanOptions := #[
-    ⟨`autoImplicit, false⟩
+    ⟨`autoImplicit, false⟩,
+    ⟨`warningAsError, true⟩,
+    ⟨`linter.all, true⟩,
+    ⟨`linter.missingDocs, false⟩,
+    ⟨`linter.unusedVariables.analyzeTactics, true⟩
   ]
 
 require "leanprover-community" / "batteries" @ git "v4.28.0"
