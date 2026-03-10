@@ -21,7 +21,8 @@ private def freshTempDir (label : String) : IO System.FilePath := do
   IO.FS.createDirAll path
   return path
 
-/-- Create a temporary spec file for testing, returning its path. -/
+/-- Create a temporary spec file for testing, returning its path.
+    All callers share the same directory (sequential execution assumed). -/
 private def writeTempSpec (content : String) : IO System.FilePath := do
   let dir ← freshTempDir "cli"
   let path := dir / "test.spec.json"
