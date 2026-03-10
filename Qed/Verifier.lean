@@ -20,7 +20,7 @@ private def shellCmd : String × String :=
   if System.Platform.isWindows then ("cmd", "/c") else ("/bin/sh", "-c")
 
 /-- Run a shell command and return pass/fail based on exit code.
-    Captures stdout and stderr, truncates to last 2000 chars.
+    Captures stdout and stderr, truncates to last `maxOutputLength` chars.
     TODO: `timeout` is parsed and stored but not yet enforced. Process-level
     timeout requires `IO.Process.spawn` + async kill, tracked for a future PR. -/
 private def verifyCommand (command : String) (_timeout : Nat) : IO VerificationResult := do
