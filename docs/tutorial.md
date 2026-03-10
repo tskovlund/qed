@@ -87,12 +87,12 @@ qed verify hello.spec.toml --json
   "criteria": [
     {
       "description": "echo succeeds",
-      "status": "pass",
+      "result": "passed",
       "details": "hello"
     },
     {
       "description": "this will fail",
-      "status": "fail",
+      "result": "failed",
       "details": "exit code 1\n"
     }
   ]

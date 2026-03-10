@@ -12,10 +12,10 @@ def statusIndicator : VerificationResult → String
   | .needsHuman _ => "NEEDS-HUMAN"
   | .skipped _ => "SKIP"
 
-/-- Serialize a VerificationResult status to a JSON-friendly string. -/
+/-- Serialize a VerificationResult to a JSON-friendly result string. -/
 def resultStatus : VerificationResult → String
-  | .pass _ => "pass"
-  | .fail _ => "fail"
+  | .pass _ => "passed"
+  | .fail _ => "failed"
   | .needsHuman _ => "needs-human"
   | .skipped _ => "skipped"
 
@@ -30,7 +30,7 @@ def resultDetails : VerificationResult → String
 def resultToJson (description : String) (result : VerificationResult) : Json :=
   Json.mkObj [
     ("description", Json.str description),
-    ("status", Json.str (resultStatus result)),
+    ("result", Json.str (resultStatus result)),
     ("details", Json.str (resultDetails result))
   ]
 

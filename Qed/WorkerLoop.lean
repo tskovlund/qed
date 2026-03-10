@@ -49,7 +49,7 @@ private def writeFailuresFile (failures : List (String × VerificationResult))
   let entries := failures.map fun (desc, result) =>
     Lean.Json.mkObj [
       ("description", Lean.Json.str desc),
-      ("status", Lean.Json.str (Output.resultStatus result)),
+      ("result", Lean.Json.str (Output.resultStatus result)),
       ("details", Lean.Json.str (Output.resultDetails result))]
   let json := Lean.Json.arr entries.toArray
   IO.FS.writeFile path (json.pretty 2)
