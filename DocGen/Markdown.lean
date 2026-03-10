@@ -88,7 +88,7 @@ private def renderVerifyVariant (variant : Json) : String :=
   let typeProperty := getObject properties "type"
   let typeName := getString typeProperty "const"
   let description := getString variant "description"
-  let table := renderPropertiesTable variant { includeDescription := false }
+  let table := renderPropertiesTable variant { includeDescription := true }
   s!"### `{typeName}`\n\n{description}\n\n{table}"
 
 /-- Generate the full markdown reference from a JSON Schema string. -/

@@ -88,6 +88,38 @@ def testParseJsonExtractsAgentReviewFields : IO Bool := do
     | none => return false
   | .error _ => return false
 
+def testParseJsonExtractsAgentCustomCommand : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check it\", \"command\": \"ollama run llama3\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    match spec.criteria.head? with
+    | some criterion =>
+      return match criterion.verify with
+        | .agent prompt _ command => prompt == "check it" && command == some "ollama run llama3"
+        | _ => false
+    | none => return false
+  | .error _ => return false
+
+def testParseJsonDefaultsAgentCommandToNone : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    match spec.criteria.head? with
+    | some criterion =>
+      return match criterion.verify with
+        | .agent _ _ command => command == none
+        | _ => false
+    | none => return false
+  | .error _ => return false
+
 def testParseJsonDefaultsAgentReviewModelToSonnet : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check\"}}]}"
@@ -403,6 +435,8 @@ def parserTests : List (String × IO Bool) := [
   ("testParseJsonAppliesCustomLoopConfig", testParseJsonAppliesCustomLoopConfig),
   ("testParseJsonExtractsCommandFields", testParseJsonExtractsCommandFields),
   ("testParseJsonExtractsAgentReviewFields", testParseJsonExtractsAgentReviewFields),
+  ("testParseJsonExtractsAgentCustomCommand", testParseJsonExtractsAgentCustomCommand),
+  ("testParseJsonDefaultsAgentCommandToNone", testParseJsonDefaultsAgentCommandToNone),
   ("testParseJsonDefaultsAgentReviewModelToSonnet", testParseJsonDefaultsAgentReviewModelToSonnet),
   ("testParseJsonExtractsProofFields", testParseJsonExtractsProofFields),
   ("testParseJsonExtractsPropertyFieldsWithDefault", testParseJsonExtractsPropertyFieldsWithDefault),
