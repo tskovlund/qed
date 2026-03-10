@@ -63,7 +63,7 @@ def generate : String :=
   let verifyTypes := verifyTypeConstructors
   let ciSchedules := ciScheduleValues
   let loopConfig : LoopConfig := {}
-  let worker := WorkerConfig.mk "echo hi" none "." 3600
+  let worker : WorkerConfig := { command := "echo hi" }
 s!"\{
   \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",
   \"$id\": \"https://qed.skovlund.dev/spec.schema.json\",
@@ -127,7 +127,7 @@ s!"\{
                 \"properties\": \{
                   \"type\": \{ \"const\": \"{verifyTypes[0]!}\" },
                   \"run\": \{ \"type\": \"string\", \"description\": \"Shell command to execute.\" },
-                  \"timeout\": \{ \"type\": \"integer\", \"default\": 300, \"minimum\": 1, \"description\": \"Timeout in seconds.\" }
+                  \"timeout\": \{ \"type\": \"integer\", \"default\": {defaultCommandTimeout}, \"minimum\": 1, \"description\": \"Timeout in seconds.\" }
                 }
               },
               \{
@@ -138,7 +138,7 @@ s!"\{
                 \"properties\": \{
                   \"type\": \{ \"const\": \"{verifyTypes[1]!}\" },
                   \"prompt\": \{ \"type\": \"string\", \"description\": \"Review prompt for the agent.\" },
-                  \"model\": \{ \"type\": \"string\", \"default\": \"claude-sonnet-4-6\", \"description\": \"Model to use for the review.\" }
+                  \"model\": \{ \"type\": \"string\", \"default\": \"{defaultAgentModel}\", \"description\": \"Model to use for the review.\" }
                 }
               },
               \{
@@ -149,7 +149,7 @@ s!"\{
                 \"properties\": \{
                   \"type\": \{ \"const\": \"{verifyTypes[2]!}\" },
                   \"run\": \{ \"type\": \"string\", \"description\": \"Shell command to run property tests.\" },
-                  \"timeout\": \{ \"type\": \"integer\", \"default\": 600, \"minimum\": 1, \"description\": \"Timeout in seconds.\" }
+                  \"timeout\": \{ \"type\": \"integer\", \"default\": {defaultPropertyTimeout}, \"minimum\": 1, \"description\": \"Timeout in seconds.\" }
                 }
               },
               \{

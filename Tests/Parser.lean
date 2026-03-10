@@ -99,7 +99,7 @@ def testParseJsonDefaultsAgentReviewModelToSonnet : IO Bool := do
     match spec.criteria.head? with
     | some criterion =>
       return match criterion.verify with
-        | .agent _ model => model == "claude-sonnet-4-6"
+        | .agent _ model => model == Qed.defaultAgentModel
         | _ => false
     | none => return false
   | .error _ => return false
