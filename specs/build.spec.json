@@ -20,7 +20,7 @@
       "description": "No sorry in proof or source files",
       "verify": {
         "type": "command",
-        "run": "! grep -rn 'sorry' --include='*.lean' Qed/ Tests/ Main.lean 2>/dev/null | grep -v '^\\s*--' | grep -q ."
+        "run": "! grep -rn 'sorry' --include='*.lean' Qed/ Tests/ DocGen/ Main.lean 2>/dev/null | grep -v '^\\s*--' | grep -q ."
       }
     }
   ]

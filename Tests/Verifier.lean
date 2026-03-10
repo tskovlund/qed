@@ -82,8 +82,24 @@ def testVerifyHumanFailsInNonInteractiveContext : IO Bool := do
   }
   -- Act
   let result ← verifyCriterion criterion
-  -- Assert: human criteria fail when stdin is non-interactive
-  return result.isFailed
+  -- Assert: human criteria fail with "non-interactive context" when stdin is piped
+  match result with
+  | .fail details => return details == "non-interactive context"
+  | _ => return false
+
+def testVerifySkipReturnsSkippedWithReason : IO Bool := do
+  -- Arrange
+  let criterion : AcceptanceCriterion := {
+    description := "skipped check"
+    verify := .command "true"
+    skip := some "not yet implemented"
+  }
+  -- Act
+  let result ← verifyCriterion criterion
+  -- Assert: skip field produces .skipped with the reason string
+  match result with
+  | .skipped reason => return reason == "not yet implemented"
+  | _ => return false
 
 def testVerifyAllReturnsResultsForAllCriteria : IO Bool := do
   -- Arrange
@@ -103,11 +119,13 @@ def testVerifyAllReturnsResultsForAllCriteria : IO Bool := do
   let secondFailed := match results[1]? with
     | some (_, r) => r.isFailed
     | none => false
-  let thirdFailed := match results[2]? with
-    | some (_, r) => r.isFailed
-    | _ => false
+  let thirdNonInteractive := match results[2]? with
+    | some (_, r) => match r with
+      | .fail details => details == "non-interactive context"
+      | _ => false
+    | none => false
   return descriptions == ["passes", "fails", "manual"] &&
-    firstPassed && secondFailed && thirdFailed
+    firstPassed && secondFailed && thirdNonInteractive
 
 def testParseAgentVerdictPassWithJsonBlock : IO Bool := do
   -- Arrange
@@ -173,6 +191,7 @@ def verifierTests : List (String × IO Bool) := [
   ("testVerifyCommandHandlesPipedCommands", testVerifyCommandHandlesPipedCommands),
   ("testVerifyCommandReturnsFailForMissingCommand", testVerifyCommandReturnsFailForMissingCommand),
   ("testVerifyHumanFailsInNonInteractiveContext", testVerifyHumanFailsInNonInteractiveContext),
+  ("testVerifySkipReturnsSkippedWithReason", testVerifySkipReturnsSkippedWithReason),
   ("testVerifyAllReturnsResultsForAllCriteria", testVerifyAllReturnsResultsForAllCriteria),
   ("testParseAgentVerdictPassWithJsonBlock", testParseAgentVerdictPassWithJsonBlock),
   ("testParseAgentVerdictFailWithJsonBlock", testParseAgentVerdictFailWithJsonBlock),
