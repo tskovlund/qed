@@ -31,6 +31,8 @@ def listSpecs (directory : System.FilePath) (extension : String := ".spec.json")
 /-- Recursively find all spec files (.spec.json and .spec.toml) under a directory. -/
 def listAllSpecs (directory : System.FilePath)
     : IO (Except String (List System.FilePath)) := do
+  -- Read the initial directory eagerly so errors (e.g., not found) propagate
+  let _ ← directory.readDir
   let mut specFiles : List System.FilePath := []
   let mut queue : List System.FilePath := [directory]
   while !queue.isEmpty do
@@ -41,7 +43,7 @@ def listAllSpecs (directory : System.FilePath)
       let entries ← try
         dir.readDir
       catch _ =>
-        -- Skip directories we can't read (e.g., .lake, .git)
+        -- Skip subdirectories we can't read
         continue
       for entry in entries do
         let path := dir / entry.fileName
@@ -49,8 +51,8 @@ def listAllSpecs (directory : System.FilePath)
           specFiles := specFiles ++ [path]
         else
           let isDir ← path.isDir
-          -- Skip hidden directories and build artifacts
-          if isDir && !entry.fileName.startsWith "." && entry.fileName != ".lake" then
+          -- Skip hidden directories (includes .lake, .git, etc.)
+          if isDir && !entry.fileName.startsWith "." then
             queue := queue ++ [path]
   return .ok specFiles
 
