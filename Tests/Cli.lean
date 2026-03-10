@@ -163,7 +163,8 @@ def testParseRejectsMaxIterationsWithoutWorker : IO Bool := do
 
 def testVerifyHandlesNonUtf8Output : IO Bool := do
   -- Arrange: command outputs raw bytes that aren't valid UTF-8
-  let specContent := "{\"name\": \"non-utf8-test\", \"criteria\": [{\"description\": \"binary output\", \"verify\": {\"type\": \"command\", \"run\": \"printf '\\\\x80\\\\xff'\"}}]}"
+  -- Use perl which reliably produces raw bytes on all platforms
+  let specContent := "{\"name\": \"non-utf8-test\", \"criteria\": [{\"description\": \"binary output\", \"verify\": {\"type\": \"command\", \"run\": \"perl -e 'print \\\"\\\\x80\\\\xff\\\"'\"}}]}"
   let specPath ← writeTempSpec specContent
   -- Act
   let (exitCode, stdout, _) ← runQed ["verify", specPath.toString]

@@ -152,7 +152,13 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
             IO.println ""
       | _ => break  -- unreachable: while guard ensures non-terminal
   catch error =>
-    if !jsonOutput then
+    if jsonOutput then
+      let errorJson := Lean.Json.mkObj [
+        ("error", Lean.Json.str s!"interrupted: {error}"),
+        ("state", Lean.Json.str (repr state).pretty)
+      ]
+      IO.println (errorJson.pretty 2)
+    else
       IO.eprintln s!"\nInterrupted: {error}"
       IO.eprintln s!"  State at interruption: {repr state}"
     return (1 : UInt32)
