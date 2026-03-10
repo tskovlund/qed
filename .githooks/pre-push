@@ -10,9 +10,19 @@ fi
 
 echo "pre-push: building..."
 lake build || exit 1
+lake build docgen || exit 1
 
 echo "pre-push: running tests..."
 lake test || exit 1
+
+echo "pre-push: checking docs freshness..."
+.lake/build/bin/docgen schema > /tmp/qed-schema-check.json 2>/dev/null
+.lake/build/bin/docgen markdown > /tmp/qed-format-check.md 2>/dev/null
+if ! diff -q docs/spec.schema.json /tmp/qed-schema-check.json &>/dev/null || \
+   ! diff -q docs/spec-format.md /tmp/qed-format-check.md &>/dev/null; then
+  echo "pre-push: generated docs are stale — run 'lake build docgen && .lake/build/bin/docgen schema > docs/spec.schema.json && .lake/build/bin/docgen markdown > docs/spec-format.md' and commit"
+  exit 1
+fi
 
 echo "pre-push: checking for sorry..."
 if grep -rn 'sorry' --include='*.lean' Qed/ Tests/ DocGen/ Main.lean 2>/dev/null | grep -v '^--' | grep -v '^\s*--'; then
