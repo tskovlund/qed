@@ -125,7 +125,33 @@ qed verify hello.spec.toml
 
 The agent criterion spawns Claude (or your configured agent command) to review the codebase. If Claude isn't available, the criterion fails — qed never silently skips verification you asked for.
 
-## Step 5: Verify a directory
+## Step 5: Add a human criterion
+
+Human criteria prompt you interactively for sign-off — useful for things that can't be automated:
+
+```toml
+name = "hello"
+
+[[criteria]]
+description = "echo succeeds"
+verify = { type = "command", run = "echo hello" }
+
+[[criteria]]
+description = "Output is readable"
+verify = { type = "human", instruction = "Run 'echo hello' and confirm the output looks correct." }
+```
+
+When qed reaches the human criterion, it prints the instruction and waits:
+
+```
+    → Output is readable
+      Run 'echo hello' and confirm the output looks correct.
+    Accept? [y/n]: y
+```
+
+Type `y` to pass, `n` to fail. Human criteria default to `ci = "manual"`, so they're automatically excluded from CI runs (`qed verify --ci`).
+
+## Step 6: Verify a directory
 
 qed can verify all specs in a directory recursively:
 
@@ -135,7 +161,7 @@ qed verify specs/
 
 This finds all `.spec.json` and `.spec.toml` files, skipping hidden directories and build artifacts. With no argument, `qed verify` defaults to the current directory.
 
-## Step 6: A worker loop spec
+## Step 7: A worker loop spec
 
 So far we've used **verify mode** — run each criterion once and report. For iterative development with an AI agent, use **worker loop mode** by adding a `[worker]`:
 

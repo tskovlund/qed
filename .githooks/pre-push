@@ -29,3 +29,6 @@ if grep -rn 'sorry' --include='*.lean' Qed/ Tests/ DocGen/ Main.lean 2>/dev/null
   echo "pre-push: found 'sorry' in source files"
   exit 1
 fi
+
+echo "pre-push: verifying specs..."
+.lake/build/bin/qed verify --ci || exit 1

@@ -59,7 +59,7 @@ DocGen/
   Main.lean            CLI entry point (lake exe docgen schema|markdown)
 docs/                  Documentation (Diataxis: tutorial, how-to, reference, explanation)
   tutorial.md          Tutorial: write your first spec
-  how-to/              How-to guides (CI, agent verification, worker loops, JSON vs TOML)
+  how-to/              How-to guides (CI, agent/human verification, worker loops, JSON vs TOML)
   cli-reference.md     CLI reference (commands, flags, exit codes, env vars, config)
   spec-format.md       Spec format reference (auto-generated from schema)
   spec.schema.json     JSON Schema (auto-generated, CI-checked)

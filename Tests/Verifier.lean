@@ -74,19 +74,16 @@ def testVerifyCommandReturnsFailForMissingCommand : IO Bool := do
   -- Assert
   return result.isFailed
 
-def testVerifyHumanReturnsNeedsHuman : IO Bool := do
-  -- Arrange
-  let instruction := "Please verify the UI looks correct"
+def testVerifyHumanFailsInNonInteractiveContext : IO Bool := do
+  -- Arrange: in test context, stdin is non-interactive
   let criterion : AcceptanceCriterion := {
     description := "manual check"
-    verify := .human instruction
+    verify := .human "Please verify the UI looks correct"
   }
   -- Act
   let result ← verifyCriterion criterion
-  -- Assert
-  match result with
-  | .needsHuman returnedInstruction => return returnedInstruction == instruction
-  | _ => return false
+  -- Assert: human criteria fail when stdin is non-interactive
+  return result.isFailed
 
 def testVerifyAllReturnsResultsForAllCriteria : IO Bool := do
   -- Arrange
@@ -106,11 +103,11 @@ def testVerifyAllReturnsResultsForAllCriteria : IO Bool := do
   let secondFailed := match results[1]? with
     | some (_, r) => r.isFailed
     | none => false
-  let thirdHuman := match results[2]? with
-    | some (_, .needsHuman _) => true
+  let thirdFailed := match results[2]? with
+    | some (_, r) => r.isFailed
     | _ => false
   return descriptions == ["passes", "fails", "manual"] &&
-    firstPassed && secondFailed && thirdHuman
+    firstPassed && secondFailed && thirdFailed
 
 def testParseAgentVerdictPassWithJsonBlock : IO Bool := do
   -- Arrange
@@ -175,7 +172,7 @@ def verifierTests : List (String × IO Bool) := [
   ("testVerifyCommandCapturesStderr", testVerifyCommandCapturesStderr),
   ("testVerifyCommandHandlesPipedCommands", testVerifyCommandHandlesPipedCommands),
   ("testVerifyCommandReturnsFailForMissingCommand", testVerifyCommandReturnsFailForMissingCommand),
-  ("testVerifyHumanReturnsNeedsHuman", testVerifyHumanReturnsNeedsHuman),
+  ("testVerifyHumanFailsInNonInteractiveContext", testVerifyHumanFailsInNonInteractiveContext),
   ("testVerifyAllReturnsResultsForAllCriteria", testVerifyAllReturnsResultsForAllCriteria),
   ("testParseAgentVerdictPassWithJsonBlock", testParseAgentVerdictPassWithJsonBlock),
   ("testParseAgentVerdictFailWithJsonBlock", testParseAgentVerdictFailWithJsonBlock),

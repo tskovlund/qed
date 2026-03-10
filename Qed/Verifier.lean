@@ -101,6 +101,28 @@ private def verifyAgent (prompt : String) (model : String) (command : Option Str
   | .ok false => return .fail (truncate response maxOutputLength)
   | .error e => return .fail s!"could not parse agent verdict: {e}\n{truncate response maxOutputLength}"
 
+/-- Prompt a human to verify a criterion interactively. Prints the instruction
+    to stderr and reads a y/n response from stdin. Retries on invalid input.
+    Fails if stdin is not available (non-interactive context). -/
+private partial def promptLoop (stdin : IO.FS.Stream) : IO VerificationResult := do
+  let line ← try
+    let l ← stdin.getLine
+    pure l.trim.toLower
+  catch _ =>
+    pure ""
+  match line with
+  | "y" | "yes" => return .pass "accepted by human"
+  | "n" | "no" => return .fail "rejected by human"
+  | "" => return .fail "non-interactive context"
+  | _ =>
+    IO.eprint "    Invalid input. Accept? [y/n]: "
+    promptLoop stdin
+
+private def verifyHuman (description : String) (instruction : String) : IO VerificationResult := do
+  IO.eprint s!"\n    → {description}\n      {instruction}\n    Accept? [y/n]: "
+  let stdin ← IO.getStdin
+  promptLoop stdin
+
 /-- Verify a single acceptance criterion. Skipped criteria return immediately
     without dispatching to any verifier. -/
 def verifyCriterion (criterion : AcceptanceCriterion) : IO VerificationResult := do
@@ -115,7 +137,7 @@ def verifyCriterion (criterion : AcceptanceCriterion) : IO VerificationResult :=
     | .proof prover target =>
       return .fail s!"proof verification not yet implemented (prover: {prover}, target: {target})"
     | .human instruction =>
-      return .needsHuman instruction
+      verifyHuman criterion.description instruction
 
 /-- Verify all criteria in a spec, returning results paired with descriptions. -/
 def verifyAll (criteria : List AcceptanceCriterion) : IO (List (String × VerificationResult)) := do
