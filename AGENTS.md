@@ -174,7 +174,7 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `TypeProperties.lean` | `isFailed_iff_fail` | `isFailed` returns true iff the result is `.fail` |
 | `TypeProperties.lean` | `passed_and_failed_exclusive` | No result is both passed and failed |
 | `TypeProperties.lean` | `result_exhaustive` | Every VerificationResult is exactly one of pass, fail, needsHuman, or skipped |
-| `TypeProperties.lean` | `result_complete_partition` | **Spec criterion:** complete partition — every result is exactly one variant; predicates agree |
+| `TypeProperties.lean` | `result_complete_partition` | Complete partition — every result is exactly one variant; predicates agree (cli.spec.toml) |
 | `OutputCorrectness.lean` | `allPassed_iff_no_failures` | Pass/fail decision is correct: true iff no result is `.fail` |
 | `OutputCorrectness.lean` | `resultsToJson_has_required_fields` | JSON output always contains "spec", "passed", "criteria" fields |
 | `OutputCorrectness.lean` | `workerResultsToJson_has_required_fields` | Worker loop JSON always contains "spec", "state", "passed", "criteria" fields |

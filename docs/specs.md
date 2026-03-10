@@ -42,7 +42,7 @@ Building-block lemmas (fuel measures, monotonicity, phase tracking, determinism)
 
 ### 3. Verify mode correctness (`verify-mode.spec.toml`)
 
-Two formal proofs verify the type-level separation between modes: verify mode cannot carry a WorkerConfig or LoopConfig, and is independent of the state machine. Building-block proofs (isTerminal decidability) live in the proof files but are not spec criteria. The result complete partition was promoted to a spec criterion in cli.spec.toml. Structural assertions check the schema and documentation.
+Two formal proofs verify the type-level separation between modes: verify mode cannot carry a WorkerConfig or LoopConfig, and is independent of the state machine. Building-block proofs (isTerminal decidability) live in the proof files but are not spec criteria. Structural assertions check the schema and documentation.
 
 ### 4. Parser correctness (`parser.spec.toml`)
 
