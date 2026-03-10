@@ -23,28 +23,7 @@ jobs:
           test: true
           lean4checker: false
 
-      - name: No sorry in proofs
+      - name: Verify specs
         run: |
-          if [ -d "Qed/Proofs" ]; then
-            if grep -rn 'sorry' Qed/Proofs/; then
-              echo "ERROR: sorry found in proof files"
-              exit 1
-            fi
-          fi
-          echo "No sorry found"
-
-      - name: Build docgen
-        run: lake build docgen
-
-      - name: Docs freshness
-        run: |
-          .lake/build/bin/docgen schema > /tmp/spec.schema.json
-          .lake/build/bin/docgen markdown > /tmp/spec-format.md
-          diff docs/spec.schema.json /tmp/spec.schema.json || {
-            echo "ERROR: docs/spec.schema.json is stale — run 'devbox run docs' and commit"
-            exit 1
-          }
-          diff docs/spec-format.md /tmp/spec-format.md || {
-            echo "ERROR: docs/spec-format.md is stale — run 'devbox run docs' and commit"
-            exit 1
-          }
+          lake build docgen
+          .lake/build/bin/qed verify

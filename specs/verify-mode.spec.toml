@@ -12,7 +12,7 @@ description = "SpecMode has exactly two constructors: workerLoop and verify"
 
 [criteria.verify]
 type = "command"
-run = "grep -c '| workerLoop\\|| verify' Qed/Types.lean | grep -q '^2$'"
+run = "grep -cE '\\| workerLoop |\\| verify$' Qed/Types.lean | grep -q '^2$'"
 
 [[criteria]]
 description = "JSON Schema enforces at least one criterion when no worker is present"

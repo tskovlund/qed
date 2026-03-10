@@ -48,6 +48,24 @@ def runVerify (path : String) (jsonOutput : Bool) : IO UInt32 := do
     return 2
   | .ok spec => verifySpec spec jsonOutput
 
+/-- Verify all specs in a directory. Returns 0 if all pass, 1 if any fail, 2 on error. -/
+def runVerifyAll (directory : String) (jsonOutput : Bool) : IO UInt32 := do
+  match ← SpecLoader.listAllSpecs directory with
+  | .error message =>
+    reportError message jsonOutput
+    return 2
+  | .ok specs =>
+    if specs.isEmpty then
+      reportError s!"no spec files found in '{directory}'" jsonOutput
+      return 2
+    let mut anyFailed := false
+    for specPath in specs do
+      let result ← runVerify specPath.toString jsonOutput
+      if result == 1 then anyFailed := true
+      if result == 2 then return 2
+      if !jsonOutput then IO.println ""
+    return if anyFailed then 1 else 0
+
 /-- Parse and validate a spec file, printing the parsed result. -/
 def runParse (path : String) (jsonOutput : Bool) : IO UInt32 := do
   match ← loadSpecSafe path with
@@ -77,7 +95,8 @@ def printHelp : IO Unit := do
   IO.println ""
   IO.println "Usage:"
   IO.println "  qed run <spec-file>       Run verification (verify mode) or worker loop"
-  IO.println "  qed verify <spec-file>    Single-pass verification (the CI command)"
+  IO.println "  qed verify [spec-or-dir]  Verify a spec file, or all specs in a directory (recursive)"
+  IO.println "                            Defaults to current directory if omitted"
   IO.println "  qed parse <spec-file>     Parse and validate a spec file"
   IO.println "  qed version               Print version"
   IO.println "  qed help                  Show this help"
@@ -105,8 +124,12 @@ def main (args : List String) : IO UInt32 := do
   | ["help"] =>
     printHelp
     return 0
+  | ["verify"] =>
+    runVerifyAll "." jsonOutput
   | ["verify", path] =>
-    runVerify path jsonOutput
+    let isDir ← (path : System.FilePath).isDir
+    if isDir then runVerifyAll path jsonOutput
+    else runVerify path jsonOutput
   | ["run", path] =>
     match ← loadSpecSafe path with
     | .error message =>

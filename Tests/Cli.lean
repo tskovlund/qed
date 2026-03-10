@@ -161,6 +161,28 @@ def testParseRejectsMaxIterationsWithoutWorker : IO Bool := do
   -- Assert
   return exitCode == 2 && stderr.contains "maxIterations" && stderr.contains "worker"
 
+def testVerifyDirectoryRunsAllSpecs : IO Bool := do
+  -- Arrange: create a temp directory with two spec files
+  IO.FS.createDirAll "/tmp/qed-test-dir"
+  IO.FS.writeFile "/tmp/qed-test-dir/a.spec.json"
+    "{\"name\": \"a\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  IO.FS.writeFile "/tmp/qed-test-dir/b.spec.json"
+    "{\"name\": \"b\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", "/tmp/qed-test-dir"]
+  -- Assert
+  return exitCode == 0 && stdout.contains "a" && stdout.contains "b"
+
+def testVerifyDirectoryFailsOnBadSpec : IO Bool := do
+  -- Arrange
+  IO.FS.createDirAll "/tmp/qed-test-dir-fail"
+  IO.FS.writeFile "/tmp/qed-test-dir-fail/fail.spec.json"
+    "{\"name\": \"fail\", \"criteria\": [{\"description\": \"fails\", \"verify\": {\"type\": \"command\", \"run\": \"false\"}}]}"
+  -- Act
+  let (exitCode, _, _) ← runQed ["verify", "/tmp/qed-test-dir-fail"]
+  -- Assert
+  return exitCode == 1
+
 def testVerifyHandlesNonUtf8Output : IO Bool := do
   -- Arrange: command outputs raw bytes that aren't valid UTF-8
   -- Use perl which reliably produces raw bytes on all platforms
@@ -188,5 +210,7 @@ def cliTests : List (String × IO Bool) := [
   ("testNoArgsShowsHelp", testNoArgsShowsHelp),
   ("testUnknownCommandReturnsError", testUnknownCommandReturnsError),
   ("testParseRejectsMaxIterationsWithoutWorker", testParseRejectsMaxIterationsWithoutWorker),
+  ("testVerifyDirectoryRunsAllSpecs", testVerifyDirectoryRunsAllSpecs),
+  ("testVerifyDirectoryFailsOnBadSpec", testVerifyDirectoryFailsOnBadSpec),
   ("testVerifyHandlesNonUtf8Output", testVerifyHandlesNonUtf8Output)
 ]

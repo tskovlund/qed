@@ -28,13 +28,30 @@ def listSpecs (directory : System.FilePath) (extension : String := ".spec.json")
     directory / entry.fileName
   return .ok paths.toList
 
-/-- List all spec files in a directory (both .spec.json and .spec.toml). -/
+/-- Recursively find all spec files (.spec.json and .spec.toml) under a directory. -/
 def listAllSpecs (directory : System.FilePath)
     : IO (Except String (List System.FilePath)) := do
-  let jsonSpecs ← listSpecs directory ".spec.json"
-  let tomlSpecs ← listSpecs directory ".spec.toml"
-  match jsonSpecs, tomlSpecs with
-  | .ok jsonList, .ok tomlList => return .ok (jsonList ++ tomlList)
-  | .error e, _ | _, .error e => return .error e
+  let mut specFiles : List System.FilePath := []
+  let mut queue : List System.FilePath := [directory]
+  while !queue.isEmpty do
+    match queue with
+    | [] => break
+    | dir :: rest =>
+      queue := rest
+      let entries ← try
+        dir.readDir
+      catch _ =>
+        -- Skip directories we can't read (e.g., .lake, .git)
+        continue
+      for entry in entries do
+        let path := dir / entry.fileName
+        if entry.fileName.endsWith ".spec.json" || entry.fileName.endsWith ".spec.toml" then
+          specFiles := specFiles ++ [path]
+        else
+          let isDir ← path.isDir
+          -- Skip hidden directories and build artifacts
+          if isDir && !entry.fileName.startsWith "." && entry.fileName != ".lake" then
+            queue := queue ++ [path]
+  return .ok specFiles
 
 end Qed.SpecLoader
