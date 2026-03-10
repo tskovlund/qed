@@ -183,6 +183,24 @@ def testVerifyDirectoryFailsOnBadSpec : IO Bool := do
   -- Assert
   return exitCode == 1
 
+def testVerifyDirectoryFindsNestedSpecs : IO Bool := do
+  -- Arrange: create a directory tree with specs at multiple levels
+  IO.FS.createDirAll "/tmp/qed-test-nested/sub/deep"
+  IO.FS.createDirAll "/tmp/qed-test-nested/.hidden"
+  IO.FS.writeFile "/tmp/qed-test-nested/root.spec.json"
+    "{\"name\": \"root-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  IO.FS.writeFile "/tmp/qed-test-nested/sub/nested.spec.json"
+    "{\"name\": \"nested-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  IO.FS.writeFile "/tmp/qed-test-nested/sub/deep/deep.spec.json"
+    "{\"name\": \"deep-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  IO.FS.writeFile "/tmp/qed-test-nested/.hidden/hidden.spec.json"
+    "{\"name\": \"hidden-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", "/tmp/qed-test-nested"]
+  -- Assert: finds root, nested, and deep specs; skips hidden directory
+  return exitCode == 0 && stdout.contains "root-spec" && stdout.contains "nested-spec" &&
+    stdout.contains "deep-spec" && !stdout.contains "hidden-spec"
+
 def testVerifyHandlesNonUtf8Output : IO Bool := do
   -- Arrange: command outputs raw bytes that aren't valid UTF-8
   -- Use perl which reliably produces raw bytes on all platforms
@@ -212,5 +230,6 @@ def cliTests : List (String × IO Bool) := [
   ("testParseRejectsMaxIterationsWithoutWorker", testParseRejectsMaxIterationsWithoutWorker),
   ("testVerifyDirectoryRunsAllSpecs", testVerifyDirectoryRunsAllSpecs),
   ("testVerifyDirectoryFailsOnBadSpec", testVerifyDirectoryFailsOnBadSpec),
+  ("testVerifyDirectoryFindsNestedSpecs", testVerifyDirectoryFindsNestedSpecs),
   ("testVerifyHandlesNonUtf8Output", testVerifyHandlesNonUtf8Output)
 ]
