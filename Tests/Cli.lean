@@ -191,8 +191,8 @@ def testVerifyDirectoryFindsNestedSpecs : IO Bool := do
     "{\"name\": \"root-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
   IO.FS.writeFile "/tmp/qed-test-nested/sub/nested.spec.json"
     "{\"name\": \"nested-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
-  IO.FS.writeFile "/tmp/qed-test-nested/sub/deep/deep.spec.json"
-    "{\"name\": \"deep-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  IO.FS.writeFile "/tmp/qed-test-nested/sub/deep/deep.spec.toml"
+    "name = \"deep-spec\"\n\n[[criteria]]\ndescription = \"pass\"\n\n[criteria.verify]\ntype = \"command\"\nrun = \"true\"\n"
   IO.FS.writeFile "/tmp/qed-test-nested/.hidden/hidden.spec.json"
     "{\"name\": \"hidden-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
   -- Act
