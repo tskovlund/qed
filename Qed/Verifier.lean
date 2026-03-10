@@ -68,7 +68,7 @@ def parseAgentVerdict (response : String) : Except String Bool := do
     match verdictLine with
     | none => .error "no verdict found in agent response (expected ```json block with {\"pass\": true/false})"
     | some line =>
-      let trimmed := line.trim
+      let trimmed := line.trimAscii.toString
       match Lean.Json.parse trimmed with
       | .error e => .error s!"found verdict-like line but failed to parse: {e}"
       | .ok json =>
@@ -80,7 +80,7 @@ def parseAgentVerdict (response : String) : Except String Bool := do
     let lastPart := parts.getLast!
     -- Find the closing ```
     let beforeClose := (lastPart.splitOn "```").head!
-    let jsonStr := beforeClose.trim
+    let jsonStr := beforeClose.trimAscii.toString
     match Lean.Json.parse jsonStr with
     | .error e => .error s!"invalid JSON in verdict block: {e}"
     | .ok json =>
