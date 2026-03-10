@@ -70,7 +70,7 @@ Proofs are also tests — `lake build` verifies all theorems. If a proof has `so
 - **Deterministic orchestrator** — the core loop is a pure state machine. LLMs are tools used *by* the orchestrator, not the control plane
 - **Proofs alongside code** — theorems about a module live in the same file or a `Proofs/` subdirectory
 - **Typed verification dispatch** — each AC specifies its verification type at definition time, not at runtime
-- **Backend-agnostic** — spec sources (file system, Linear, Jira) are pluggable via typeclass
+- **Backend-agnostic agents** — worker and verifier agent commands are configurable shell commands, defaulting to Claude CLI
 
 ## Pull requests
 
