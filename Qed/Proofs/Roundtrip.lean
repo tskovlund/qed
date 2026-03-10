@@ -59,8 +59,15 @@ theorem criterion_roundtrip (criterion : AcceptanceCriterion) :
 /-- parseWorkerConfig inverts workerConfigToJson. -/
 theorem workerConfig_roundtrip (worker : WorkerConfig) :
     parseWorkerConfig (workerConfigToJson worker) = .ok worker := by
-  simp [workerConfigToJson, parseWorkerConfig, requireString, optionalString, optionalNat,
-    Json.mkObj, Json.getObjValAs?, Json.getObjVal?]
+  cases worker with
+  | mk command prompt workdir timeout =>
+    cases prompt with
+    | none =>
+      simp [workerConfigToJson, parseWorkerConfig, requireString, optionalString, optionalNat,
+        Json.mkObj, Json.getObjValAs?, Json.getObjVal?]
+    | some p =>
+      simp [workerConfigToJson, parseWorkerConfig, requireString, optionalString, optionalNat,
+        Json.mkObj, Json.getObjValAs?, Json.getObjVal?]
 
 -- Helper: lift element-wise roundtrip to List.mapM
 

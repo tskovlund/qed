@@ -4,13 +4,6 @@ open Qed
 
 def version : String := "0.1.0-dev"
 
-/-- Status indicator for a verification result. -/
-private def statusIndicator : VerificationResult → String
-  | .pass _ => "PASS"
-  | .fail _ => "FAIL"
-  | .needsHuman _ => "NEEDS-HUMAN"
-  | .skipped _ => "SKIP"
-
 /-- Run single-pass verification on an already-loaded spec. -/
 def verifySpec (spec : Spec) (jsonOutput : Bool) : IO UInt32 := do
   let results ← Verifier.verifyAll spec.criteria
@@ -21,7 +14,7 @@ def verifySpec (spec : Spec) (jsonOutput : Bool) : IO UInt32 := do
     IO.println s!"Verifying: {spec.name}"
     IO.println ""
     for (description, result) in results do
-      IO.println s!"  [{statusIndicator result}] {description}"
+      IO.println s!"  [{Output.statusIndicator result}] {description}"
     IO.println ""
     let failed := results.filter fun (_, result) => result.isFailed
     if failed.isEmpty then
@@ -117,10 +110,8 @@ def main (args : List String) : IO UInt32 := do
     | .ok spec =>
       match spec.mode with
       | .verify => verifySpec spec jsonOutput
-      | .workerLoop _ _ =>
-        IO.eprintln "Worker loop mode is not yet implemented."
-        IO.eprintln "Use `qed verify` for single-pass verification."
-        return 1
+      | .workerLoop worker loopConfig =>
+        WorkerLoop.run spec worker loopConfig jsonOutput
   | ["parse", path] =>
     runParse path jsonOutput
   | [] =>

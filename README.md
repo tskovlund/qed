@@ -22,7 +22,8 @@ The core loop is written in Lean 4 with formally proven termination, stuck detec
 name = "state-machine"
 
 [worker]
-command = "claude -p 'implement the state machine transition function'"
+command = "claude -p"
+prompt = "Implement the state machine transition function"
 
 [[criteria]]
 description = "Project builds and tests pass"
@@ -72,6 +73,11 @@ Formal proofs verified by Lean 4's kernel:
 **Verify mode:**
 - **No worker or loop config** — verify mode cannot carry worker loop state
 - **Independent of state machine** — verify mode does not use the transition function
+
+**Worker loop (execution engine):**
+- **Step = transition** — the loop drives the proven state machine exclusively
+- **Prompt preservation** — empty failures return base prompt unchanged; failures extend, not replace
+- **Shell quoting** — shellQuote wraps input correctly in single quotes
 
 **Types, output, and parsing:**
 - **Pass/fail decision correctness** — `allPassed` returns true iff no result is `.fail`

@@ -1,0 +1,75 @@
+#:schema ../docs/spec.schema.json
+
+# Worker loop — the iterative execution engine that drives the proven
+# state machine. Owns WorkerLoop.lean, its proofs, and the two-tier
+# prompt model.
+
+name = "worker-loop-correctness"
+
+# --- Proof criteria ---
+
+[[criteria]]
+description = "Worker loop drives StateMachine.transition exclusively (step = transition)"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.WorkerLoopProperties.step_eq_transition"
+
+[[criteria]]
+description = "Empty failures produce the base prompt unchanged"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.WorkerLoopProperties.buildPrompt_empty_failures"
+
+[[criteria]]
+description = "Non-empty failures extend (not replace) the base prompt"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.WorkerLoopProperties.buildPrompt_nonempty_appends"
+
+[[criteria]]
+description = "shellQuote wraps its input in single quotes"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.WorkerLoopProperties.shellQuote_wraps"
+
+[[criteria]]
+description = "shellQuote of empty string produces the empty shell string ''"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.WorkerLoopProperties.shellQuote_empty"
+
+# --- Agent review ---
+
+[[criteria]]
+description = """Worker loop execution correctly drives the proven state machine \
+and handles both prompt tiers safely"""
+
+[criteria.verify]
+type = "agent"
+prompt = """
+Review Qed/WorkerLoop.lean. Verify:
+
+1. The loop drives the pure StateMachine.transition function via the `step`
+   wrapper — no ad-hoc state management outside the proven transition
+2. Tier 1 (prompt present): prompt is correctly built with failure feedback,
+   shell-quoted, and passed via QED_PROMPT env var
+3. Tier 2 (no prompt): command runs as-is with env vars only
+4. Shell quoting handles single quotes in prompts correctly
+5. The while loop correctly matches on workerRunning and verifying states
+6. Failure feedback includes criterion descriptions and verification output
+7. JSON output mode produces valid JSON with spec, state, passed, criteria
+8. Terminal state handling covers all cases (passed, stuck, maxIterations,
+   escalated)
+
+Report any shell injection risks, state machine misuse, or missing cases.
+"""

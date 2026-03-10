@@ -32,7 +32,8 @@ Optional. If present, qed runs in worker loop mode. The worker is the command th
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `command` | string | yes | — | Shell command to run the worker. |
+| `command` | string | yes | — | Shell command to run the worker. With prompt: qed appends the prompt via $QED_PROMPT env var. Without prompt: runs the command as-is with env vars. |
+| `prompt` | string | no | — | Prompt for the worker agent. When present, qed manages the prompt (appends failure feedback on retries) and passes it via QED_PROMPT env var. When absent, the command has full control. |
 | `timeout` | integer | no | 3600 | Worker timeout in seconds. |
 | `workdir` | string | no | `"."` | Working directory for the worker. |
 

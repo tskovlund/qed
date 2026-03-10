@@ -35,9 +35,16 @@ structure AcceptanceCriterion where
     | _ => .always
   deriving Repr, BEq
 
-/-- Configuration for the worker agent. -/
+/-- Configuration for the worker agent.
+    Two tiers of usage:
+    - **Tier 1 (prompt present):** qed manages the prompt. The command receives
+      the full prompt (original + failure feedback) via `$QED_PROMPT` env var,
+      and qed runs `{command} "$QED_PROMPT"` through the shell.
+    - **Tier 2 (no prompt):** full control. qed runs the command as-is with
+      env vars (`QED_ITERATION`, `QED_FAILURES_FILE`) for optional use. -/
 structure WorkerConfig where
   command : String
+  prompt : Option String := none
   workdir : String := "."
   timeout : Nat := 3600
   deriving Repr, BEq

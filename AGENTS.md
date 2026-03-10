@@ -16,6 +16,7 @@ Qed/
   TomlConverter.lean   TOML → JSON conversion (thin wrapper around TomlParser)
   StateMachine.lean    Pure transition function (proven core)
   Verifier.lean        Verification dispatch (command, agent, property, proof)
+  WorkerLoop.lean      Worker loop execution (spawn worker, verify, feed failures, repeat)
   Output.lean          JSON result serialization (--json flag support)
   Serializer.lean      Spec → JSON serialization (roundtrip-proven against Parser)
 Qed/Proofs/
@@ -32,6 +33,7 @@ Qed/Proofs/
   TomlProperties.lean     setNested/appendArray structural integrity
   TomlJsonValidity.lean   TOML→JSON pipeline totality and error propagation
   Roundtrip.lean          Serializer↔parser roundtrip (parseFromJson ∘ specToJson = ok)
+  WorkerLoopProperties.lean  step=transition, buildPrompt, shellQuote proofs
 Tests/
   Main.lean            Test runner (imports all test modules)
   Types.lean           isTerminal behavior tests
@@ -42,7 +44,9 @@ Tests/
   Cli.lean             End-to-end CLI tests (invoke built binary, check output/exit codes)
 specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry
-  cli.spec.toml            CLI + verifier + output correctness — 1 proof + agent
+  cli.spec.toml            CLI + output correctness — 1 proof + agent
+  verifier.spec.toml       Verifier dispatch and shell execution — agent
+  worker-loop.spec.toml    Worker loop correctness — 5 proofs + agent
   state-machine.spec.toml  State machine correctness — 5 proofs + agent
   parser.spec.toml         Parser correctness — 3 proofs + agent
   verify-mode.spec.toml    Verify mode correctness — 2 proofs + command + agent
@@ -73,6 +77,24 @@ A spec runs in one of two modes, determined by whether `worker` is present:
 
 - **Worker loop** (`SpecMode.workerLoop`) — run the worker, verify criteria, feed failures back, repeat. Uses the state machine. `maxIterations` and `stuckThreshold` control termination.
 - **Verify** (`SpecMode.verify`) — run each criterion once and report results. No state machine, no loop. Requires at least one criterion.
+
+## Worker configuration
+
+Two tiers:
+
+- **Tier 1 (prompt present):** qed manages the prompt. On retries, failure feedback is appended. The command receives the full prompt via `$QED_PROMPT` env var and qed runs `{command} "$QED_PROMPT"` through the shell.
+- **Tier 2 (no prompt):** full control. qed runs the command as-is with env vars (`QED_ITERATION`, `QED_FAILURES_FILE`) available for optional use.
+
+```toml
+# Tier 1: qed manages the prompt
+[worker]
+command = "claude -p"
+prompt = "Implement the feature"
+
+# Tier 2: full control
+[worker]
+command = "./scripts/worker.sh"
+```
 
 ## Key design principle
 
@@ -132,6 +154,16 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `Invariants.lean` | `iteration_bounded` | Iteration count never exceeds `maxIterations` (given `maxIterations ≥ 1`) |
 | `VerifyMode.lean` | `verify_has_no_worker` | `SpecMode.verify` cannot carry a `WorkerConfig` or `LoopConfig` |
 | `VerifyMode.lean` | `verify_independent_of_loop` | Verify mode is independent of the worker loop machinery |
+
+**Worker loop (execution engine):**
+
+| File | Theorem | Property |
+|------|---------|----------|
+| `WorkerLoopProperties.lean` | `step_eq_transition` | The loop's step function is exactly StateMachine.transition |
+| `WorkerLoopProperties.lean` | `buildPrompt_empty_failures` | No failures → base prompt returned unchanged |
+| `WorkerLoopProperties.lean` | `buildPrompt_nonempty_appends` | Failures → base prompt is extended (not replaced) |
+| `WorkerLoopProperties.lean` | `shellQuote_wraps` | shellQuote wraps input in single quotes |
+| `WorkerLoopProperties.lean` | `shellQuote_empty` | shellQuote of "" produces "''" |
 
 **Types, output, parser, and TOML parser:**
 

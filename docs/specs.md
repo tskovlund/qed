@@ -48,11 +48,19 @@ Two formal proofs verify the type-level separation between modes: verify mode ca
 
 Three formal proofs verify parser correctness: CI schedule completeness (accepts exactly the three valid strings), CI schedule rejection (all other strings produce errors), and the serializer↔parser roundtrip (parsing serialized JSON recovers the original spec exactly). Building-block proofs (TOML duplicate key rejection, array creation, per-type roundtrips) live in the proof files. Agent reviews check the JSON and TOML parsers for data loss, correct defaults, and spec compliance.
 
-### 5. CLI and verifier correctness (`cli.spec.toml`)
+### 5. Worker loop correctness (`worker-loop.spec.toml`)
 
-One formal proof verifies output correctness: the pass/fail decision is correct (allPassed iff no failures). The JSON structure proof lives in the proof file but is not a spec criterion. Agent reviews verify the CLI dispatch logic and verifier safety.
+Five formal proofs verify the worker loop execution engine: the loop drives the proven state machine exclusively (`step = transition`), empty failures leave the base prompt unchanged, non-empty failures extend (not replace) the base prompt, and shellQuote wraps correctly. An agent review checks the two-tier prompt model, shell safety, and terminal state handling.
 
-### 6. Documentation accuracy (`docs.spec.toml`)
+### 6. CLI and output correctness (`cli.spec.toml`)
+
+One formal proof verifies output correctness: the pass/fail decision is correct (allPassed iff no failures). The JSON structure proof lives in the proof file but is not a spec criterion. An agent review verifies CLI dispatch logic.
+
+### 7. Verifier correctness (`verifier.spec.toml`)
+
+An agent review verifies the verification dispatch: exhaustive match on all VerifyType constructors, platform-aware shell execution, output truncation preserving the most recent output, and correct result mappings (exit code 0 → pass, non-zero → fail, unimplemented → skipped, human → needsHuman).
+
+### 8. Documentation accuracy (`docs.spec.toml`)
 
 Generated docs (schema, format reference) must be fresh. Hand-written docs (architecture, README) must be consistent with the actual codebase. Agent reviews cross-reference docs against source.
 

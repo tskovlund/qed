@@ -63,7 +63,7 @@ def generate : String :=
   let verifyTypes := verifyTypeConstructors
   let ciSchedules := ciScheduleValues
   let loopConfig : LoopConfig := {}
-  let worker := WorkerConfig.mk "echo hi" "." 3600
+  let worker := WorkerConfig.mk "echo hi" none "." 3600
 s!"\{
   \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",
   \"$id\": \"https://qed.skovlund.dev/spec.schema.json\",
@@ -85,7 +85,11 @@ s!"\{
       \"properties\": \{
         \"command\": \{
           \"type\": \"string\",
-          \"description\": \"Shell command to run the worker.\"
+          \"description\": \"Shell command to run the worker. With prompt: qed appends the prompt via $QED_PROMPT env var. Without prompt: runs the command as-is with env vars.\"
+        },
+        \"prompt\": \{
+          \"type\": \"string\",
+          \"description\": \"Prompt for the worker agent. When present, qed manages the prompt (appends failure feedback on retries) and passes it via QED_PROMPT env var. When absent, the command has full control.\"
         },
         \"workdir\": \{
           \"type\": \"string\",

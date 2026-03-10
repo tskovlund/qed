@@ -97,6 +97,49 @@ def testRunDispatchesToVerifyMode : IO Bool := do
   -- Assert
   return exitCode == 0 && stdout.contains "run-verify-test"
 
+def testRunWorkerLoopPassesOnFirstIteration : IO Bool := do
+  -- Arrange: worker does nothing, criterion always passes
+  let specContent := "{\"name\": \"loop-pass\", \"worker\": {\"command\": \"true\"}, \"criteria\": [{\"description\": \"always passes\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["run", specPath.toString]
+  -- Assert
+  return exitCode == 0 && stdout.contains "loop-pass" && stdout.contains "passed"
+
+def testRunWorkerLoopJsonOutput : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"loop-json\", \"worker\": {\"command\": \"true\"}, \"criteria\": [{\"description\": \"passes\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["run", "--json", specPath.toString]
+  -- Assert
+  match Lean.Json.parse stdout with
+  | .error _ => return false
+  | .ok json =>
+    let specOk := match json.getObjValAs? String "spec" with
+      | .ok "loop-json" => true | _ => false
+    let passedOk := match json.getObjValAs? Bool "passed" with
+      | .ok true => true | _ => false
+    return exitCode == 0 && specOk && passedOk
+
+def testRunWorkerLoopReachesMaxIterations : IO Bool := do
+  -- Arrange: worker does nothing, criterion always fails, max 2 iterations
+  let specContent := "{\"name\": \"loop-max\", \"worker\": {\"command\": \"true\"}, \"maxIterations\": 2, \"criteria\": [{\"description\": \"always fails\", \"verify\": {\"type\": \"command\", \"run\": \"false\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, _, stderr) ← runQed ["run", specPath.toString]
+  -- Assert
+  return exitCode == 1 && stderr.contains "maximum iterations"
+
+def testRunWorkerLoopWithPrompt : IO Bool := do
+  -- Arrange: Tier 1 worker with prompt, criterion always passes
+  let specContent := "{\"name\": \"loop-prompt\", \"worker\": {\"command\": \"echo\", \"prompt\": \"Do the thing\"}, \"criteria\": [{\"description\": \"passes\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["run", specPath.toString]
+  -- Assert
+  return exitCode == 0 && stdout.contains "loop-prompt" && stdout.contains "passed"
+
 def testNoArgsShowsHelp : IO Bool := do
   -- Arrange / Act
   let (exitCode, stdout, _) ← runQed []
@@ -119,6 +162,10 @@ def cliTests : List (String × IO Bool) := [
   ("testVerifyJsonOutputReturnsValidJson", testVerifyJsonOutputReturnsValidJson),
   ("testVerifyJsonErrorReturnsJsonOnMissingFile", testVerifyJsonErrorReturnsJsonOnMissingFile),
   ("testRunDispatchesToVerifyMode", testRunDispatchesToVerifyMode),
+  ("testRunWorkerLoopPassesOnFirstIteration", testRunWorkerLoopPassesOnFirstIteration),
+  ("testRunWorkerLoopJsonOutput", testRunWorkerLoopJsonOutput),
+  ("testRunWorkerLoopReachesMaxIterations", testRunWorkerLoopReachesMaxIterations),
+  ("testRunWorkerLoopWithPrompt", testRunWorkerLoopWithPrompt),
   ("testNoArgsShowsHelp", testNoArgsShowsHelp),
   ("testUnknownCommandReturnsError", testUnknownCommandReturnsError)
 ]
