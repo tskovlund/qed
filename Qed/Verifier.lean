@@ -51,7 +51,9 @@ def parseAgentVerdict (response : String) : Except String Bool := do
   -- Strategy: split by ```json, take the last block before ```, parse it
   let parts := response.splitOn "```json"
   if parts.length < 2 then
-    -- No ```json block — try to find raw JSON with "pass" field
+    -- No ```json block — heuristic fallback: search for a line that looks
+    -- like JSON with a "pass" field. May match analysis text, but Json.parse
+    -- rejects non-JSON lines, limiting false positives.
     let lines := response.splitOn "\n"
     let verdictLine := lines.reverse.find? fun line =>
       line.contains "\"pass\"" && (line.contains "true" || line.contains "false")
@@ -66,10 +68,10 @@ def parseAgentVerdict (response : String) : Except String Bool := do
         | .ok passed => .ok passed
         | .error _ => .error "verdict JSON missing boolean \"pass\" field"
   else
-    -- Take everything after the last ```json marker
-    let lastPart := parts.getLast!
-    -- Find the closing ```
-    let beforeClose := (lastPart.splitOn "```").head!
+    -- Take everything after the last ```json marker (safe: parts.length ≥ 2)
+    let lastPart := parts.getLastD ""
+    -- Find the closing ``` (safe: splitOn always returns ≥ 1 element)
+    let beforeClose := (lastPart.splitOn "```").headD ""
     let jsonStr := beforeClose.trimAscii.toString
     match Lean.Json.parse jsonStr with
     | .error e => .error s!"invalid JSON in verdict block: {e}"

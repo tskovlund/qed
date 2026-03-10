@@ -11,7 +11,9 @@ def shellQuote (s : String) : String :=
 
 /-- Build a shell command string with exported environment variables.
     Each entry in `envVars` is `(name, value)` — values are shell-quoted.
-    The `command` is appended after all exports. -/
+    The `command` is appended after all exports.
+    Precondition: `name` must be a valid shell identifier (alphanumeric + underscore).
+    All callers use constants from `Agent.lean`. -/
 def buildShellCommand (envVars : List (String × String)) (command : String) : String :=
   let exports := envVars.map fun (name, value) =>
     s!"export {name}={shellQuote value}"

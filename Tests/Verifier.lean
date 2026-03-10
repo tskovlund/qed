@@ -152,6 +152,14 @@ def testParseAgentVerdictErrorOnNoVerdict : IO Bool := do
   | .error _ => return true
   | _ => return false
 
+def testParseAgentVerdictHandlesTrailingContent : IO Bool := do
+  -- Arrange: agent produces text after the closing backticks
+  let response := "Analysis:\n```json\n{\"pass\": true}\n```\nHope that helps!"
+  -- Act / Assert
+  match Verifier.parseAgentVerdict response with
+  | .ok true => return true
+  | _ => return false
+
 def testParseAgentVerdictErrorOnMissingPassField : IO Bool := do
   -- Arrange: JSON block without "pass" field
   let response := "Review done.\n```json\n{\"result\": \"ok\"}\n```"
@@ -174,5 +182,6 @@ def verifierTests : List (String × IO Bool) := [
   ("testParseAgentVerdictUsesLastJsonBlock", testParseAgentVerdictUsesLastJsonBlock),
   ("testParseAgentVerdictFallbackToRawJson", testParseAgentVerdictFallbackToRawJson),
   ("testParseAgentVerdictErrorOnNoVerdict", testParseAgentVerdictErrorOnNoVerdict),
+  ("testParseAgentVerdictHandlesTrailingContent", testParseAgentVerdictHandlesTrailingContent),
   ("testParseAgentVerdictErrorOnMissingPassField", testParseAgentVerdictErrorOnMissingPassField)
 ]
