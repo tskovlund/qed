@@ -10,6 +10,8 @@ Follow the code standards in [CONVENTIONS.md](CONVENTIONS.md).
 Main.lean              CLI entry point (qed run, qed verify, qed parse, qed version, qed help)
 Qed/
   Types.lean           Core types (VerifyType, SpecMode, Spec, LoopState)
+  Shell.lean           Shell command execution and quoting utilities
+  Agent.lean           Shared agent invocation (env var constants, default commands)
   SpecLoader.lean      Load and list spec files from disk
   Parser.lean          JSON spec parser (Lean.Json → Spec, parseFromJson for roundtrip proofs)
   TomlParser.lean      Pure Lean TOML parser (no external dependencies)
@@ -82,13 +84,19 @@ A spec runs in one of two modes, determined by whether `worker` is present:
 
 Two tiers:
 
-- **Tier 1 (prompt present):** qed manages the prompt. On retries, failure feedback is appended. The command receives the full prompt via `$QED_PROMPT` env var and qed runs `{command} "$QED_PROMPT"` through the shell.
-- **Tier 2 (no prompt):** full control. qed runs the command as-is with env vars (`QED_ITERATION`, `QED_FAILURES_FILE`) available for optional use.
+- **Tier 1 (prompt present):** Agent invocation — qed manages the prompt, appends failure feedback on retries, and passes it via `$QED_WORKER_PROMPT`. Defaults to Claude CLI if no command specified.
+- **Tier 2 (no prompt):** Script worker — qed runs the command as-is with env vars (`QED_WORKER_ITERATION`, `QED_WORKER_FAILURES_FILE`) available for optional use.
+
+At least one of `command` or `prompt` must be present.
 
 ```toml
-# Tier 1: qed manages the prompt
+# Tier 1: agent invocation (defaults to Claude CLI)
 [worker]
-command = "claude -p"
+prompt = "Implement the feature"
+
+# Tier 1: agent with custom command
+[worker]
+command = "my-agent --prompt"
 prompt = "Implement the feature"
 
 # Tier 2: full control

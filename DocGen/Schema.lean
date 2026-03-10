@@ -63,7 +63,7 @@ def generate : String :=
   let verifyTypes := verifyTypeConstructors
   let ciSchedules := ciScheduleValues
   let loopConfig : LoopConfig := {}
-  let worker : WorkerConfig := { command := "echo hi" }
+  let worker : WorkerConfig := { command := some "echo hi" }
 s!"\{
   \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",
   \"$id\": \"https://qed.skovlund.dev/spec.schema.json\",
@@ -79,17 +79,25 @@ s!"\{
     },
     \"worker\": \{
       \"type\": \"object\",
-      \"description\": \"Configuration for the worker agent. If present, qed runs in worker loop mode (iterate until criteria pass). If absent, qed runs in verify mode (single-pass verification).\",
-      \"required\": [\"command\"],
+      \"description\": \"Configuration for the worker. If present, qed runs in worker loop mode (iterate until criteria pass). If absent, qed runs in verify mode (single-pass verification). At least one of 'command' or 'prompt' is required.\",
       \"additionalProperties\": false,
+      \"anyOf\": [
+        \{\"required\": [\"command\"]},
+        \{\"required\": [\"prompt\"]}
+      ],
       \"properties\": \{
         \"command\": \{
           \"type\": \"string\",
-          \"description\": \"Shell command to run the worker. With prompt: qed appends the prompt via $QED_PROMPT env var. Without prompt: runs the command as-is with env vars.\"
+          \"description\": \"Shell command to run the worker. For agent workers (prompt present), defaults to Claude CLI. For script workers (no prompt), required. The command receives the prompt via $QED_WORKER_PROMPT env var.\"
         },
         \"prompt\": \{
           \"type\": \"string\",
-          \"description\": \"Prompt for the worker agent. When present, qed manages the prompt (appends failure feedback on retries) and passes it via QED_PROMPT env var. When absent, the command has full control.\"
+          \"description\": \"Prompt for the worker agent. When present, this is agent invocation — qed manages the prompt (appends failure feedback on retries) and passes it via $QED_WORKER_PROMPT env var. When absent, the command has full control (script worker).\"
+        },
+        \"model\": \{
+          \"type\": \"string\",
+          \"description\": \"Model to use for agent workers. Only used when prompt is present.\",
+          \"default\": \"{defaultAgentModel}\"
         },
         \"workdir\": \{
           \"type\": \"string\",
@@ -139,7 +147,7 @@ s!"\{
                   \"type\": \{ \"const\": \"{verifyTypes[1]!}\" },
                   \"prompt\": \{ \"type\": \"string\", \"description\": \"Review prompt for the agent.\" },
                   \"model\": \{ \"type\": \"string\", \"default\": \"{defaultAgentModel}\", \"description\": \"Model to use for the review.\" },
-                  \"command\": \{ \"type\": \"string\", \"description\": \"Shell command to invoke the agent. Receives prompt via $QED_AGENT_PROMPT. Defaults to Claude CLI.\" }
+                  \"command\": \{ \"type\": \"string\", \"description\": \"Shell command to invoke the agent. Receives prompt via $QED_VERIFIER_PROMPT. Defaults to Claude CLI.\" }
                 }
               },
               \{

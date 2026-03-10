@@ -157,16 +157,16 @@ Environment variables set by qed for workers:
 
 | Variable | Purpose |
 |----------|---------|
-| `QED_PROMPT` | Full prompt with failure feedback (Tier 1 only) |
-| `QED_ITERATION` | Current iteration number |
-| `QED_FAILURES_FILE` | Path to JSON file with failure details |
+| `QED_WORKER_PROMPT` | Full prompt with failure feedback (Tier 1 only) |
+| `QED_WORKER_ITERATION` | Current iteration number |
+| `QED_WORKER_FAILURES_FILE` | Path to JSON file with failure details |
 
 Environment variables set by qed for agent verification:
 
 | Variable | Purpose |
 |----------|---------|
-| `QED_AGENT_PROMPT` | The criterion's review prompt |
-| `QED_AGENT_SYSTEM_PROMPT` | Verdict format instructions (JSON block with `{"pass": true/false}`) |
+| `QED_VERIFIER_PROMPT` | The criterion's review prompt |
+| `QED_VERIFIER_SYSTEM_PROMPT` | Verdict format instructions (JSON block with `{"pass": true/false}`) |
 
 CLI flags:
 

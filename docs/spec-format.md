@@ -15,7 +15,7 @@ Schema: [`spec.schema.json`](spec.schema.json) — add `"$schema": "docs/spec.sc
 | `maxIterations` | integer | no | 10 | Maximum worker iterations before giving up. Only valid when worker is present. |
 | `name` | string | yes | — | Unique identifier for this spec. |
 | `stuckThreshold` | integer | no | 3 | Consecutive identical failures before declaring stuck. Only valid when worker is present. |
-| `worker` | [Worker](#worker) | no | — | Configuration for the worker agent. If present, qed runs in worker loop mode (iterate until criteria pass). If absent, qed runs in verify mode (single-pass verification). |
+| `worker` | [Worker](#worker) | no | — | Configuration for the worker. If present, qed runs in worker loop mode (iterate until criteria pass). If absent, qed runs in verify mode (single-pass verification). At least one of 'command' or 'prompt' is required. |
 
 ## Execution modes
 
@@ -32,8 +32,9 @@ Optional. If present, qed runs in worker loop mode. The worker is the command th
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `command` | string | yes | — | Shell command to run the worker. With prompt: qed appends the prompt via $QED_PROMPT env var. Without prompt: runs the command as-is with env vars. |
-| `prompt` | string | no | — | Prompt for the worker agent. When present, qed manages the prompt (appends failure feedback on retries) and passes it via QED_PROMPT env var. When absent, the command has full control. |
+| `command` | string | no | — | Shell command to run the worker. For agent workers (prompt present), defaults to Claude CLI. For script workers (no prompt), required. The command receives the prompt via $QED_WORKER_PROMPT env var. |
+| `model` | string | no | `"claude-opus-4-6"` | Model to use for agent workers. Only used when prompt is present. |
+| `prompt` | string | no | — | Prompt for the worker agent. When present, this is agent invocation — qed manages the prompt (appends failure feedback on retries) and passes it via $QED_WORKER_PROMPT env var. When absent, the command has full control (script worker). |
 | `timeout` | integer | no | 3600 | Worker timeout in seconds. |
 | `workdir` | string | no | `"."` | Working directory for the worker. |
 
