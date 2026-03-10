@@ -32,13 +32,14 @@ The foundation. Everything compiles, tests pass, no incomplete proofs. If this f
 
 ### 2. State machine correctness (`state-machine.spec.toml`)
 
-Six top-level formal proofs verify the state machine's mathematical properties, organized by what they guarantee:
+Nine formal proofs verify the state machine's mathematical properties, organized by what they guarantee:
 
 - **Safety:** terminal states are absorbing, no skipped verification, iteration count bounded by maxIterations
+- **Invariants:** transition function is deterministic, iteration count is monotonically non-decreasing, state lifecycle phase never decreases
 - **Liveness:** the loop terminates within maxIterations
 - **Correctness:** stuck detection fires iff repeated failures reach the threshold, ready state is never revisited
 
-Building-block lemmas (fuel measures, monotonicity, phase tracking, determinism) live in the proof files but are not spec criteria — they exist to support these results, not as independent guarantees. An agent review checks design quality (exhaustive matches, purity, edge cases).
+Building-block lemmas (fuel measures, stuck detection directions, specific transition paths) live in the proof files but are not spec criteria — they exist to support these results, not as independent guarantees. An agent review checks design quality (exhaustive matches, purity, edge cases).
 
 ### 3. Verify mode correctness (`verify-mode.spec.toml`)
 
@@ -54,7 +55,7 @@ Five formal proofs verify the worker loop execution engine: the loop drives the 
 
 ### 6. CLI and output correctness (`cli.spec.toml`)
 
-Two formal proofs verify output correctness: the result complete partition (every result is exactly one variant, predicates agree) and the pass/fail decision (allPassed iff no failures). Building-block proofs (JSON structure contract for both verify and worker loop modes) live in the proof file but are not spec criteria. An agent review verifies CLI dispatch logic.
+Four formal proofs verify output correctness: the result complete partition (every result is exactly one variant, predicates agree), the pass/fail decision (allPassed iff no failures), and the JSON output contracts (verify-mode and worker-loop JSON always contain the required fields). An agent review verifies CLI dispatch logic.
 
 ### 7. Verifier correctness (`verifier.spec.toml`)
 

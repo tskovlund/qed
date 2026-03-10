@@ -2,40 +2,40 @@
 
 > Complete reference for all formally verified theorems in qed.
 
-The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. All proofs are complete — no `sorry`, no gaps.
+The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. All proofs are complete — no `sorry`, no gaps. Theorems marked with **[spec]** are verified as acceptance criteria in `specs/`.
 
 ## State machine (worker loop)
 
 | File | Theorem | Property |
 |------|---------|----------|
-| `FinalStates.lean` | `terminal_absorbing` | Terminal states ignore all events — transitioning from a terminal state returns the same state and context |
-| `Monotonic.lean` | `iteration_monotonic` | The iteration count never decreases across transitions |
-| `NoSkip.lean` | `no_skip_verification` | Cannot reach `passed` without going through `verifying` first |
+| `FinalStates.lean` | `terminal_absorbing` | **[spec]** Terminal states ignore all events — transitioning from a terminal state returns the same state and context |
+| `Monotonic.lean` | `iteration_monotonic` | **[spec]** The iteration count never decreases across transitions |
+| `NoSkip.lean` | `no_skip_verification` | **[spec]** Cannot reach `passed` without going through `verifying` first |
 | `NoSkip.lean` | `worker_before_verification` | `verifying(n)` is only reachable from `workerRunning(n)` or `verifying(n)` |
-| `StuckDetection.lean` | `stuck_iff_threshold` | Stuck detection fires iff consecutive failure count reaches the threshold |
+| `StuckDetection.lean` | `stuck_iff_threshold` | **[spec]** Stuck detection fires iff consecutive failure count reaches the threshold |
 | `StuckDetection.lean` | `stuck_when_threshold_reached` | Threshold reached implies stuck state |
 | `StuckDetection.lean` | `not_stuck_when_below_threshold` | Below threshold implies retry (workerRunning) |
 | `StuckDetection.lean` | `failure_count_update` | Failure count increments on same failures, resets on different failures |
 | `Termination.lean` | `verify_someFailed_terminates_or_increments` | Each verify+someFailed step either terminates or increments iteration |
 | `Termination.lean` | `fuel_decreases_on_retry` | The fuel measure (maxIterations - iteration) strictly decreases on retry |
 | `Termination.lean` | `loop_progress` | Each non-terminal step either terminates or increments iteration (bounded by maxIterations) |
-| `Termination.lean` | `loop_terminates` | Full termination: each step terminates or strictly decreases fuel (maxIterations - iteration) |
-| `Invariants.lean` | `transition_deterministic` | Equal inputs produce equal outputs — the transition function is deterministic |
-| `Invariants.lean` | `ready_unreachable` | No non-terminal transition produces `ready` — the initial state is visited exactly once |
-| `Invariants.lean` | `phase_monotonic` | State lifecycle phase (initial → working → terminal) never decreases |
-| `Invariants.lean` | `iteration_bounded` | Iteration count never exceeds `maxIterations` (given `maxIterations ≥ 1`) |
-| `VerifyMode.lean` | `verify_has_no_worker` | `SpecMode.verify` cannot carry a `WorkerConfig` or `LoopConfig` |
-| `VerifyMode.lean` | `verify_independent_of_loop` | Verify mode is independent of the worker loop machinery |
+| `Termination.lean` | `loop_terminates` | **[spec]** Full termination: each step terminates or strictly decreases fuel (maxIterations - iteration) |
+| `Invariants.lean` | `transition_deterministic` | **[spec]** Equal inputs produce equal outputs — the transition function is deterministic |
+| `Invariants.lean` | `ready_unreachable` | **[spec]** No non-terminal transition produces `ready` — the initial state is visited exactly once |
+| `Invariants.lean` | `phase_monotonic` | **[spec]** State lifecycle phase (initial → working → terminal) never decreases |
+| `Invariants.lean` | `iteration_bounded` | **[spec]** Iteration count never exceeds `maxIterations` (given `maxIterations ≥ 1`) |
+| `VerifyMode.lean` | `verify_has_no_worker` | **[spec]** `SpecMode.verify` cannot carry a `WorkerConfig` or `LoopConfig` |
+| `VerifyMode.lean` | `verify_independent_of_loop` | **[spec]** Verify mode is independent of the worker loop machinery |
 
 ## Worker loop (execution engine)
 
 | File | Theorem | Property |
 |------|---------|----------|
-| `WorkerLoopProperties.lean` | `step_eq_transition` | The loop's step function is exactly StateMachine.transition |
-| `WorkerLoopProperties.lean` | `buildPrompt_empty_failures` | No failures → base prompt returned unchanged |
-| `WorkerLoopProperties.lean` | `buildPrompt_nonempty_appends` | Failures → base prompt is extended (not replaced) |
-| `WorkerLoopProperties.lean` | `shellQuote_wraps` | shellQuote wraps input in single quotes |
-| `WorkerLoopProperties.lean` | `shellQuote_empty` | shellQuote of "" produces "''" |
+| `WorkerLoopProperties.lean` | `step_eq_transition` | **[spec]** The loop's step function is exactly StateMachine.transition |
+| `WorkerLoopProperties.lean` | `buildPrompt_empty_failures` | **[spec]** No failures → base prompt returned unchanged |
+| `WorkerLoopProperties.lean` | `buildPrompt_nonempty_appends` | **[spec]** Failures → base prompt is extended (not replaced) |
+| `WorkerLoopProperties.lean` | `shellQuote_wraps` | **[spec]** shellQuote wraps input in single quotes |
+| `WorkerLoopProperties.lean` | `shellQuote_empty` | **[spec]** shellQuote of "" produces "''" |
 
 ## Types, output, parser, and TOML parser
 
@@ -46,12 +46,12 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `TypeProperties.lean` | `isFailed_iff_fail` | `isFailed` returns true iff the result is `.fail` |
 | `TypeProperties.lean` | `passed_and_failed_exclusive` | No result is both passed and failed |
 | `TypeProperties.lean` | `result_exhaustive` | Every VerificationResult is exactly one of pass, fail, needsHuman, or skipped |
-| `TypeProperties.lean` | `result_complete_partition` | Complete partition — every result is exactly one variant; predicates agree |
-| `OutputCorrectness.lean` | `allPassed_iff_no_failures` | Pass/fail decision is correct: true iff no result is `.fail` |
-| `OutputCorrectness.lean` | `resultsToJson_has_required_fields` | JSON output always contains "spec", "passed", "criteria" fields |
-| `OutputCorrectness.lean` | `workerResultsToJson_has_required_fields` | Worker loop JSON always contains "spec", "state", "passed", "criteria" fields |
-| `ParserProperties.lean` | `parseCiSchedule_complete` | If parseCiSchedule succeeds, input was "always", "trunk", or "manual" |
-| `ParserProperties.lean` | `parseCiSchedule_rejects_invalid` | Any other string produces an error |
+| `TypeProperties.lean` | `result_complete_partition` | **[spec]** Complete partition — every result is exactly one variant; predicates agree |
+| `OutputCorrectness.lean` | `allPassed_iff_no_failures` | **[spec]** Pass/fail decision is correct: true iff no result is `.fail` |
+| `OutputCorrectness.lean` | `resultsToJson_has_required_fields` | **[spec]** JSON output always contains "spec", "passed", "criteria" fields |
+| `OutputCorrectness.lean` | `workerResultsToJson_has_required_fields` | **[spec]** Worker loop JSON always contains "spec", "state", "passed", "criteria" fields |
+| `ParserProperties.lean` | `parseCiSchedule_complete` | **[spec]** If parseCiSchedule succeeds, input was "always", "trunk", or "manual" |
+| `ParserProperties.lean` | `parseCiSchedule_rejects_invalid` | **[spec]** Any other string produces an error |
 | `TomlProperties.lean` | `setNested_no_duplicate_at_leaf` | setNested inserts without duplicates when key is absent |
 | `TomlProperties.lean` | `setNested_rejects_duplicate` | setNested returns error when key already exists |
 | `TomlProperties.lean` | `setNested_empty_keys` | Empty key path is always rejected |
@@ -72,4 +72,4 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `Roundtrip.lean` | `criterion_roundtrip` | parseCriterion inverts criterionToJson |
 | `Roundtrip.lean` | `workerConfig_roundtrip` | parseWorkerConfig inverts workerConfigToJson |
 | `Roundtrip.lean` | `criteria_list_roundtrip` | Element-wise roundtrip lifts to list-level mapM roundtrip |
-| `Roundtrip.lean` | `spec_roundtrip` | **Main theorem:** parseFromJson inverts specToJson for all well-formed specs |
+| `Roundtrip.lean` | `spec_roundtrip` | **[spec]** **Main theorem:** parseFromJson inverts specToJson for all well-formed specs |

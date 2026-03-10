@@ -4,9 +4,9 @@ name = "state-machine-correctness"
 
 # --- Proof criteria ---
 # Top-level guarantees about the worker loop state machine.
-# Building-block lemmas (fuel measures, monotonicity helpers, phase tracking)
-# live in the proof files but are not spec criteria — they exist to support
-# these results, not as independent guarantees.
+# Building-block lemmas (fuel measures, stuck detection directions, specific
+# transition paths) live in the proof files but are not spec criteria — they
+# exist to support these results, not as independent guarantees.
 
 # Safety: bad things don't happen
 
@@ -33,6 +33,32 @@ description = "Iteration count never exceeds maxIterations — the configured bo
 type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.Invariants.iteration_bounded"
+
+# Invariants: structural properties preserved across all transitions
+
+[[criteria]]
+description = "The transition function is deterministic — equal inputs always produce equal outputs"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.Invariants.transition_deterministic"
+
+[[criteria]]
+description = "Iteration count never decreases across transitions"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.Monotonic.iteration_monotonic"
+
+[[criteria]]
+description = "State lifecycle phase (initial → working → terminal) never decreases"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.Invariants.phase_monotonic"
 
 # Liveness: good things eventually happen
 
@@ -65,7 +91,7 @@ target = "Qed.Proofs.Invariants.ready_unreachable"
 # --- Agent review ---
 
 [[criteria]]
-description = "Transition function is correct, total, and deterministic"
+description = "Transition function is correct, total, and well-structured"
 
 [criteria.verify]
 type = "agent"
@@ -78,6 +104,9 @@ Review Qed/StateMachine.lean. Verify:
    and increments/resets the consecutive count
 4. The function is pure — no IO, no side effects, no mutable state
 5. Retry transitions increment the iteration counter exactly once
+
+Determinism, monotonicity, and phase ordering are formally proven — focus
+on structural correctness and edge cases the proofs don't cover.
 
 Report any missed edge cases, logical errors, or unreachable branches.
 """
