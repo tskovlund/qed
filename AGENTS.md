@@ -173,8 +173,10 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `TypeProperties.lean` | `isPassed_iff_pass` | `isPassed` returns true iff the result is `.pass` |
 | `TypeProperties.lean` | `isFailed_iff_fail` | `isFailed` returns true iff the result is `.fail` |
 | `TypeProperties.lean` | `passed_and_failed_exclusive` | No result is both passed and failed |
+| `TypeProperties.lean` | `result_exhaustive` | Every VerificationResult is exactly one of pass, fail, needsHuman, or skipped |
 | `OutputCorrectness.lean` | `allPassed_iff_no_failures` | Pass/fail decision is correct: true iff no result is `.fail` |
 | `OutputCorrectness.lean` | `resultsToJson_has_required_fields` | JSON output always contains "spec", "passed", "criteria" fields |
+| `OutputCorrectness.lean` | `workerResultsToJson_has_required_fields` | Worker loop JSON always contains "spec", "state", "passed", "criteria" fields |
 | `ParserProperties.lean` | `parseCiSchedule_complete` | If parseCiSchedule succeeds, input was "always", "trunk", or "manual" |
 | `ParserProperties.lean` | `parseCiSchedule_rejects_invalid` | Any other string produces an error |
 | `TomlProperties.lean` | `setNested_no_duplicate_at_leaf` | setNested inserts without duplicates when key is absent |

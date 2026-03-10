@@ -35,4 +35,18 @@ theorem passed_and_failed_exclusive (result : VerificationResult) :
     ¬ (result.isPassed = true ∧ result.isFailed = true) := by
   cases result <;> simp [VerificationResult.isPassed, VerificationResult.isFailed]
 
+-- 5. VerificationResult exhaustive partition
+
+/-- Every VerificationResult is exactly one of pass, fail, needsHuman, or skipped.
+This is the exhaustive direction — combined with mutual exclusivity (4), it gives
+a complete partition of the result space. -/
+theorem result_exhaustive (result : VerificationResult) :
+    (∃ d, result = .pass d) ∨ (∃ d, result = .fail d) ∨
+    (∃ i, result = .needsHuman i) ∨ (∃ r, result = .skipped r) := by
+  cases result with
+  | pass d => exact .inl ⟨d, rfl⟩
+  | fail d => exact .inr (.inl ⟨d, rfl⟩)
+  | needsHuman i => exact .inr (.inr (.inl ⟨i, rfl⟩))
+  | skipped r => exact .inr (.inr (.inr ⟨r, rfl⟩))
+
 end Qed.Proofs.TypeProperties

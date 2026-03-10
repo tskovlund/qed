@@ -4,6 +4,10 @@ namespace Qed.Verifier
 
 open Qed
 
+/-- Maximum characters of command output to preserve (keeps the tail, most
+    recent output is most useful for debugging). -/
+def maxOutputLength : Nat := 2000
+
 /-- Truncate a string to the last `maxLength` characters, prepending a truncation marker. -/
 private def truncate (s : String) (maxLength : Nat) : String :=
   if s.length > maxLength then
@@ -28,7 +32,7 @@ private def verifyCommand (command : String) (_timeout : Nat) : IO VerificationR
   let stdout := result.stdout.trimAscii.toString
   let stderr := result.stderr.trimAscii.toString
   let combined := stdout ++ (if stderr.isEmpty then "" else "\nSTDERR:\n" ++ stderr)
-  let details := truncate combined 2000
+  let details := truncate combined maxOutputLength
   if result.exitCode == 0 then
     return .pass details
   else

@@ -8,6 +8,9 @@ namespace Qed.WorkerLoop
 
 open Qed
 
+/-- Maximum characters of stderr to preview in terminal output. -/
+private def stderrPreviewLength : Nat := 200
+
 /-- Thin wrapper around StateMachine.transition. The worker loop calls this
     exclusively — never StateMachine.transition directly. This lets us prove
     that the loop drives the proven state machine and nothing else. -/
@@ -26,11 +29,21 @@ def buildPrompt (basePrompt : String)
     basePrompt ++ s!"\n\n## Previous failures (iteration {iteration})\n\nThe following criteria failed. Fix these issues:\n\n" ++
       String.intercalate "\n" failureLines
 
+/-- Get the temporary directory from $TMPDIR, falling back to /tmp. -/
+private def getTmpDir : IO String := do
+  match ← IO.getEnv "TMPDIR" with
+  | some dir =>
+      -- Strip trailing slashes for consistent path joining
+      let trimmed := (dir.toSlice.dropEndWhile (· == '/')).toString
+      return if trimmed.isEmpty then "/" else trimmed
+  | none => return "/tmp"
+
 /-- Write failures to a JSON file for Tier 2 workers. Returns the file path. -/
 private def writeFailuresFile (failures : List (String × VerificationResult))
     (iteration : Nat) : IO String := do
   let pid ← IO.Process.getPID
-  let path := s!"/tmp/qed-failures-{pid}-{iteration}.json"
+  let tmpDir ← getTmpDir
+  let path := s!"{tmpDir}/qed-failures-{pid}-{iteration}.json"
   let entries := failures.map fun (desc, result) =>
     Lean.Json.mkObj [
       ("description", Lean.Json.str desc),
@@ -101,7 +114,7 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
         else
           IO.println s!"  Worker completed (stdout: {stdout.length} chars)"
         if !stderr.isEmpty then
-          IO.println s!"  Worker stderr: {stderr.trimAscii.take 200}"
+          IO.println s!"  Worker stderr: {stderr.trimAscii.take stderrPreviewLength}"
       -- Worker done → transition to verifying
       let (s, c) := step loopConfig state context .workerDone
       state := s
@@ -137,16 +150,7 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
       | .maxIterationsReached iterations => s!"max iterations reached ({iterations})"
       | .escalated reason => s!"escalated: {reason}"
       | _ => "unknown"
-    let resultJson := Lean.Json.mkObj [
-      ("spec", Lean.Json.str spec.name),
-      ("state", Lean.Json.str stateStr),
-      ("passed", Lean.Json.bool (match state with | .passed _ => true | _ => false)),
-      ("criteria", Lean.Json.arr (allResults.map fun (desc, result) =>
-        Lean.Json.mkObj [
-          ("description", Lean.Json.str desc),
-          ("status", Lean.Json.str (Output.resultStatus result)),
-          ("details", Lean.Json.str (Output.resultDetails result))
-        ]).toArray)]
+    let resultJson := Output.workerResultsToJson spec.name stateStr allResults
     IO.println (resultJson.pretty 2)
   else
     IO.println ""
