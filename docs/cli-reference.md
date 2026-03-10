@@ -5,11 +5,12 @@
 ## Commands
 
 ```
-qed run <spec>       Run a spec (worker loop or verify mode)
-qed verify [path]    Verify specs (default: current directory, recursive)
-qed parse <spec>     Parse and print a spec (for debugging)
-qed version          Print version
-qed help             Print help
+qed run <spec-file>       Run verification (verify mode) or worker loop
+qed verify [spec-or-dir]  Verify a spec file, or all specs in a directory (recursive)
+                          Defaults to current directory if omitted
+qed parse <spec-file>     Parse and validate a spec file
+qed version               Print version
+qed help                  Show this help
 ```
 
 ## CLI flags

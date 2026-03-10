@@ -32,8 +32,9 @@ qed verify hello.spec.toml
 You should see:
 
 ```
-Verifying hello...
-  [✓] echo succeeds
+Verifying: hello
+
+  [PASS] echo succeeds
 
 All 1 criteria passed.
 ```
@@ -61,9 +62,10 @@ qed verify hello.spec.toml
 ```
 
 ```
-Verifying hello...
-  [✓] echo succeeds
-  [✗] this will fail
+Verifying: hello
+
+  [PASS] echo succeeds
+  [FAIL] this will fail
 
 1 of 2 criteria failed.
 ```
@@ -79,7 +81,22 @@ qed verify hello.spec.toml --json
 ```
 
 ```json
-{"spec":"hello","passed":false,"criteria":[{"description":"echo succeeds","result":"pass","details":"hello"},{"description":"this will fail","result":"fail","details":"exit code 1\n"}]}
+{
+  "spec": "hello",
+  "passed": false,
+  "criteria": [
+    {
+      "description": "echo succeeds",
+      "status": "pass",
+      "details": "hello"
+    },
+    {
+      "description": "this will fail",
+      "status": "fail",
+      "details": "exit code 1\n"
+    }
+  ]
+}
 ```
 
 The `--json` flag is position-independent — it works before or after the spec path.

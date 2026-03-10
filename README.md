@@ -37,17 +37,17 @@ $ qed run state-machine.spec.toml
 ── Iteration 1 ──
   Running worker...
   Verifying criteria...
-    [✓] Project builds and tests pass
-    [✗] Transition function terminates within maxIterations
-    [✓] Code follows conventions and handles edge cases
+    [PASS] Project builds and tests pass
+    [FAIL] Transition function terminates within maxIterations
+    [PASS] Code follows conventions and handles edge cases
   1 criteria failed, retrying...
 
 ── Iteration 2 ──
   Running worker...
   Verifying criteria...
-    [✓] Project builds and tests pass
-    [✓] Transition function terminates within maxIterations
-    [✓] Code follows conventions and handles edge cases
+    [PASS] Project builds and tests pass
+    [PASS] Transition function terminates within maxIterations
+    [PASS] Code follows conventions and handles edge cases
 
 All criteria passed after 2 iteration(s).
 ```
