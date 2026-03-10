@@ -11,10 +11,13 @@ private def runQed (args : List String) : IO (UInt32 × String × String) := do
   }
   return (result.exitCode, result.stdout, result.stderr)
 
-/-- Create a unique temporary directory for a test run. -/
+/-- Create a clean temporary directory for this test process.
+    Uses PID for per-process uniqueness and removes any stale
+    directory from a previous process that reused the same PID. -/
 private def freshTempDir (label : String) : IO System.FilePath := do
-  let id ← IO.rand 100000 999999
-  let path : System.FilePath := s!"/tmp/qed-test-{label}-{id}"
+  let pid ← IO.Process.getPID
+  let path : System.FilePath := s!"/tmp/qed-test-{label}-{pid}"
+  let _ ← IO.Process.output { cmd := "rm", args := #["-rf", path.toString] }
   IO.FS.createDirAll path
   return path
 
