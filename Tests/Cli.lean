@@ -11,9 +11,21 @@ private def runQed (args : List String) : IO (UInt32 × String × String) := do
   }
   return (result.exitCode, result.stdout, result.stderr)
 
-/-- Create a temporary spec file for testing, returning its path. -/
+/-- Create a clean temporary directory for this test process.
+    Uses PID for per-process uniqueness and removes any stale
+    directory from a previous process that reused the same PID. -/
+private def freshTempDir (label : String) : IO System.FilePath := do
+  let pid ← IO.Process.getPID
+  let path : System.FilePath := s!"/tmp/qed-test-{label}-{pid}"
+  let _ ← IO.Process.output { cmd := "rm", args := #["-rf", path.toString] }
+  IO.FS.createDirAll path
+  return path
+
+/-- Create a temporary spec file for testing, returning its path.
+    All callers share the same directory (sequential execution assumed). -/
 private def writeTempSpec (content : String) : IO System.FilePath := do
-  let path : System.FilePath := "/tmp/qed-test-cli.spec.json"
+  let dir ← freshTempDir "cli"
+  let path := dir / "test.spec.json"
   IO.FS.writeFile path content
   return path
 
@@ -161,6 +173,47 @@ def testParseRejectsMaxIterationsWithoutWorker : IO Bool := do
   -- Assert
   return exitCode == 2 && stderr.contains "maxIterations" && stderr.contains "worker"
 
+def testVerifyDirectoryRunsAllSpecs : IO Bool := do
+  -- Arrange
+  let dir ← freshTempDir "dir"
+  IO.FS.writeFile (dir / "a.spec.json")
+    "{\"name\": \"a\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  IO.FS.writeFile (dir / "b.spec.json")
+    "{\"name\": \"b\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", dir.toString]
+  -- Assert
+  return exitCode == 0 && stdout.contains "a" && stdout.contains "b"
+
+def testVerifyDirectoryFailsOnBadSpec : IO Bool := do
+  -- Arrange
+  let dir ← freshTempDir "dir-fail"
+  IO.FS.writeFile (dir / "fail.spec.json")
+    "{\"name\": \"fail\", \"criteria\": [{\"description\": \"fails\", \"verify\": {\"type\": \"command\", \"run\": \"false\"}}]}"
+  -- Act
+  let (exitCode, _, _) ← runQed ["verify", dir.toString]
+  -- Assert
+  return exitCode == 1
+
+def testVerifyDirectoryFindsNestedSpecs : IO Bool := do
+  -- Arrange: create a directory tree with specs at multiple levels
+  let dir ← freshTempDir "nested"
+  IO.FS.createDirAll (dir / "sub" / "deep")
+  IO.FS.createDirAll (dir / ".hidden")
+  IO.FS.writeFile (dir / "root.spec.json")
+    "{\"name\": \"root-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  IO.FS.writeFile (dir / "sub" / "nested.spec.json")
+    "{\"name\": \"nested-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  IO.FS.writeFile (dir / "sub" / "deep" / "deep.spec.toml")
+    "name = \"deep-spec\"\n\n[[criteria]]\ndescription = \"pass\"\n\n[criteria.verify]\ntype = \"command\"\nrun = \"true\"\n"
+  IO.FS.writeFile (dir / ".hidden" / "hidden.spec.json")
+    "{\"name\": \"hidden-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", dir.toString]
+  -- Assert: finds root, nested, and deep specs; skips hidden directory
+  return exitCode == 0 && stdout.contains "root-spec" && stdout.contains "nested-spec" &&
+    stdout.contains "deep-spec" && !stdout.contains "hidden-spec"
+
 def testVerifyHandlesNonUtf8Output : IO Bool := do
   -- Arrange: command outputs raw bytes that aren't valid UTF-8
   -- Use perl which reliably produces raw bytes on all platforms
@@ -188,5 +241,8 @@ def cliTests : List (String × IO Bool) := [
   ("testNoArgsShowsHelp", testNoArgsShowsHelp),
   ("testUnknownCommandReturnsError", testUnknownCommandReturnsError),
   ("testParseRejectsMaxIterationsWithoutWorker", testParseRejectsMaxIterationsWithoutWorker),
+  ("testVerifyDirectoryRunsAllSpecs", testVerifyDirectoryRunsAllSpecs),
+  ("testVerifyDirectoryFailsOnBadSpec", testVerifyDirectoryFailsOnBadSpec),
+  ("testVerifyDirectoryFindsNestedSpecs", testVerifyDirectoryFindsNestedSpecs),
   ("testVerifyHandlesNonUtf8Output", testVerifyHandlesNonUtf8Output)
 ]

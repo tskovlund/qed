@@ -115,8 +115,10 @@ Specs are files in the repo — version-controlled, schema-validated, colocated 
 ```lean
 def loadSpec (path : System.FilePath) : IO (Except String Spec)
 def listSpecs (directory : System.FilePath) (extension : String) : IO (Except String (List System.FilePath))
-def listAllSpecs (directory : System.FilePath) : IO (Except String (List System.FilePath))
+def listAllSpecs (directory : System.FilePath) : IO (Except String (List System.FilePath))  -- recursive
 ```
+
+`listAllSpecs` recursively searches for `.spec.json` and `.spec.toml` files, skipping hidden directories and build artifacts. `qed verify` with no argument defaults to the current directory.
 
 ## Pure core, IO shell
 
