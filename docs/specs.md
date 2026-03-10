@@ -32,9 +32,9 @@ The foundation. Everything compiles, tests pass, no incomplete proofs. If this f
 
 ### 2. State machine correctness (`state-machine.spec.toml`)
 
-Five top-level formal proofs verify the state machine's mathematical properties, organized by what they guarantee:
+Six top-level formal proofs verify the state machine's mathematical properties, organized by what they guarantee:
 
-- **Safety:** terminal states are absorbing, no skipped verification
+- **Safety:** terminal states are absorbing, no skipped verification, iteration count bounded by maxIterations
 - **Liveness:** the loop terminates within maxIterations
 - **Correctness:** stuck detection fires iff repeated failures reach the threshold, ready state is never revisited
 

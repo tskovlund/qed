@@ -26,6 +26,14 @@ type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.NoSkip.no_skip_verification"
 
+[[criteria]]
+description = "Iteration count never exceeds maxIterations — the configured bound is respected"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.Invariants.iteration_bounded"
+
 # Liveness: good things eventually happen
 
 [[criteria]]
