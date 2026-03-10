@@ -98,13 +98,23 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Architecture](docs/architecture.md) | Execution modes, state machine, verification dispatch |
-| [Proven properties](docs/proven-properties.md) | All 40+ formally verified theorems |
-| [Spec design](docs/specs.md) | Why these specs exist and how they're organized |
-| [Spec format](docs/spec-format.md) | Complete reference for spec files (auto-generated) |
-| [JSON Schema](docs/spec.schema.json) | Machine-readable schema for editor autocomplete |
+**Start here:** [Tutorial](docs/tutorial.md) — write your first spec in 5 minutes.
+
+**How-to guides:**
+[Add qed to CI](docs/how-to/ci.md) ·
+[Agent verification](docs/how-to/agent-verification.md) ·
+[Worker loop specs](docs/how-to/worker-loop.md) ·
+[JSON vs TOML](docs/how-to/json-vs-toml.md)
+
+**Reference:**
+[Spec format](docs/spec-format.md) ·
+[CLI reference](docs/cli-reference.md) ·
+[Proven properties](docs/proven-properties.md) ·
+[JSON Schema](docs/spec.schema.json)
+
+**Explanation:**
+[Architecture](docs/architecture.md) ·
+[Spec design](docs/specs.md)
 
 ## Author
 
