@@ -4,6 +4,8 @@
 
 # qed
 
+*Typed acceptance criteria. Deterministic verification. Formally proven orchestration.*
+
 **AI agents are non-deterministic. Your verification shouldn't be.**
 
 When an AI writes your code *and* your tests, passing tests prove nothing — they inherit the same blind spots as the implementation. qed defines what "done" means with typed specs — verified independently of the agent that did the work.
@@ -77,11 +79,11 @@ The core is written in Lean 4 with complete formal proofs — no `sorry`, no gap
 - **Absorbing terminal states** — once done, done — no event can change a terminal state
 - **Serializer↔parser roundtrip** — parsing serialized JSON recovers the original spec exactly
 
-40+ theorems total across state machine, worker loop, types, output, parsing, and TOML. See [AGENTS.md](AGENTS.md#proven-properties) for the full list.
+40+ theorems total across state machine, worker loop, types, output, parsing, and TOML. See [proven properties](docs/proven-properties.md) for the full list.
 
 ## Status
 
-Under active development — building the MVP. qed eats its own dogfood: the repo's own acceptance criteria are defined as [specs](specs/).
+Under active development — building the MVP. qed eats its own dogfood: the repo's own acceptance criteria are defined as [specs](specs/) and verified in CI on every push.
 
 ## Quick start
 
@@ -99,6 +101,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
 | Document | Description |
 |----------|-------------|
 | [Architecture](docs/architecture.md) | Execution modes, state machine, verification dispatch |
+| [Proven properties](docs/proven-properties.md) | All 40+ formally verified theorems |
 | [Spec design](docs/specs.md) | Why these specs exist and how they're organized |
 | [Spec format](docs/spec-format.md) | Complete reference for spec files (auto-generated) |
 | [JSON Schema](docs/spec.schema.json) | Machine-readable schema for editor autocomplete |
