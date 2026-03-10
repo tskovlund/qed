@@ -57,11 +57,15 @@ DocGen/
   Schema.lean          JSON Schema generation (exhaustive matches on Types)
   Markdown.lean        JSON Schema → markdown transformation
   Main.lean            CLI entry point (lake exe docgen schema|markdown)
-docs/                  Auto-generated + hand-written documentation
-  spec.schema.json     JSON Schema (auto-generated, CI-checked)
+docs/                  Documentation (Diataxis: tutorial, how-to, reference, explanation)
+  tutorial.md          Tutorial: write your first spec
+  how-to/              How-to guides (CI, agent verification, worker loops, JSON vs TOML)
+  cli-reference.md     CLI reference (commands, flags, exit codes, env vars, config)
   spec-format.md       Spec format reference (auto-generated from schema)
-  architecture.md      System design, state machine, mermaid diagrams
-  specs.md             Spec design philosophy and layer organization
+  spec.schema.json     JSON Schema (auto-generated, CI-checked)
+  proven-properties.md All 40+ formally verified theorems
+  architecture.md      Explanation: state machine, verification dispatch, pure core/IO shell
+  specs.md             Explanation: spec design philosophy and layer organization
 ```
 
 ## Spec format

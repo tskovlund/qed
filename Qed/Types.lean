@@ -53,6 +53,9 @@ structure AcceptanceCriterion where
   ci : CiSchedule := match verify with
     | .human _ => .manual
     | _ => .always
+  /-- When set, the criterion is intentionally skipped with the given reason.
+      Skipped criteria show `[SKIP]` in output and do not affect pass/fail. -/
+  skip : Option String := none
   deriving Repr, BEq
 
 /-- Configuration for the worker agent.

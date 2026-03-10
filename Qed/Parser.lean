@@ -77,7 +77,10 @@ def parseCriterion (json : Json) : Except String AcceptanceCriterion := do
       .ok (match verify with
         | .human _ => .manual
         | _ => .always)
-  .ok { description, verify, ci }
+  let skip := match json.getObjValAs? String "skip" with
+    | .ok value => some value
+    | .error _ => none
+  .ok { description, verify, ci, skip }
 
 /-- Parse a WorkerConfig from a JSON object. Does not validate that at least
     one of command/prompt is present — that check lives in parseFromJson. -/

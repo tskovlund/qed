@@ -133,67 +133,8 @@ The pure core is where all proofs live. It has no side effects, no process spawn
 
 This separation means proofs about the state machine are proofs about the actual system behavior, not about a model of it.
 
-## Configuration
+## Further reading
 
-All meaningful parameters are configurable at the spec level — defaults are sensible but overridable:
-
-| Parameter | Default | Where set |
-|-----------|---------|-----------|
-| `maxIterations` | 10 | Spec file (worker loop) |
-| `stuckThreshold` | 3 | Spec file (worker loop) |
-| `timeout` (worker) | 3600s | Spec file (`[worker]`) |
-| `timeout` (command) | 300s | Spec file (`[[criteria]]`) |
-| `timeout` (property) | 600s | Spec file (`[[criteria]]`) |
-| `model` (agent) | `claude-opus-4-6` | Spec file (`[[criteria]]`) |
-| `workdir` | `.` | Spec file (`[worker]`) |
-
-Environment variables consumed by qed:
-
-| Variable | Purpose |
-|----------|---------|
-| `TMPDIR` | Temp directory for failure files (falls back to `/tmp`) |
-
-Environment variables set by qed for workers:
-
-| Variable | Purpose |
-|----------|---------|
-| `QED_WORKER_PROMPT` | Full prompt with failure feedback (Tier 1 only) |
-| `QED_WORKER_ITERATION` | Current iteration number |
-| `QED_WORKER_FAILURES_FILE` | Path to JSON file with failure details |
-
-Environment variables set by qed for agent verification:
-
-| Variable | Purpose |
-|----------|---------|
-| `QED_VERIFIER_PROMPT` | The criterion's review prompt |
-| `QED_VERIFIER_SYSTEM_PROMPT` | Verdict format instructions (JSON block with `{"pass": true/false}`) |
-
-CLI flags:
-
-| Flag | Purpose |
-|------|---------|
-| `--json` | Machine-readable JSON output (position-independent) |
-
-Exit codes:
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success — all criteria passed |
-| 1 | Verification failure — one or more criteria failed |
-| 2 | Configuration or usage error — bad spec, missing file, unknown command |
-
-Named constants in the IO shell (not configurable — reasonable defaults):
-
-| Constant | Value | Location |
-|----------|-------|----------|
-| `maxOutputLength` | 2000 chars | `Verifier.lean` — output truncation (keeps tail) |
-| `stderrPreviewLength` | 200 chars | `WorkerLoop.lean` — stderr preview in terminal |
-
-## Spec format
-
-Two serialization formats, same types:
-
-- **JSON** (`.spec.json`) — simple specs, parsed via `Lean.Json`
-- **TOML** (`.spec.toml`) — multi-line strings (agent prompts, human instructions)
-
-Both validate against the same [JSON Schema](spec.schema.json). See [spec-format.md](spec-format.md) for the full reference.
+- [CLI reference](cli-reference.md) — commands, flags, exit codes, environment variables, configuration
+- [Spec format](spec-format.md) — complete field-by-field reference for spec files
+- [Proven properties](proven-properties.md) — all 40+ formally verified theorems

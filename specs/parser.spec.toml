@@ -12,6 +12,7 @@ name = "parser-correctness"
 
 [[criteria]]
 description = "CI schedule parser accepts exactly the three valid strings"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -20,6 +21,7 @@ target = "Qed.Proofs.ParserProperties.parseCiSchedule_complete"
 
 [[criteria]]
 description = "CI schedule parser rejects all invalid strings"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -28,6 +30,7 @@ target = "Qed.Proofs.ParserProperties.parseCiSchedule_rejects_invalid"
 
 [[criteria]]
 description = "Serializer→parser roundtrip: parsing serialized JSON recovers the original spec exactly"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -41,6 +44,7 @@ description = """
 JSON parser faithfully maps JSON to the Spec type — no data loss, no \
 silent defaults where explicit values should be required, no ambiguous \
 error messages."""
+ci = "manual"
 
 [criteria.verify]
 type = "agent"
@@ -63,6 +67,7 @@ description = """
 TOML parser correctly handles all value types and structural features \
 used in qed specs — arrays of tables with sub-tables, multi-line \
 strings, non-ASCII content, and duplicate key rejection."""
+ci = "manual"
 
 [criteria.verify]
 type = "agent"

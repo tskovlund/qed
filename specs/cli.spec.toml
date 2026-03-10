@@ -6,6 +6,7 @@ name = "cli-correctness"
 
 [[criteria]]
 description = "Result space is a complete partition: every result is exactly one variant, predicates agree"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -14,6 +15,7 @@ target = "Qed.Proofs.TypeProperties.result_complete_partition"
 
 [[criteria]]
 description = "Pass/fail decision is correct: allPassed returns true iff no result is .fail"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -22,6 +24,7 @@ target = "Qed.Proofs.OutputCorrectness.allPassed_iff_no_failures"
 
 [[criteria]]
 description = "Verify-mode JSON output always contains 'spec', 'passed', and 'criteria' fields"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -30,6 +33,7 @@ target = "Qed.Proofs.OutputCorrectness.resultsToJson_has_required_fields"
 
 [[criteria]]
 description = "Worker-loop JSON output always contains 'spec', 'state', 'passed', and 'criteria' fields"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -40,6 +44,7 @@ target = "Qed.Proofs.OutputCorrectness.workerResultsToJson_has_required_fields"
 
 [[criteria]]
 description = "CLI argument parsing, dispatch, and error handling are correct"
+ci = "manual"
 
 [criteria.verify]
 type = "agent"

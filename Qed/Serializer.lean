@@ -38,11 +38,17 @@ def verifyTypeToJson : VerifyType → Json
       ("type", Json.str "human"),
       ("instruction", Json.str instruction)]
 
-/-- Serialize an AcceptanceCriterion to JSON. -/
-def criterionToJson (criterion : AcceptanceCriterion) : Json := Json.mkObj [
-  ("description", Json.str criterion.description),
-  ("verify", verifyTypeToJson criterion.verify),
-  ("ci", Json.str (ciScheduleToString criterion.ci))]
+/-- Serialize an AcceptanceCriterion to JSON. Optional `skip` field is only
+    emitted when present. -/
+def criterionToJson (criterion : AcceptanceCriterion) : Json :=
+  let base := [
+    ("description", Json.str criterion.description),
+    ("verify", verifyTypeToJson criterion.verify),
+    ("ci", Json.str (ciScheduleToString criterion.ci))]
+  let fields := match criterion.skip with
+    | some reason => base ++ [("skip", Json.str reason)]
+    | none => base
+  Json.mkObj fields
 
 /-- Serialize a WorkerConfig to JSON. Optional fields (command, prompt) are
     only emitted when present. Model, workdir, and timeout are always emitted

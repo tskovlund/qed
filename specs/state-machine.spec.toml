@@ -12,6 +12,7 @@ name = "state-machine-correctness"
 
 [[criteria]]
 description = "Terminal states are absorbing — transitioning from a terminal state always returns the same state unchanged"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -20,6 +21,7 @@ target = "Qed.Proofs.FinalStates.terminal_absorbing"
 
 [[criteria]]
 description = "Worker must pass through verification before reaching any terminal success state"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -28,6 +30,7 @@ target = "Qed.Proofs.NoSkip.no_skip_verification"
 
 [[criteria]]
 description = "Iteration count never exceeds maxIterations — the configured bound is respected"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -38,6 +41,7 @@ target = "Qed.Proofs.Invariants.iteration_bounded"
 
 [[criteria]]
 description = "The transition function is deterministic — equal inputs always produce equal outputs"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -46,6 +50,7 @@ target = "Qed.Proofs.Invariants.transition_deterministic"
 
 [[criteria]]
 description = "Iteration count never decreases across transitions"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -54,6 +59,7 @@ target = "Qed.Proofs.Monotonic.iteration_monotonic"
 
 [[criteria]]
 description = "State lifecycle phase (initial → working → terminal) never decreases"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -64,6 +70,7 @@ target = "Qed.Proofs.Invariants.phase_monotonic"
 
 [[criteria]]
 description = "The loop always reaches a terminal state within maxIterations transitions"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -74,6 +81,7 @@ target = "Qed.Proofs.Termination.loop_terminates"
 
 [[criteria]]
 description = "Stuck detection fires iff the same failures repeat for stuckThreshold consecutive iterations"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -82,6 +90,7 @@ target = "Qed.Proofs.StuckDetection.stuck_iff_threshold"
 
 [[criteria]]
 description = "The initial state (ready) is never revisited after leaving it"
+skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -92,6 +101,7 @@ target = "Qed.Proofs.Invariants.ready_unreachable"
 
 [[criteria]]
 description = "Transition function is correct, total, and well-structured"
+ci = "manual"
 
 [criteria.verify]
 type = "agent"

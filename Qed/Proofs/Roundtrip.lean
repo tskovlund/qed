@@ -101,18 +101,18 @@ theorem verifyType_roundtrip (vt : VerifyType) :
 -- ═══════════════════════════════════════════════════════════════════
 
 /-- parseCriterion inverts criterionToJson. Full case-split on all verify type
-    constructors × CI schedules × optional fields so the kernel can reduce
+    constructors × CI schedules × skip × optional fields so the kernel can reduce
     every TreeMap lookup. -/
 theorem criterion_roundtrip (criterion : AcceptanceCriterion) :
     parseCriterion (criterionToJson criterion) = .ok criterion := by
   cases criterion with
-  | mk description verify ci =>
+  | mk description verify ci skip =>
     cases verify with
-    | command run timeout => cases ci <;> rfl
-    | agent prompt model command => cases command <;> (cases ci <;> rfl)
-    | property run timeout => cases ci <;> rfl
-    | proof prover target => cases ci <;> rfl
-    | human instruction => cases ci <;> rfl
+    | command run timeout => cases ci <;> cases skip <;> rfl
+    | agent prompt model command => cases command <;> (cases ci <;> cases skip <;> rfl)
+    | property run timeout => cases ci <;> cases skip <;> rfl
+    | proof prover target => cases ci <;> cases skip <;> rfl
+    | human instruction => cases ci <;> cases skip <;> rfl
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Level 4: WorkerConfig roundtrip

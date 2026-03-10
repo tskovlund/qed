@@ -49,7 +49,7 @@ private def writeFailuresFile (failures : List (String × VerificationResult))
   let entries := failures.map fun (desc, result) =>
     Lean.Json.mkObj [
       ("description", Lean.Json.str desc),
-      ("status", Lean.Json.str (Output.resultStatus result)),
+      ("result", Lean.Json.str (Output.resultStatus result)),
       ("details", Lean.Json.str (Output.resultDetails result))]
   let json := Lean.Json.arr entries.toArray
   IO.FS.writeFile path (json.pretty 2)
@@ -129,7 +129,11 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
         let failed := results.filter fun (_, result) => result.isFailed
         if !jsonOutput then
           for (description, result) in results do
-            IO.println s!"    [{Output.statusIndicator result}] {description}"
+            match result with
+            | .skipped reason =>
+              IO.println s!"    [{Output.statusIndicator result}] {description} — {reason}"
+            | _ =>
+              IO.println s!"    [{Output.statusIndicator result}] {description}"
         if failed.isEmpty then
           let (s, c) := step loopConfig state context .allPassed
           state := s
