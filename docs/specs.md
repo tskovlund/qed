@@ -42,7 +42,7 @@ Building-block lemmas (fuel measures, monotonicity, phase tracking, determinism)
 
 ### 3. Verify mode correctness (`verify-mode.spec.toml`)
 
-Two formal proofs verify the type-level separation between modes: verify mode cannot carry a WorkerConfig or LoopConfig, and is independent of the state machine. Building-block proofs (isTerminal decidability, isPassed/isFailed mutual exclusivity, result exhaustive partition) live in the proof files but are not spec criteria. Structural assertions check the schema and documentation.
+Two formal proofs verify the type-level separation between modes: verify mode cannot carry a WorkerConfig or LoopConfig, and is independent of the state machine. Building-block proofs (isTerminal decidability) live in the proof files but are not spec criteria. The result complete partition was promoted to a spec criterion in cli.spec.toml. Structural assertions check the schema and documentation.
 
 ### 4. Parser correctness (`parser.spec.toml`)
 
@@ -54,7 +54,7 @@ Five formal proofs verify the worker loop execution engine: the loop drives the 
 
 ### 6. CLI and output correctness (`cli.spec.toml`)
 
-One formal proof verifies output correctness: the pass/fail decision is correct (allPassed iff no failures). Building-block proofs (JSON structure contract for both verify and worker loop modes) live in the proof file but are not spec criteria. An agent review verifies CLI dispatch logic.
+Two formal proofs verify output correctness: the result complete partition (every result is exactly one variant, predicates agree) and the pass/fail decision (allPassed iff no failures). Building-block proofs (JSON structure contract for both verify and worker loop modes) live in the proof file but are not spec criteria. An agent review verifies CLI dispatch logic.
 
 ### 7. Verifier correctness (`verifier.spec.toml`)
 

@@ -170,10 +170,7 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | File | Theorem | Property |
 |------|---------|----------|
 | `TypeProperties.lean` | `isTerminal_decidable` | Every LoopState is either terminal or not |
-| `TypeProperties.lean` | `isPassed_iff_pass` | `isPassed` returns true iff the result is `.pass` |
-| `TypeProperties.lean` | `isFailed_iff_fail` | `isFailed` returns true iff the result is `.fail` |
-| `TypeProperties.lean` | `passed_and_failed_exclusive` | No result is both passed and failed |
-| `TypeProperties.lean` | `result_exhaustive` | Every VerificationResult is exactly one of pass, fail, needsHuman, or skipped |
+| `TypeProperties.lean` | `result_complete_partition` | Every VerificationResult is exactly one variant; isPassed/isFailed predicates agree with the constructor |
 | `OutputCorrectness.lean` | `allPassed_iff_no_failures` | Pass/fail decision is correct: true iff no result is `.fail` |
 | `OutputCorrectness.lean` | `resultsToJson_has_required_fields` | JSON output always contains "spec", "passed", "criteria" fields |
 | `OutputCorrectness.lean` | `workerResultsToJson_has_required_fields` | Worker loop JSON always contains "spec", "state", "passed", "criteria" fields |

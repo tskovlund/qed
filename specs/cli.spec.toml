@@ -5,6 +5,14 @@ name = "cli-correctness"
 # --- Proof criteria ---
 
 [[criteria]]
+description = "Result space is a complete partition: every result is exactly one variant, predicates agree"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.TypeProperties.result_complete_partition"
+
+[[criteria]]
 description = "Pass/fail decision is correct: allPassed returns true iff no result is .fail"
 
 [criteria.verify]

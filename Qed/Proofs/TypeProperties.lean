@@ -14,39 +14,25 @@ theorem isTerminal_decidable (state : LoopState) :
     state.isTerminal = true ∨ state.isTerminal = false := by
   cases state <;> simp [LoopState.isTerminal]
 
--- 2. isPassed characterization
+-- 2. VerificationResult complete partition
+--
+-- Combines exhaustiveness, mutual exclusivity, and predicate correctness
+-- into a single spec-level guarantee: every result is exactly one variant,
+-- and the isPassed/isFailed predicates agree with the constructor.
 
-/-- `isPassed` returns true if and only if the result is a `.pass`. -/
-theorem isPassed_iff_pass (result : VerificationResult) :
-    result.isPassed = true ↔ ∃ details : String, result = .pass details := by
-  cases result <;> simp [VerificationResult.isPassed]
-
--- 3. isFailed characterization
-
-/-- `isFailed` returns true if and only if the result is a `.fail`. -/
-theorem isFailed_iff_fail (result : VerificationResult) :
-    result.isFailed = true ↔ ∃ details : String, result = .fail details := by
-  cases result <;> simp [VerificationResult.isFailed]
-
--- 4. isPassed and isFailed are mutually exclusive
-
-/-- No VerificationResult is both passed and failed. -/
-theorem passed_and_failed_exclusive (result : VerificationResult) :
-    ¬ (result.isPassed = true ∧ result.isFailed = true) := by
-  cases result <;> simp [VerificationResult.isPassed, VerificationResult.isFailed]
-
--- 5. VerificationResult exhaustive partition
-
-/-- Every VerificationResult is exactly one of pass, fail, needsHuman, or skipped.
-This is the exhaustive direction — combined with mutual exclusivity (4), it gives
-a complete partition of the result space. -/
-theorem result_exhaustive (result : VerificationResult) :
-    (∃ d, result = .pass d) ∨ (∃ d, result = .fail d) ∨
-    (∃ i, result = .needsHuman i) ∨ (∃ r, result = .skipped r) := by
+/-- Every VerificationResult falls into exactly one of four categories.
+For each category, isPassed and isFailed correctly reflect the variant.
+This is the complete partition of the result space — the foundation for
+allPassed correctness (OutputCorrectness.allPassed_iff_no_failures). -/
+theorem result_complete_partition (result : VerificationResult) :
+    (∃ d, result = .pass d) ∧ result.isPassed = true ∧ result.isFailed = false
+  ∨ (∃ d, result = .fail d) ∧ result.isPassed = false ∧ result.isFailed = true
+  ∨ (∃ i, result = .needsHuman i) ∧ result.isPassed = false ∧ result.isFailed = false
+  ∨ (∃ r, result = .skipped r) ∧ result.isPassed = false ∧ result.isFailed = false := by
   cases result with
-  | pass d => exact .inl ⟨d, rfl⟩
-  | fail d => exact .inr (.inl ⟨d, rfl⟩)
-  | needsHuman i => exact .inr (.inr (.inl ⟨i, rfl⟩))
-  | skipped r => exact .inr (.inr (.inr ⟨r, rfl⟩))
+  | pass d => exact .inl ⟨⟨d, rfl⟩, rfl, rfl⟩
+  | fail d => exact .inr (.inl ⟨⟨d, rfl⟩, rfl, rfl⟩)
+  | needsHuman i => exact .inr (.inr (.inl ⟨⟨i, rfl⟩, rfl, rfl⟩))
+  | skipped r => exact .inr (.inr (.inr ⟨⟨r, rfl⟩, rfl, rfl⟩))
 
 end Qed.Proofs.TypeProperties
