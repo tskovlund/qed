@@ -21,14 +21,19 @@ private def shellCmd : String × String :=
 
 /-- Run a shell command and return pass/fail based on exit code.
     Captures stdout and stderr, truncates to last `maxOutputLength` chars.
+    Catches non-UTF-8 output (Lean's IO.Process.output throws when the process
+    emits bytes that aren't valid UTF-8).
     TODO: `timeout` is parsed and stored but not yet enforced. Process-level
     timeout requires `IO.Process.spawn` + async kill, tracked for a future PR. -/
 private def verifyCommand (command : String) (_timeout : Nat) : IO VerificationResult := do
   let (cmd, flag) := shellCmd
-  let result ← IO.Process.output {
-    cmd := cmd
-    args := #[flag, command]
-  }
+  let result ← try
+    IO.Process.output {
+      cmd := cmd
+      args := #[flag, command]
+    }
+  catch error =>
+    return .fail s!"command execution error: {error}"
   let stdout := result.stdout.trimAscii.toString
   let stderr := result.stderr.trimAscii.toString
   let combined := stdout ++ (if stderr.isEmpty then "" else "\nSTDERR:\n" ++ stderr)

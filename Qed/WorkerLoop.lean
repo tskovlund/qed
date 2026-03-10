@@ -61,7 +61,9 @@ private def shellCmd : String × String :=
 def shellQuote (s : String) : String :=
   "'" ++ s.replace "'" "'\\''" ++ "'"
 
-/-- Spawn a worker process with the appropriate env vars and prompt handling. -/
+/-- Spawn a worker process with the appropriate env vars and prompt handling.
+    Catches non-UTF-8 output (Lean's IO.Process.output throws when the process
+    emits bytes that aren't valid UTF-8). -/
 def spawnWorker (worker : WorkerConfig)
     (failures : List (String × VerificationResult))
     (iteration : Nat) : IO (UInt32 × String × String) := do
@@ -77,14 +79,20 @@ def spawnWorker (worker : WorkerConfig)
     | none =>
       -- Tier 2: just set env vars, run command as-is
       s!"export QED_ITERATION={iteration}; export QED_FAILURES_FILE={shellQuote failuresFile}; {worker.command}"
-  let result ← IO.Process.output {
-    cmd := cmd
-    args := #[flag, shellCommand]
-    cwd := if worker.workdir == "." then none else some worker.workdir
-  }
-  return (result.exitCode, result.stdout, result.stderr)
+  try
+    let result ← IO.Process.output {
+      cmd := cmd
+      args := #[flag, shellCommand]
+      cwd := if worker.workdir == "." then none else some worker.workdir
+    }
+    return (result.exitCode, result.stdout, result.stderr)
+  catch error =>
+    -- Non-UTF-8 output or other IO errors — report as failure
+    return ((1 : UInt32), "", s!"worker process error: {error}")
 
-/-- Run the worker loop: spawn worker, verify, feed failures back, repeat. -/
+/-- Run the worker loop: spawn worker, verify, feed failures back, repeat.
+    Handles interruption (SIGINT) gracefully — Lean's runtime converts the
+    signal into an IO exception, which we catch to report partial progress. -/
 def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
     (jsonOutput : Bool) : IO UInt32 := do
   let mut state : LoopState := .ready
@@ -101,47 +109,53 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
     IO.println s!"Worker loop: {spec.name}"
     IO.println s!"  max iterations: {loopConfig.maxIterations}, stuck threshold: {loopConfig.stuckThreshold}"
     IO.println ""
-  while !state.isTerminal do
-    match state with
-    | .workerRunning iteration =>
-      if !jsonOutput then
-        IO.println s!"── Iteration {iteration} ──"
-        IO.println "  Running worker..."
-      let (exitCode, stdout, stderr) ← spawnWorker worker lastFailures iteration
-      if !jsonOutput then
-        if exitCode != 0 then
-          IO.println s!"  Worker exited with code {exitCode}"
+  try
+    while !state.isTerminal do
+      match state with
+      | .workerRunning iteration =>
+        if !jsonOutput then
+          IO.println s!"── Iteration {iteration} ──"
+          IO.println "  Running worker..."
+        let (exitCode, stdout, stderr) ← spawnWorker worker lastFailures iteration
+        if !jsonOutput then
+          if exitCode != 0 then
+            IO.println s!"  Worker exited with code {exitCode}"
+          else
+            IO.println s!"  Worker completed (stdout: {stdout.length} chars)"
+          if !stderr.isEmpty then
+            IO.println s!"  Worker stderr: {stderr.trimAscii.take stderrPreviewLength}"
+        -- Worker done → transition to verifying
+        let (s, c) := step loopConfig state context .workerDone
+        state := s
+        context := c
+      | .verifying _ =>
+        if !jsonOutput then
+          IO.println "  Verifying criteria..."
+        let results ← Verifier.verifyAll spec.criteria
+        allResults := results
+        let failed := results.filter fun (_, result) => result.isFailed
+        if !jsonOutput then
+          for (description, result) in results do
+            IO.println s!"    [{Output.statusIndicator result}] {description}"
+        if failed.isEmpty then
+          let (s, c) := step loopConfig state context .allPassed
+          state := s
+          context := c
         else
-          IO.println s!"  Worker completed (stdout: {stdout.length} chars)"
-        if !stderr.isEmpty then
-          IO.println s!"  Worker stderr: {stderr.trimAscii.take stderrPreviewLength}"
-      -- Worker done → transition to verifying
-      let (s, c) := step loopConfig state context .workerDone
-      state := s
-      context := c
-    | .verifying _ =>
-      if !jsonOutput then
-        IO.println "  Verifying criteria..."
-      let results ← Verifier.verifyAll spec.criteria
-      allResults := results
-      let failed := results.filter fun (_, result) => result.isFailed
-      if !jsonOutput then
-        for (description, result) in results do
-          IO.println s!"    [{Output.statusIndicator result}] {description}"
-      if failed.isEmpty then
-        let (s, c) := step loopConfig state context .allPassed
-        state := s
-        context := c
-      else
-        lastFailures := failed
-        let failureDescs := failed.map fun (desc, _) => desc
-        let (s, c) := step loopConfig state context (.someFailed failureDescs)
-        state := s
-        context := c
-        if !jsonOutput && !state.isTerminal then
-          IO.println s!"  {failed.length} criteria failed, retrying..."
-          IO.println ""
-    | _ => break  -- unreachable: while guard ensures non-terminal
+          lastFailures := failed
+          let failureDescs := failed.map fun (desc, _) => desc
+          let (s, c) := step loopConfig state context (.someFailed failureDescs)
+          state := s
+          context := c
+          if !jsonOutput && !state.isTerminal then
+            IO.println s!"  {failed.length} criteria failed, retrying..."
+            IO.println ""
+      | _ => break  -- unreachable: while guard ensures non-terminal
+  catch error =>
+    if !jsonOutput then
+      IO.eprintln s!"\nInterrupted: {error}"
+      IO.eprintln s!"  State at interruption: {repr state}"
+    return (1 : UInt32)
   -- Output final result
   if jsonOutput then
     let stateStr := match state with

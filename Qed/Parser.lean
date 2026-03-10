@@ -105,8 +105,12 @@ def parseFromJson (json : Json) : Except String Spec := do
       let stuckThreshold ← optionalNat json "stuckThreshold" defaultStuckThreshold
       .ok (SpecMode.workerLoop worker { maxIterations, stuckThreshold })
     | .error _ =>
-      -- Verify mode: must have at least one criterion
-      if criteria.isEmpty then
+      -- Verify mode: reject worker loop fields that don't apply
+      if (json.getObjVal? "maxIterations").isOk then
+        .error "'maxIterations' requires a [worker] section"
+      else if (json.getObjVal? "stuckThreshold").isOk then
+        .error "'stuckThreshold' requires a [worker] section"
+      else if criteria.isEmpty then
         .error "verify mode (no worker) requires at least one criterion"
       else
         .ok SpecMode.verify

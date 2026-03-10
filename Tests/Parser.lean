@@ -317,6 +317,26 @@ def testParseJsonErrorsOnInvalidCiSchedule : IO Bool := do
   | .ok _ => return false
   | .error e => return e.contains "nightly"
 
+def testParseJsonRejectsMaxIterationsWithoutWorker : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"bad\", \"maxIterations\": 5, \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok _ => return false
+  | .error e => return e.contains "maxIterations" && e.contains "worker"
+
+def testParseJsonRejectsStuckThresholdWithoutWorker : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"bad\", \"stuckThreshold\": 3, \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok _ => return false
+  | .error e => return e.contains "stuckThreshold" && e.contains "worker"
+
 def parserTests : List (String × IO Bool) := [
   ("testParseJsonReturnsVerifyModeWhenNoWorker", testParseJsonReturnsVerifyModeWhenNoWorker),
   ("testParseJsonReturnsWorkerLoopWithDefaults", testParseJsonReturnsWorkerLoopWithDefaults),
@@ -339,5 +359,7 @@ def parserTests : List (String × IO Bool) := [
   ("testParseJsonErrorsOnUnknownVerifyType", testParseJsonErrorsOnUnknownVerifyType),
   ("testParseJsonErrorsOnMissingVerifyField", testParseJsonErrorsOnMissingVerifyField),
   ("testParseJsonErrorsOnMissingCommandRun", testParseJsonErrorsOnMissingCommandRun),
-  ("testParseJsonErrorsOnInvalidCiSchedule", testParseJsonErrorsOnInvalidCiSchedule)
+  ("testParseJsonErrorsOnInvalidCiSchedule", testParseJsonErrorsOnInvalidCiSchedule),
+  ("testParseJsonRejectsMaxIterationsWithoutWorker", testParseJsonRejectsMaxIterationsWithoutWorker),
+  ("testParseJsonRejectsStuckThresholdWithoutWorker", testParseJsonRejectsStuckThresholdWithoutWorker)
 ]

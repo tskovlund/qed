@@ -41,7 +41,7 @@ def testParseReturnsErrorForMissingFile : IO Bool := do
   -- Arrange / Act
   let (exitCode, _, stderr) ← runQed ["parse", "nonexistent.json"]
   -- Assert
-  return exitCode == 1 && stderr.length > 0
+  return exitCode == 2 && stderr.length > 0
 
 def testVerifyReturnsPassForPassingSpec : IO Bool := do
   -- Arrange
@@ -86,7 +86,7 @@ def testVerifyJsonErrorReturnsJsonOnMissingFile : IO Bool := do
   | .error _ => return false
   | .ok json =>
     let hasError := (json.getObjValAs? String "error").isOk
-    return exitCode == 1 && hasError
+    return exitCode == 2 && hasError
 
 def testRunDispatchesToVerifyMode : IO Bool := do
   -- Arrange
@@ -150,7 +150,25 @@ def testUnknownCommandReturnsError : IO Bool := do
   -- Arrange / Act
   let (exitCode, _, stderr) ← runQed ["foo"]
   -- Assert
-  return exitCode == 1 && stderr.contains "unknown command"
+  return exitCode == 2 && stderr.contains "unknown command"
+
+def testParseRejectsMaxIterationsWithoutWorker : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"bad-combo\", \"maxIterations\": 5, \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, _, stderr) ← runQed ["parse", specPath.toString]
+  -- Assert
+  return exitCode == 2 && stderr.contains "maxIterations" && stderr.contains "worker"
+
+def testVerifyHandlesNonUtf8Output : IO Bool := do
+  -- Arrange: command outputs raw bytes that aren't valid UTF-8
+  let specContent := "{\"name\": \"non-utf8-test\", \"criteria\": [{\"description\": \"binary output\", \"verify\": {\"type\": \"command\", \"run\": \"printf '\\\\x80\\\\xff'\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", specPath.toString]
+  -- Assert — should not crash; either pass (if shell handles it) or fail gracefully
+  return exitCode == 0 || (exitCode == 1 && stdout.length > 0)
 
 def cliTests : List (String × IO Bool) := [
   ("testVersionPrintsVersionString", testVersionPrintsVersionString),
@@ -167,5 +185,7 @@ def cliTests : List (String × IO Bool) := [
   ("testRunWorkerLoopReachesMaxIterations", testRunWorkerLoopReachesMaxIterations),
   ("testRunWorkerLoopWithPrompt", testRunWorkerLoopWithPrompt),
   ("testNoArgsShowsHelp", testNoArgsShowsHelp),
-  ("testUnknownCommandReturnsError", testUnknownCommandReturnsError)
+  ("testUnknownCommandReturnsError", testUnknownCommandReturnsError),
+  ("testParseRejectsMaxIterationsWithoutWorker", testParseRejectsMaxIterationsWithoutWorker),
+  ("testVerifyHandlesNonUtf8Output", testVerifyHandlesNonUtf8Output)
 ]

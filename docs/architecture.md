@@ -165,6 +165,14 @@ CLI flags:
 |------|---------|
 | `--json` | Machine-readable JSON output (position-independent) |
 
+Exit codes:
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success — all criteria passed |
+| 1 | Verification failure — one or more criteria failed |
+| 2 | Configuration or usage error — bad spec, missing file, unknown command |
+
 Named constants in the IO shell (not configurable — reasonable defaults):
 
 | Constant | Value | Location |
