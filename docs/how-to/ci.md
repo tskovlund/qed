@@ -40,9 +40,36 @@ ci = "manual"      # never in CI (default for human)
 | `trunk` | Only when the default branch changes |
 | `manual` | Only via explicit `qed run` |
 
-## Agent criteria in CI
+## Criteria that require external tools
 
-Agent criteria (`type = "agent"`) require an LLM backend. If the agent command isn't available in CI, the criterion is skipped (not failed). To run agent criteria in CI, ensure the agent command is installed and any required API keys are available as secrets.
+qed never silently skips verification — if a criterion's tool isn't available (agent binary, proof checker, property testing framework, etc.), the criterion **fails**. This applies to all verification types equally.
+
+To exclude criteria from environments where their tools aren't installed, set `ci = "manual"`:
+
+```toml
+[[criteria]]
+description = "Code review"
+ci = "manual"
+verify = { type = "agent", prompt = "Review the implementation." }
+
+[[criteria]]
+description = "Termination proof"
+ci = "manual"
+verify = { type = "proof", prover = "lean4", target = "Proofs.Termination.loop_terminates" }
+```
+
+This keeps the criteria in the spec but only runs them via explicit `qed run`, not in CI. To run them in CI, ensure the required tools are installed and any API keys are available as secrets.
+
+Alternatively, use `skip` to disable a criterion entirely (in all environments) with a documented reason:
+
+```toml
+[[criteria]]
+description = "Exchange rate refresh"
+skip = "flaky, investigating #42"
+verify = { type = "command", run = "pytest tests/test_refresh.py" }
+```
+
+Skipped criteria show `[SKIP]` in output and do not affect the overall pass/fail result.
 
 ## Verifying a specific directory
 

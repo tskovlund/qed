@@ -6,7 +6,7 @@ By the end of this tutorial you'll have written a spec that verifies a shell com
 
 ## Prerequisites
 
-- qed installed and on your PATH (see [CONTRIBUTING.md](../CONTRIBUTING.md) for setup)
+- qed installed and on your PATH (see the [quick start](../README.md#quick-start))
 - A project directory to work in
 
 ## Step 1: A minimal spec
@@ -123,7 +123,7 @@ Run it:
 qed verify hello.spec.toml
 ```
 
-The agent criterion spawns Claude (or your configured agent command) to review the codebase. If Claude isn't available, the criterion is skipped with a message.
+The agent criterion spawns Claude (or your configured agent command) to review the codebase. If Claude isn't available, the criterion fails — qed never silently skips verification you asked for.
 
 ## Step 5: Verify a directory
 

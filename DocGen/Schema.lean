@@ -189,6 +189,10 @@ s!"\{
             \"description\": \"When this criterion runs in CI. Defaults: 'always' for automatable types, 'manual' for human.\",
             \"enum\": [\"{ciSchedules[0]!}\", \"{ciSchedules[1]!}\", \"{ciSchedules[2]!}\"],
             \"default\": \"always\"
+          },
+          \"skip\": \{
+            \"type\": \"string\",
+            \"description\": \"Skip this criterion with the given reason. Skipped criteria show [SKIP] in output and do not affect the overall pass/fail result.\"
           }
         }
       }

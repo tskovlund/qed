@@ -129,7 +129,11 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
         let failed := results.filter fun (_, result) => result.isFailed
         if !jsonOutput then
           for (description, result) in results do
-            IO.println s!"    [{Output.statusIndicator result}] {description}"
+            match result with
+            | .skipped reason =>
+              IO.println s!"    [{Output.statusIndicator result}] {description} — {reason}"
+            | _ =>
+              IO.println s!"    [{Output.statusIndicator result}] {description}"
         if failed.isEmpty then
           let (s, c) := step loopConfig state context .allPassed
           state := s

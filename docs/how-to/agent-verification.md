@@ -52,9 +52,9 @@ Your command receives two environment variables:
 
 The command must write to stdout. qed parses the last `` ```json `` block for the verdict.
 
-## Graceful degradation
+## Agent availability
 
-If the agent command isn't installed (exit code 127, "not found", etc.), the criterion is **skipped**, not failed. This means specs with agent criteria work in environments without LLM access — the agent criteria are simply skipped.
+If the agent command isn't available, the criterion fails — like any other criterion whose tool is missing (see [CI guide](ci.md#criteria-that-require-external-tools) for how to handle this in environments where not all tools are installed).
 
 ## Writing effective prompts
 

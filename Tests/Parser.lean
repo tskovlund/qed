@@ -429,6 +429,32 @@ def testParseJsonRejectsWorkerWithoutCommandOrPrompt : IO Bool := do
   | .ok _ => return false
   | .error e => return e.contains "command" && e.contains "prompt"
 
+def testParseJsonExtractsSkipReason : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}, \"skip\": \"not yet implemented\"}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    match spec.criteria.head? with
+    | some criterion => return criterion.skip == some "not yet implemented"
+    | none => return false
+  | .error _ => return false
+
+def testParseJsonDefaultsSkipToNone : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    match spec.criteria.head? with
+    | some criterion => return criterion.skip == none
+    | none => return false
+  | .error _ => return false
+
 def parserTests : List (String × IO Bool) := [
   ("testParseJsonReturnsVerifyModeWhenNoWorker", testParseJsonReturnsVerifyModeWhenNoWorker),
   ("testParseJsonReturnsWorkerLoopWithDefaults", testParseJsonReturnsWorkerLoopWithDefaults),
@@ -459,5 +485,7 @@ def parserTests : List (String × IO Bool) := [
   ("testParseJsonWorkerWithPromptNoCommand", testParseJsonWorkerWithPromptNoCommand),
   ("testParseJsonWorkerWithCustomModel", testParseJsonWorkerWithCustomModel),
   ("testParseJsonWorkerDefaultsModelToDefault", testParseJsonWorkerDefaultsModelToDefault),
-  ("testParseJsonRejectsWorkerWithoutCommandOrPrompt", testParseJsonRejectsWorkerWithoutCommandOrPrompt)
+  ("testParseJsonRejectsWorkerWithoutCommandOrPrompt", testParseJsonRejectsWorkerWithoutCommandOrPrompt),
+  ("testParseJsonExtractsSkipReason", testParseJsonExtractsSkipReason),
+  ("testParseJsonDefaultsSkipToNone", testParseJsonDefaultsSkipToNone)
 ]

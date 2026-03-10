@@ -14,7 +14,11 @@ def verifySpec (spec : Spec) (jsonOutput : Bool) : IO UInt32 := do
     IO.println s!"Verifying: {spec.name}"
     IO.println ""
     for (description, result) in results do
-      IO.println s!"  [{Output.statusIndicator result}] {description}"
+      match result with
+      | .skipped reason =>
+        IO.println s!"  [{Output.statusIndicator result}] {description} — {reason}"
+      | _ =>
+        IO.println s!"  [{Output.statusIndicator result}] {description}"
     IO.println ""
     let failed := results.filter fun (_, result) => result.isFailed
     if failed.isEmpty then

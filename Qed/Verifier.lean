@@ -92,7 +92,7 @@ private def verifyAgent (prompt : String) (model : String) (command : Option Str
   if exitCode != 0 then
     let stderrStr := stderr.trimAscii.toString
     if Agent.isUnavailable exitCode stderrStr then
-      return .skipped s!"agent unavailable: {truncate stderrStr maxOutputLength}"
+      return .fail s!"agent unavailable: {truncate stderrStr maxOutputLength}"
     else
       return .fail s!"agent exited with code {exitCode}\n{truncate stderrStr maxOutputLength}"
   let response := stdout.trimAscii.toString
@@ -101,17 +101,21 @@ private def verifyAgent (prompt : String) (model : String) (command : Option Str
   | .ok false => return .fail (truncate response maxOutputLength)
   | .error e => return .fail s!"could not parse agent verdict: {e}\n{truncate response maxOutputLength}"
 
-/-- Verify a single acceptance criterion. -/
+/-- Verify a single acceptance criterion. Skipped criteria return immediately
+    without dispatching to any verifier. -/
 def verifyCriterion (criterion : AcceptanceCriterion) : IO VerificationResult := do
-  match criterion.verify with
-  | .command run timeout => verifyCommand run timeout
-  | .agent prompt model command => verifyAgent prompt model command
-  | .property run timeout =>
-    return .skipped s!"property testing not yet implemented (run: {run}, timeout: {timeout})"
-  | .proof prover target =>
-    return .skipped s!"proof verification not yet implemented (prover: {prover}, target: {target})"
-  | .human instruction =>
-    return .needsHuman instruction
+  match criterion.skip with
+  | some reason => return .skipped reason
+  | none =>
+    match criterion.verify with
+    | .command run timeout => verifyCommand run timeout
+    | .agent prompt model command => verifyAgent prompt model command
+    | .property run timeout =>
+      return .fail s!"property testing not yet implemented (run: {run}, timeout: {timeout})"
+    | .proof prover target =>
+      return .fail s!"proof verification not yet implemented (prover: {prover}, target: {target})"
+    | .human instruction =>
+      return .needsHuman instruction
 
 /-- Verify all criteria in a spec, returning results paired with descriptions. -/
 def verifyAll (criteria : List AcceptanceCriterion) : IO (List (String × VerificationResult)) := do

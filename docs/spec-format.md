@@ -46,6 +46,7 @@ Each criterion has a description, a verification strategy, and a CI schedule.
 |-------|------|----------|---------|-------------|
 | `ci` | [CiSchedule](#ci-schedule) | no | `"always"` | When this criterion runs in CI. Defaults: 'always' for automatable types, 'manual' for human. |
 | `description` | string | yes | — | Human-readable description of what this criterion verifies. |
+| `skip` | string | no | — | Skip this criterion with the given reason. Skipped criteria show [SKIP] in output and do not affect the overall pass/fail result. |
 | `verify` | [VerifyType](#verification-types) | yes | — | How to verify this criterion. Discriminated by the 'type' field. |
 
 ## Verification types
