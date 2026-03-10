@@ -22,8 +22,10 @@ def defaultStuckThreshold : Nat := 3
 inductive VerifyType where
   /-- Run a shell command, check exit code. -/
   | command (run : String) (timeout : Nat := defaultCommandTimeout)
-  /-- Spawn an independent LLM agent to review the diff. -/
-  | agent (prompt : String) (model : String := defaultAgentModel)
+  /-- Spawn an independent LLM agent to review the criterion.
+      `command` is a shell command that receives the prompt via `$QED_AGENT_PROMPT`.
+      Defaults to `claude -p "$QED_AGENT_PROMPT" --model {model}`. -/
+  | agent (prompt : String) (model : String := defaultAgentModel) (command : Option String := none)
   /-- Run property-based tests. -/
   | property (run : String) (timeout : Nat := defaultPropertyTimeout)
   /-- Run a formal proof checker. -/

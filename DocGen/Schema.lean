@@ -14,7 +14,7 @@ namespace DocGen.Schema
 def verifyTypeConstructors : List String :=
   let _ : VerifyType → Unit := fun
     | .command _ _ => ()
-    | .agent _ _ => ()
+    | .agent _ _ _ => ()
     | .property _ _ => ()
     | .proof _ _ => ()
     | .human _ => ()
@@ -138,7 +138,8 @@ s!"\{
                 \"properties\": \{
                   \"type\": \{ \"const\": \"{verifyTypes[1]!}\" },
                   \"prompt\": \{ \"type\": \"string\", \"description\": \"Review prompt for the agent.\" },
-                  \"model\": \{ \"type\": \"string\", \"default\": \"{defaultAgentModel}\", \"description\": \"Model to use for the review.\" }
+                  \"model\": \{ \"type\": \"string\", \"default\": \"{defaultAgentModel}\", \"description\": \"Model to use for the review.\" },
+                  \"command\": \{ \"type\": \"string\", \"description\": \"Shell command to invoke the agent. Receives prompt via $QED_AGENT_PROMPT. Defaults to Claude CLI.\" }
                 }
               },
               \{

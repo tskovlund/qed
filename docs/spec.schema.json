@@ -72,7 +72,8 @@
                 "properties": {
                   "type": { "const": "agent" },
                   "prompt": { "type": "string", "description": "Review prompt for the agent." },
-                  "model": { "type": "string", "default": "claude-opus-4-6", "description": "Model to use for the review." }
+                  "model": { "type": "string", "default": "claude-opus-4-6", "description": "Model to use for the review." },
+                  "command": { "type": "string", "description": "Shell command to invoke the agent. Receives prompt via $QED_AGENT_PROMPT. Defaults to Claude CLI." }
                 }
               },
               {

@@ -19,10 +19,13 @@ def verifyTypeToJson : VerifyType → Json
       ("type", Json.str "command"),
       ("run", Json.str run),
       ("timeout", Lean.toJson timeout)]
-  | .agent prompt model => Json.mkObj [
-      ("type", Json.str "agent"),
-      ("prompt", Json.str prompt),
-      ("model", Json.str model)]
+  | .agent prompt model command => Json.mkObj <|
+      [("type", Json.str "agent"),
+       ("prompt", Json.str prompt),
+       ("model", Json.str model)] ++
+      match command with
+      | some cmd => [("command", Json.str cmd)]
+      | none => []
   | .property run timeout => Json.mkObj [
       ("type", Json.str "property"),
       ("run", Json.str run),

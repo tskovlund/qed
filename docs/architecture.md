@@ -103,7 +103,7 @@ The verification type determines both **what runs** and **what guarantee you get
 | Type | Runs | Guarantee | CI default |
 |------|------|-----------|------------|
 | `human` | Nothing (waits) | Human judgment | `manual` |
-| `agent` | LLM agent | Probabilistic | `always` |
+| `agent` | LLM agent (any backend) | Probabilistic | `always` |
 | `command` | Shell command | Deterministic | `always` |
 | `property` | Test framework | Statistical | `always` |
 | `proof` | Proof checker | Mathematical | `always` |
@@ -160,6 +160,13 @@ Environment variables set by qed for workers:
 | `QED_PROMPT` | Full prompt with failure feedback (Tier 1 only) |
 | `QED_ITERATION` | Current iteration number |
 | `QED_FAILURES_FILE` | Path to JSON file with failure details |
+
+Environment variables set by qed for agent verification:
+
+| Variable | Purpose |
+|----------|---------|
+| `QED_AGENT_PROMPT` | The criterion's review prompt |
+| `QED_AGENT_SYSTEM_PROMPT` | Verdict format instructions (JSON block with `{"pass": true/false}`) |
 
 CLI flags:
 

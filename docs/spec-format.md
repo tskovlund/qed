@@ -67,6 +67,7 @@ Spawn an independent LLM agent to review against a prompt.
 
 | Field | Type | Required | Default |
 |-------|------|----------|---------|
+| `command` | string | no | — |
 | `model` | string | no | `"claude-opus-4-6"` |
 | `prompt` | string | yes | — |
 | `type` | `"agent"` | yes | — |

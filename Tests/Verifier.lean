@@ -112,6 +112,54 @@ def testVerifyAllReturnsResultsForAllCriteria : IO Bool := do
   return descriptions == ["passes", "fails", "manual"] &&
     firstPassed && secondFailed && thirdHuman
 
+def testParseAgentVerdictPassWithJsonBlock : IO Bool := do
+  -- Arrange
+  let response := "The code looks correct.\n```json\n{\"pass\": true}\n```"
+  -- Act / Assert
+  match Verifier.parseAgentVerdict response with
+  | .ok true => return true
+  | _ => return false
+
+def testParseAgentVerdictFailWithJsonBlock : IO Bool := do
+  -- Arrange
+  let response := "Found issues.\n```json\n{\"pass\": false, \"reason\": \"missing error handling\"}\n```"
+  -- Act / Assert
+  match Verifier.parseAgentVerdict response with
+  | .ok false => return true
+  | _ => return false
+
+def testParseAgentVerdictUsesLastJsonBlock : IO Bool := do
+  -- Arrange: agent might show example JSON blocks before the verdict
+  let response := "Here's an example:\n```json\n{\"example\": true}\n```\nMy verdict:\n```json\n{\"pass\": true}\n```"
+  -- Act / Assert
+  match Verifier.parseAgentVerdict response with
+  | .ok true => return true
+  | _ => return false
+
+def testParseAgentVerdictFallbackToRawJson : IO Bool := do
+  -- Arrange: no ```json block, but a raw JSON line with "pass"
+  let response := "Analysis complete.\n{\"pass\": true}"
+  -- Act / Assert
+  match Verifier.parseAgentVerdict response with
+  | .ok true => return true
+  | _ => return false
+
+def testParseAgentVerdictErrorOnNoVerdict : IO Bool := do
+  -- Arrange: no verdict at all
+  let response := "The code looks fine to me. Everything is great."
+  -- Act / Assert
+  match Verifier.parseAgentVerdict response with
+  | .error _ => return true
+  | _ => return false
+
+def testParseAgentVerdictErrorOnMissingPassField : IO Bool := do
+  -- Arrange: JSON block without "pass" field
+  let response := "Review done.\n```json\n{\"result\": \"ok\"}\n```"
+  -- Act / Assert
+  match Verifier.parseAgentVerdict response with
+  | .error _ => return true
+  | _ => return false
+
 def verifierTests : List (String × IO Bool) := [
   ("testVerifyCommandReturnsPassOnExitZero", testVerifyCommandReturnsPassOnExitZero),
   ("testVerifyCommandReturnsFailOnNonZeroExit", testVerifyCommandReturnsFailOnNonZeroExit),
@@ -120,5 +168,11 @@ def verifierTests : List (String × IO Bool) := [
   ("testVerifyCommandHandlesPipedCommands", testVerifyCommandHandlesPipedCommands),
   ("testVerifyCommandReturnsFailForMissingCommand", testVerifyCommandReturnsFailForMissingCommand),
   ("testVerifyHumanReturnsNeedsHuman", testVerifyHumanReturnsNeedsHuman),
-  ("testVerifyAllReturnsResultsForAllCriteria", testVerifyAllReturnsResultsForAllCriteria)
+  ("testVerifyAllReturnsResultsForAllCriteria", testVerifyAllReturnsResultsForAllCriteria),
+  ("testParseAgentVerdictPassWithJsonBlock", testParseAgentVerdictPassWithJsonBlock),
+  ("testParseAgentVerdictFailWithJsonBlock", testParseAgentVerdictFailWithJsonBlock),
+  ("testParseAgentVerdictUsesLastJsonBlock", testParseAgentVerdictUsesLastJsonBlock),
+  ("testParseAgentVerdictFallbackToRawJson", testParseAgentVerdictFallbackToRawJson),
+  ("testParseAgentVerdictErrorOnNoVerdict", testParseAgentVerdictErrorOnNoVerdict),
+  ("testParseAgentVerdictErrorOnMissingPassField", testParseAgentVerdictErrorOnMissingPassField)
 ]

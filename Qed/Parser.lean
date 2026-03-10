@@ -46,7 +46,10 @@ def parseVerifyType (json : Json) : Except String VerifyType := do
   | "agent" =>
     let prompt ← requireString json "prompt"
     let model := optionalString json "model" defaultAgentModel
-    .ok (.agent prompt model)
+    let command := match json.getObjVal? "command" with
+      | .ok (Json.str s) => some s
+      | _ => none
+    .ok (.agent prompt model command)
   | "property" =>
     let run ← requireString json "run"
     let timeout ← optionalNat json "timeout" defaultPropertyTimeout
