@@ -107,7 +107,7 @@ private def verifyAgent (prompt : String) (model : String) (command : Option Str
 private partial def promptLoop (stdin : IO.FS.Stream) : IO VerificationResult := do
   let line ← try
     let l ← stdin.getLine
-    pure l.trim.toLower
+    pure l.trimAscii.toString.toLower
   catch _ =>
     pure ""
   match line with
