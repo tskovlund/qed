@@ -6,10 +6,10 @@ Run `qed verify` in your CI pipeline to check all specs on every push.
 
 ```yaml
 - name: Verify specs
-  run: qed verify
+  run: qed verify --ci
 ```
 
-This recursively finds all `.spec.json` and `.spec.toml` files in the repository and verifies them. qed exits with code 0 if all criteria pass, 1 if any fail, and 2 on configuration errors.
+The `--ci` flag skips criteria with `ci = "manual"` (e.g., agent reviews that require LLM access). This recursively finds all `.spec.json` and `.spec.toml` files in the repository and verifies them. qed exits with code 0 if all criteria pass, 1 if any fail, and 2 on configuration errors.
 
 For JSON output (useful for downstream parsing):
 

@@ -4,9 +4,17 @@ open Qed
 
 def version : String := "0.1.0-dev"
 
+/-- Filter criteria based on CI schedule. In CI mode, manual criteria are
+    excluded. Trunk criteria are included (trunk filtering requires git
+    context — not yet implemented). -/
+def filterForCi (criteria : List AcceptanceCriterion) (ciMode : Bool) : List AcceptanceCriterion :=
+  if ciMode then criteria.filter fun c => c.ci != .manual
+  else criteria
+
 /-- Run single-pass verification on an already-loaded spec. -/
-def verifySpec (spec : Spec) (jsonOutput : Bool) : IO UInt32 := do
-  let results ← Verifier.verifyAll spec.criteria
+def verifySpec (spec : Spec) (jsonOutput : Bool) (ciMode : Bool := false) : IO UInt32 := do
+  let criteria := filterForCi spec.criteria ciMode
+  let results ← Verifier.verifyAll criteria
   if jsonOutput then
     let json := Output.resultsToJson spec.name results
     IO.println (json.pretty 2)
@@ -45,15 +53,15 @@ private def reportError (message : String) (jsonOutput : Bool) : IO Unit := do
     IO.eprintln s!"error: {message}"
 
 /-- Load a spec and run single-pass verification. -/
-def runVerify (path : String) (jsonOutput : Bool) : IO UInt32 := do
+def runVerify (path : String) (jsonOutput : Bool) (ciMode : Bool := false) : IO UInt32 := do
   match ← loadSpecSafe path with
   | .error message =>
     reportError message jsonOutput
     return 2
-  | .ok spec => verifySpec spec jsonOutput
+  | .ok spec => verifySpec spec jsonOutput ciMode
 
 /-- Verify all specs in a directory. Returns 0 if all pass, 1 if any fail, 2 on error. -/
-def runVerifyAll (directory : String) (jsonOutput : Bool) : IO UInt32 := do
+def runVerifyAll (directory : String) (jsonOutput : Bool) (ciMode : Bool := false) : IO UInt32 := do
   match ← SpecLoader.listAllSpecs directory with
   | .error message =>
     reportError message jsonOutput
@@ -64,7 +72,7 @@ def runVerifyAll (directory : String) (jsonOutput : Bool) : IO UInt32 := do
       return 2
     let mut anyFailed := false
     for specPath in specs do
-      let result ← runVerify specPath.toString jsonOutput
+      let result ← runVerify specPath.toString jsonOutput ciMode
       if result == 1 then anyFailed := true
       if result == 2 then return 2
       if !jsonOutput then IO.println ""
@@ -107,20 +115,22 @@ def printHelp : IO Unit := do
   IO.println ""
   IO.println "Options:"
   IO.println "  --json                    Output results as JSON"
+  IO.println "  --ci                      CI mode — skip criteria with ci = \"manual\""
   IO.println ""
   IO.println "Exit codes:"
   IO.println "  0  Success (all criteria passed)"
   IO.println "  1  Verification failure (one or more criteria failed)"
   IO.println "  2  Configuration or usage error (bad spec, missing file, unknown command)"
 
-/-- Extract --json flag and remaining args from the argument list. -/
-private def extractFlags (args : List String) : Bool × List String :=
+/-- Extract flags and remaining args from the argument list. -/
+private def extractFlags (args : List String) : Bool × Bool × List String :=
   let jsonFlag := args.any (· == "--json")
-  let remaining := args.filter (· != "--json")
-  (jsonFlag, remaining)
+  let ciFlag := args.any (· == "--ci")
+  let remaining := args.filter fun a => a != "--json" && a != "--ci"
+  (jsonFlag, ciFlag, remaining)
 
 def main (args : List String) : IO UInt32 := do
-  let (jsonOutput, cleanArgs) := extractFlags args
+  let (jsonOutput, ciMode, cleanArgs) := extractFlags args
   match cleanArgs with
   | ["version"] =>
     IO.println s!"qed {version}"
@@ -129,11 +139,11 @@ def main (args : List String) : IO UInt32 := do
     printHelp
     return 0
   | ["verify"] =>
-    runVerifyAll "." jsonOutput
+    runVerifyAll "." jsonOutput ciMode
   | ["verify", path] =>
     let isDir ← (path : System.FilePath).isDir
-    if isDir then runVerifyAll path jsonOutput
-    else runVerify path jsonOutput
+    if isDir then runVerifyAll path jsonOutput ciMode
+    else runVerify path jsonOutput ciMode
   | ["run", path] =>
     match ← loadSpecSafe path with
     | .error message =>
@@ -141,7 +151,7 @@ def main (args : List String) : IO UInt32 := do
       return 2
     | .ok spec =>
       match spec.mode with
-      | .verify => verifySpec spec jsonOutput
+      | .verify => verifySpec spec jsonOutput ciMode
       | .workerLoop worker loopConfig =>
         WorkerLoop.run spec worker loopConfig jsonOutput
   | ["parse", path] =>
