@@ -28,7 +28,7 @@ def testParseJsonReturnsWorkerLoopWithDefaults : IO Bool := do
     return spec.name == "loop-test" &&
       (match spec.mode with
         | .workerLoop worker config =>
-          worker.command == "run agent" &&
+          worker.command == some "run agent" &&
           config.maxIterations == 10 &&
           config.stuckThreshold == 3
         | .verify => false)
@@ -46,7 +46,7 @@ def testParseJsonAppliesCustomLoopConfig : IO Bool := do
   | .ok spec =>
     return match spec.mode with
       | .workerLoop worker config =>
-        worker.command == "agent" &&
+        worker.command == some "agent" &&
         worker.workdir == "src" &&
         worker.timeout == 1800 &&
         config.maxIterations == 5 &&
@@ -84,6 +84,38 @@ def testParseJsonExtractsAgentReviewFields : IO Bool := do
     | some criterion =>
       return match criterion.verify with
         | .agent prompt model => prompt == "check it" && model == "claude-opus-4-6"
+        | _ => false
+    | none => return false
+  | .error _ => return false
+
+def testParseJsonExtractsAgentCustomCommand : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check it\", \"command\": \"ollama run llama3\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    match spec.criteria.head? with
+    | some criterion =>
+      return match criterion.verify with
+        | .agent prompt _ command => prompt == "check it" && command == some "ollama run llama3"
+        | _ => false
+    | none => return false
+  | .error _ => return false
+
+def testParseJsonDefaultsAgentCommandToNone : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    match spec.criteria.head? with
+    | some criterion =>
+      return match criterion.verify with
+        | .agent _ _ command => command == none
         | _ => false
     | none => return false
   | .error _ => return false
@@ -223,7 +255,7 @@ def testParseJsonWorkerWithPrompt : IO Bool := do
   | .ok spec =>
     return match spec.mode with
       | .workerLoop worker _ =>
-        worker.command == "claude -p" &&
+        worker.command == some "claude -p" &&
         worker.prompt == some "Implement feature X"
       | .verify => false
   | .error e =>
@@ -240,7 +272,7 @@ def testParseJsonWorkerWithoutPrompt : IO Bool := do
   | .ok spec =>
     return match spec.mode with
       | .workerLoop worker _ =>
-        worker.command == "./run.sh" &&
+        worker.command == some "./run.sh" &&
         worker.prompt == none
       | .verify => false
   | .error e =>
@@ -337,12 +369,74 @@ def testParseJsonRejectsStuckThresholdWithoutWorker : IO Bool := do
   | .ok _ => return false
   | .error e => return e.contains "stuckThreshold" && e.contains "worker"
 
+def testParseJsonWorkerWithPromptNoCommand : IO Bool := do
+  -- Arrange: agent worker with prompt, no command (defaults to Claude CLI)
+  let json := "{\"name\": \"t\", \"worker\": {\"prompt\": \"Do the thing\"}, \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    return match spec.mode with
+      | .workerLoop worker _ =>
+        worker.command == none &&
+        worker.prompt == some "Do the thing" &&
+        worker.model == Qed.defaultAgentModel
+      | .verify => false
+  | .error e =>
+    IO.eprintln s!"  parse error: {e}"
+    return false
+
+def testParseJsonWorkerWithCustomModel : IO Bool := do
+  -- Arrange: agent worker with custom model
+  let json := "{\"name\": \"t\", \"worker\": {\"prompt\": \"Do the thing\", \"model\": \"claude-sonnet-4-6\"}, \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    return match spec.mode with
+      | .workerLoop worker _ =>
+        worker.model == "claude-sonnet-4-6" &&
+        worker.prompt == some "Do the thing"
+      | .verify => false
+  | .error e =>
+    IO.eprintln s!"  parse error: {e}"
+    return false
+
+def testParseJsonWorkerDefaultsModelToDefault : IO Bool := do
+  -- Arrange: worker without explicit model
+  let json := "{\"name\": \"t\", \"worker\": {\"command\": \"run\"}, \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    return match spec.mode with
+      | .workerLoop worker _ => worker.model == Qed.defaultAgentModel
+      | .verify => false
+  | .error e =>
+    IO.eprintln s!"  parse error: {e}"
+    return false
+
+def testParseJsonRejectsWorkerWithoutCommandOrPrompt : IO Bool := do
+  -- Arrange: worker with neither command nor prompt
+  let json := "{\"name\": \"t\", \"worker\": {\"workdir\": \"src\"}, \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok _ => return false
+  | .error e => return e.contains "command" && e.contains "prompt"
+
 def parserTests : List (String × IO Bool) := [
   ("testParseJsonReturnsVerifyModeWhenNoWorker", testParseJsonReturnsVerifyModeWhenNoWorker),
   ("testParseJsonReturnsWorkerLoopWithDefaults", testParseJsonReturnsWorkerLoopWithDefaults),
   ("testParseJsonAppliesCustomLoopConfig", testParseJsonAppliesCustomLoopConfig),
   ("testParseJsonExtractsCommandFields", testParseJsonExtractsCommandFields),
   ("testParseJsonExtractsAgentReviewFields", testParseJsonExtractsAgentReviewFields),
+  ("testParseJsonExtractsAgentCustomCommand", testParseJsonExtractsAgentCustomCommand),
+  ("testParseJsonDefaultsAgentCommandToNone", testParseJsonDefaultsAgentCommandToNone),
   ("testParseJsonDefaultsAgentReviewModelToSonnet", testParseJsonDefaultsAgentReviewModelToSonnet),
   ("testParseJsonExtractsProofFields", testParseJsonExtractsProofFields),
   ("testParseJsonExtractsPropertyFieldsWithDefault", testParseJsonExtractsPropertyFieldsWithDefault),
@@ -361,5 +455,9 @@ def parserTests : List (String × IO Bool) := [
   ("testParseJsonErrorsOnMissingCommandRun", testParseJsonErrorsOnMissingCommandRun),
   ("testParseJsonErrorsOnInvalidCiSchedule", testParseJsonErrorsOnInvalidCiSchedule),
   ("testParseJsonRejectsMaxIterationsWithoutWorker", testParseJsonRejectsMaxIterationsWithoutWorker),
-  ("testParseJsonRejectsStuckThresholdWithoutWorker", testParseJsonRejectsStuckThresholdWithoutWorker)
+  ("testParseJsonRejectsStuckThresholdWithoutWorker", testParseJsonRejectsStuckThresholdWithoutWorker),
+  ("testParseJsonWorkerWithPromptNoCommand", testParseJsonWorkerWithPromptNoCommand),
+  ("testParseJsonWorkerWithCustomModel", testParseJsonWorkerWithCustomModel),
+  ("testParseJsonWorkerDefaultsModelToDefault", testParseJsonWorkerDefaultsModelToDefault),
+  ("testParseJsonRejectsWorkerWithoutCommandOrPrompt", testParseJsonRejectsWorkerWithoutCommandOrPrompt)
 ]

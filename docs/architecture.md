@@ -103,7 +103,7 @@ The verification type determines both **what runs** and **what guarantee you get
 | Type | Runs | Guarantee | CI default |
 |------|------|-----------|------------|
 | `human` | Nothing (waits) | Human judgment | `manual` |
-| `agent` | LLM agent | Probabilistic | `always` |
+| `agent` | LLM agent (any backend) | Probabilistic | `always` |
 | `command` | Shell command | Deterministic | `always` |
 | `property` | Test framework | Statistical | `always` |
 | `proof` | Proof checker | Mathematical | `always` |
@@ -126,8 +126,8 @@ The architecture follows a strict separation:
 
 | Layer | IO? | What lives here |
 |-------|-----|-----------------|
-| **Pure core** | No | Types, StateMachine, Parser, TomlParser, TomlConverter, Output, Serializer, Proofs |
-| **IO shell** | Yes | WorkerLoop, Verifier, SpecLoader, CLI |
+| **Pure core** | No | Types, Agent, StateMachine, Parser, TomlParser, TomlConverter, Output, Serializer, Proofs |
+| **IO shell** | Yes | Shell, WorkerLoop, Verifier, SpecLoader, CLI |
 
 The pure core is where all proofs live. It has no side effects, no process spawning, no file access. The IO shell wraps the pure core with real-world effects — parsing files, running commands, reporting results.
 
@@ -157,9 +157,16 @@ Environment variables set by qed for workers:
 
 | Variable | Purpose |
 |----------|---------|
-| `QED_PROMPT` | Full prompt with failure feedback (Tier 1 only) |
-| `QED_ITERATION` | Current iteration number |
-| `QED_FAILURES_FILE` | Path to JSON file with failure details |
+| `QED_WORKER_PROMPT` | Full prompt with failure feedback (Tier 1 only) |
+| `QED_WORKER_ITERATION` | Current iteration number |
+| `QED_WORKER_FAILURES_FILE` | Path to JSON file with failure details |
+
+Environment variables set by qed for agent verification:
+
+| Variable | Purpose |
+|----------|---------|
+| `QED_VERIFIER_PROMPT` | The criterion's review prompt |
+| `QED_VERIFIER_SYSTEM_PROMPT` | Verdict format instructions (JSON block with `{"pass": true/false}`) |
 
 CLI flags:
 

@@ -1,5 +1,7 @@
 import Lean.Data.Json
 import Qed.Types
+import Qed.Shell
+import Qed.Agent
 import Qed.StateMachine
 import Qed.Verifier
 import Qed.Output
@@ -53,13 +55,8 @@ private def writeFailuresFile (failures : List (String × VerificationResult))
   IO.FS.writeFile path (json.pretty 2)
   return path
 
-/-- The shell command and argument used to execute commands on this platform. -/
-private def shellCmd : String × String :=
-  if System.Platform.isWindows then ("cmd", "/c") else ("/bin/sh", "-c")
-
-/-- Quote a string for shell use (single-quote wrapping with escape). -/
-def shellQuote (s : String) : String :=
-  "'" ++ s.replace "'" "'\\''" ++ "'"
+/-- Re-export shellQuote for backward compatibility with proofs. -/
+def shellQuote := Shell.shellQuote
 
 /-- Spawn a worker process with the appropriate env vars and prompt handling.
     Catches non-UTF-8 output (Lean's IO.Process.output throws when the process
@@ -68,27 +65,23 @@ def spawnWorker (worker : WorkerConfig)
     (failures : List (String × VerificationResult))
     (iteration : Nat) : IO (UInt32 × String × String) := do
   let failuresFile ← writeFailuresFile failures iteration
-  let (cmd, flag) := shellCmd
+  let workerEnvVars := [
+    (Agent.workerIterationVar, toString iteration),
+    (Agent.workerFailuresFileVar, failuresFile)]
   -- Build the shell command based on tier
-  let shellCommand := match worker.prompt with
+  let (envVars, command) := match worker.prompt with
     | some basePrompt =>
-      -- Tier 1: qed manages the prompt, passes via env var
+      -- Agent worker: qed manages the prompt, passes via env var
       let fullPrompt := buildPrompt basePrompt failures iteration
-      -- Set QED_PROMPT in the shell and append "$QED_PROMPT" to the command
-      s!"export QED_PROMPT={shellQuote fullPrompt}; export QED_ITERATION={iteration}; export QED_FAILURES_FILE={shellQuote failuresFile}; {worker.command} \"$QED_PROMPT\""
+      ([(Agent.workerPromptVar, fullPrompt)] ++ workerEnvVars,
+       worker.command.getD (Agent.defaultWorkerCommand worker.model))
     | none =>
-      -- Tier 2: just set env vars, run command as-is
-      s!"export QED_ITERATION={iteration}; export QED_FAILURES_FILE={shellQuote failuresFile}; {worker.command}"
-  try
-    let result ← IO.Process.output {
-      cmd := cmd
-      args := #[flag, shellCommand]
-      cwd := if worker.workdir == "." then none else some worker.workdir
-    }
-    return (result.exitCode, result.stdout, result.stderr)
-  catch error =>
-    -- Non-UTF-8 output or other IO errors — report as failure
-    return ((1 : UInt32), "", s!"worker process error: {error}")
+      -- Script worker: run command as-is (parser ensures command is present)
+      (workerEnvVars,
+       worker.command.getD "true")
+  let shellCommand := Shell.buildShellCommand envVars command
+  let workdir := if worker.workdir == "." then none else some worker.workdir
+  Shell.runShellCommand shellCommand workdir
 
 /-- Run the worker loop: spawn worker, verify, feed failures back, repeat.
     Handles interruption (SIGINT) gracefully — Lean's runtime converts the

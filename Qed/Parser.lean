@@ -46,7 +46,10 @@ def parseVerifyType (json : Json) : Except String VerifyType := do
   | "agent" =>
     let prompt ← requireString json "prompt"
     let model := optionalString json "model" defaultAgentModel
-    .ok (.agent prompt model)
+    let command := match json.getObjVal? "command" with
+      | .ok (Json.str s) => some s
+      | _ => none
+    .ok (.agent prompt model command)
   | "property" =>
     let run ← requireString json "run"
     let timeout ← optionalNat json "timeout" defaultPropertyTimeout
@@ -76,15 +79,19 @@ def parseCriterion (json : Json) : Except String AcceptanceCriterion := do
         | _ => .always)
   .ok { description, verify, ci }
 
-/-- Parse a WorkerConfig from a JSON object. -/
+/-- Parse a WorkerConfig from a JSON object. Does not validate that at least
+    one of command/prompt is present — that check lives in parseFromJson. -/
 def parseWorkerConfig (json : Json) : Except String WorkerConfig := do
-  let command ← requireString json "command"
+  let command := match json.getObjValAs? String "command" with
+    | .ok value => some value
+    | .error _ => none
   let prompt := match json.getObjValAs? String "prompt" with
     | .ok value => some value
     | .error _ => none
+  let model := optionalString json "model" defaultAgentModel
   let workdir := optionalString json "workdir" "."
   let timeout ← optionalNat json "timeout" defaultWorkerTimeout
-  .ok { command, prompt, workdir, timeout }
+  .ok { command, prompt, model, workdir, timeout }
 
 /-- Parse a Spec from a parsed JSON value. -/
 def parseFromJson (json : Json) : Except String Spec := do
@@ -101,9 +108,13 @@ def parseFromJson (json : Json) : Except String Spec := do
   let mode ← match json.getObjVal? "worker" with
     | .ok workerJson =>
       let worker ← parseWorkerConfig workerJson
-      let maxIterations ← optionalNat json "maxIterations" defaultMaxIterations
-      let stuckThreshold ← optionalNat json "stuckThreshold" defaultStuckThreshold
-      .ok (SpecMode.workerLoop worker { maxIterations, stuckThreshold })
+      -- At least one of command or prompt must be present
+      if worker.command.isNone && worker.prompt.isNone then
+        .error "worker requires at least 'command' or 'prompt'"
+      else
+        let maxIterations ← optionalNat json "maxIterations" defaultMaxIterations
+        let stuckThreshold ← optionalNat json "stuckThreshold" defaultStuckThreshold
+        .ok (SpecMode.workerLoop worker { maxIterations, stuckThreshold })
     | .error _ =>
       -- Verify mode: reject worker loop fields that don't apply
       if (json.getObjVal? "maxIterations").isOk then

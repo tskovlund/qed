@@ -19,10 +19,13 @@ def verifyTypeToJson : VerifyType → Json
       ("type", Json.str "command"),
       ("run", Json.str run),
       ("timeout", Lean.toJson timeout)]
-  | .agent prompt model => Json.mkObj [
-      ("type", Json.str "agent"),
-      ("prompt", Json.str prompt),
-      ("model", Json.str model)]
+  | .agent prompt model command => Json.mkObj <|
+      [("type", Json.str "agent"),
+       ("prompt", Json.str prompt),
+       ("model", Json.str model)] ++
+      match command with
+      | some cmd => [("command", Json.str cmd)]
+      | none => []
   | .property run timeout => Json.mkObj [
       ("type", Json.str "property"),
       ("run", Json.str run),
@@ -41,15 +44,21 @@ def criterionToJson (criterion : AcceptanceCriterion) : Json := Json.mkObj [
   ("verify", verifyTypeToJson criterion.verify),
   ("ci", Json.str (ciScheduleToString criterion.ci))]
 
-/-- Serialize a WorkerConfig to JSON. Prompt is only emitted when present. -/
+/-- Serialize a WorkerConfig to JSON. Optional fields (command, prompt) are
+    only emitted when present. Model, workdir, and timeout are always emitted
+    to simplify roundtrip proofs. -/
 def workerConfigToJson (worker : WorkerConfig) : Json :=
   let base := [
-    ("command", Json.str worker.command),
+    ("model", Json.str worker.model),
     ("workdir", Json.str worker.workdir),
     ("timeout", Lean.toJson worker.timeout)]
-  match worker.prompt with
-  | some p => Json.mkObj (("prompt", Json.str p) :: base)
-  | none => Json.mkObj base
+  let withCommand := match worker.command with
+    | some c => ("command", Json.str c) :: base
+    | none => base
+  let withPrompt := match worker.prompt with
+    | some p => ("prompt", Json.str p) :: withCommand
+    | none => withCommand
+  Json.mkObj withPrompt
 
 /-- Serialize a Spec to JSON. All fields are always emitted (including defaults)
 to simplify roundtrip proofs. -/

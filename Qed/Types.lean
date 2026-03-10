@@ -22,8 +22,10 @@ def defaultStuckThreshold : Nat := 3
 inductive VerifyType where
   /-- Run a shell command, check exit code. -/
   | command (run : String) (timeout : Nat := defaultCommandTimeout)
-  /-- Spawn an independent LLM agent to review the diff. -/
-  | agent (prompt : String) (model : String := defaultAgentModel)
+  /-- Spawn an independent LLM agent to review the criterion.
+      `command` is a shell command that receives the prompt via `$QED_VERIFIER_PROMPT`.
+      Defaults to Claude CLI. -/
+  | agent (prompt : String) (model : String := defaultAgentModel) (command : Option String := none)
   /-- Run property-based tests. -/
   | property (run : String) (timeout : Nat := defaultPropertyTimeout)
   /-- Run a formal proof checker. -/
@@ -55,14 +57,16 @@ structure AcceptanceCriterion where
 
 /-- Configuration for the worker agent.
     Two tiers of usage:
-    - **Tier 1 (prompt present):** qed manages the prompt. The command receives
-      the full prompt (original + failure feedback) via `$QED_PROMPT` env var,
-      and qed runs `{command} "$QED_PROMPT"` through the shell.
-    - **Tier 2 (no prompt):** full control. qed runs the command as-is with
-      env vars (`QED_ITERATION`, `QED_FAILURES_FILE`) for optional use. -/
+    - **Tier 1 (prompt present):** agent invocation — qed manages the prompt,
+      appends failure feedback on retries, and passes it via `$QED_WORKER_PROMPT`.
+      Defaults to Claude CLI if no command specified.
+    - **Tier 2 (no prompt):** script worker — qed runs the command as-is with
+      env vars (`QED_WORKER_ITERATION`, `QED_WORKER_FAILURES_FILE`) available.
+    At least one of `command` or `prompt` must be present (enforced by parser). -/
 structure WorkerConfig where
-  command : String
+  command : Option String := none
   prompt : Option String := none
+  model : String := defaultAgentModel
   workdir : String := "."
   timeout : Nat := defaultWorkerTimeout
   deriving Repr, BEq

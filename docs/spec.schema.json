@@ -13,17 +13,25 @@
     },
     "worker": {
       "type": "object",
-      "description": "Configuration for the worker agent. If present, qed runs in worker loop mode (iterate until criteria pass). If absent, qed runs in verify mode (single-pass verification).",
-      "required": ["command"],
+      "description": "Configuration for the worker. If present, qed runs in worker loop mode (iterate until criteria pass). If absent, qed runs in verify mode (single-pass verification). At least one of 'command' or 'prompt' is required.",
       "additionalProperties": false,
+      "anyOf": [
+        {"required": ["command"]},
+        {"required": ["prompt"]}
+      ],
       "properties": {
         "command": {
           "type": "string",
-          "description": "Shell command to run the worker. With prompt: qed appends the prompt via $QED_PROMPT env var. Without prompt: runs the command as-is with env vars."
+          "description": "Shell command to run the worker. For agent workers (prompt present), defaults to Claude CLI. For script workers (no prompt), required. The command receives the prompt via $QED_WORKER_PROMPT env var."
         },
         "prompt": {
           "type": "string",
-          "description": "Prompt for the worker agent. When present, qed manages the prompt (appends failure feedback on retries) and passes it via QED_PROMPT env var. When absent, the command has full control."
+          "description": "Prompt for the worker agent. When present, this is agent invocation — qed manages the prompt (appends failure feedback on retries) and passes it via $QED_WORKER_PROMPT env var. When absent, the command has full control (script worker)."
+        },
+        "model": {
+          "type": "string",
+          "description": "Model to use for agent workers. Only used when prompt is present.",
+          "default": "claude-opus-4-6"
         },
         "workdir": {
           "type": "string",
@@ -72,7 +80,8 @@
                 "properties": {
                   "type": { "const": "agent" },
                   "prompt": { "type": "string", "description": "Review prompt for the agent." },
-                  "model": { "type": "string", "default": "claude-opus-4-6", "description": "Model to use for the review." }
+                  "model": { "type": "string", "default": "claude-opus-4-6", "description": "Model to use for the review." },
+                  "command": { "type": "string", "description": "Shell command to invoke the agent. Receives prompt via $QED_VERIFIER_PROMPT. Defaults to Claude CLI." }
                 }
               },
               {

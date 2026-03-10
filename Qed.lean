@@ -1,6 +1,9 @@
 import Qed.Types
+import Qed.Shell
+import Qed.Agent
 import Qed.StateMachine
 import Qed.Parser
+import Qed.Serializer
 import Qed.TomlParser
 import Qed.TomlConverter
 import Qed.SpecLoader
@@ -15,3 +18,8 @@ import Qed.Proofs.Termination
 import Qed.Proofs.Invariants
 import Qed.Proofs.VerifyMode
 import Qed.Proofs.WorkerLoopProperties
+import Qed.Proofs.Roundtrip
+import Qed.Proofs.TypeProperties
+import Qed.Proofs.OutputCorrectness
+import Qed.Proofs.ParserProperties
+import Qed.Proofs.TomlProperties
