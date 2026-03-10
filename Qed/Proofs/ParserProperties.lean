@@ -7,34 +7,34 @@ namespace Qed.Proofs.ParserProperties
 
 open Qed Qed.Parser
 
--- 1. parseCiSchedule is complete over valid inputs
+-- 1. parseSchedule is complete over valid inputs
 
-/-- `parseCiSchedule` accepts exactly the three valid CI schedule strings.
-If it succeeds, the input was one of "always", "trunk", or "manual". -/
-theorem parseCiSchedule_complete (s : String) (cs : CiSchedule)
-    (h : parseCiSchedule s = .ok cs) :
-    s = "always" ∨ s = "trunk" ∨ s = "manual" := by
-  simp [parseCiSchedule] at h
+/-- `parseSchedule` accepts exactly the three valid schedule strings.
+If it succeeds, the input was one of "always", "local", or "manual". -/
+theorem parseSchedule_complete (s : String) (cs : Schedule)
+    (h : parseSchedule s = .ok cs) :
+    s = "always" ∨ s = "local" ∨ s = "manual" := by
+  simp [parseSchedule] at h
   split at h <;> simp_all
 
--- 2. parseCiSchedule maps each string to the correct constructor
+-- 2. parseSchedule maps each string to the correct constructor
 
-theorem parseCiSchedule_always : parseCiSchedule "always" = .ok CiSchedule.always := by
+theorem parseSchedule_always : parseSchedule "always" = .ok Schedule.always := by
   rfl
 
-theorem parseCiSchedule_trunk : parseCiSchedule "trunk" = .ok CiSchedule.trunk := by
+theorem parseSchedule_local : parseSchedule "local" = .ok Schedule.local := by
   rfl
 
-theorem parseCiSchedule_manual : parseCiSchedule "manual" = .ok CiSchedule.manual := by
+theorem parseSchedule_manual : parseSchedule "manual" = .ok Schedule.manual := by
   rfl
 
--- 3. parseCiSchedule rejects invalid inputs
+-- 3. parseSchedule rejects invalid inputs
 
-/-- Any string that isn't "always", "trunk", or "manual" produces an error. -/
-theorem parseCiSchedule_rejects_invalid (s : String)
-    (h1 : s ≠ "always") (h2 : s ≠ "trunk") (h3 : s ≠ "manual") :
-    ∃ e, parseCiSchedule s = .error e := by
-  unfold parseCiSchedule
+/-- Any string that isn't "always", "local", or "manual" produces an error. -/
+theorem parseSchedule_rejects_invalid (s : String)
+    (h1 : s ≠ "always") (h2 : s ≠ "local") (h3 : s ≠ "manual") :
+    ∃ e, parseSchedule s = .error e := by
+  unfold parseSchedule
   split
   · simp_all
   · simp_all

@@ -184,20 +184,20 @@ def testParseJsonExtractsHumanInstruction : IO Bool := do
     | none => return false
   | .error _ => return false
 
-def testParseJsonAppliesCiScheduleOverride : IO Bool := do
+def testParseJsonAppliesScheduleOverride : IO Bool := do
   -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}, \"ci\": \"trunk\"}]}"
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}, \"schedule\": \"local\"}]}"
   -- Act
   let result := Parser.parseJson json
   -- Assert
   match result with
   | .ok spec =>
     match spec.criteria.head? with
-    | some criterion => return criterion.ci == CiSchedule.trunk
+    | some criterion => return criterion.schedule == Schedule.local
     | none => return false
   | .error _ => return false
 
-def testParseJsonDefaultsHumanCiToManual : IO Bool := do
+def testParseJsonDefaultsHumanScheduleToLocal : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"human\", \"instruction\": \"check\"}}]}"
   -- Act
@@ -206,7 +206,7 @@ def testParseJsonDefaultsHumanCiToManual : IO Bool := do
   match result with
   | .ok spec =>
     match spec.criteria.head? with
-    | some criterion => return criterion.ci == CiSchedule.manual
+    | some criterion => return criterion.schedule == Schedule.local
     | none => return false
   | .error _ => return false
 
@@ -339,9 +339,9 @@ def testParseJsonErrorsOnMissingCommandRun : IO Bool := do
   | .ok _ => return false
   | .error e => return e.contains "run"
 
-def testParseJsonErrorsOnInvalidCiSchedule : IO Bool := do
+def testParseJsonErrorsOnInvalidSchedule : IO Bool := do
   -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}, \"ci\": \"nightly\"}]}"
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}, \"schedule\": \"nightly\"}]}"
   -- Act
   let result := Parser.parseJson json
   -- Assert
@@ -467,8 +467,8 @@ def parserTests : List (String × IO Bool) := [
   ("testParseJsonExtractsProofFields", testParseJsonExtractsProofFields),
   ("testParseJsonExtractsPropertyFieldsWithDefault", testParseJsonExtractsPropertyFieldsWithDefault),
   ("testParseJsonExtractsHumanInstruction", testParseJsonExtractsHumanInstruction),
-  ("testParseJsonAppliesCiScheduleOverride", testParseJsonAppliesCiScheduleOverride),
-  ("testParseJsonDefaultsHumanCiToManual", testParseJsonDefaultsHumanCiToManual),
+  ("testParseJsonAppliesScheduleOverride", testParseJsonAppliesScheduleOverride),
+  ("testParseJsonDefaultsHumanScheduleToLocal", testParseJsonDefaultsHumanScheduleToLocal),
   ("testParseJsonPreservesMultipleCriteria", testParseJsonPreservesMultipleCriteria),
   ("testParseJsonAllowsEmptyCriteriaInWorkerLoop", testParseJsonAllowsEmptyCriteriaInWorkerLoop),
   ("testParseJsonWorkerWithPrompt", testParseJsonWorkerWithPrompt),
@@ -479,7 +479,7 @@ def parserTests : List (String × IO Bool) := [
   ("testParseJsonErrorsOnUnknownVerifyType", testParseJsonErrorsOnUnknownVerifyType),
   ("testParseJsonErrorsOnMissingVerifyField", testParseJsonErrorsOnMissingVerifyField),
   ("testParseJsonErrorsOnMissingCommandRun", testParseJsonErrorsOnMissingCommandRun),
-  ("testParseJsonErrorsOnInvalidCiSchedule", testParseJsonErrorsOnInvalidCiSchedule),
+  ("testParseJsonErrorsOnInvalidSchedule", testParseJsonErrorsOnInvalidSchedule),
   ("testParseJsonRejectsMaxIterationsWithoutWorker", testParseJsonRejectsMaxIterationsWithoutWorker),
   ("testParseJsonRejectsStuckThresholdWithoutWorker", testParseJsonRejectsStuckThresholdWithoutWorker),
   ("testParseJsonWorkerWithPromptNoCommand", testParseJsonWorkerWithPromptNoCommand),

@@ -16,7 +16,11 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `StuckDetection.lean` | `stuck_when_threshold_reached` | Threshold reached implies stuck state |
 | `StuckDetection.lean` | `not_stuck_when_below_threshold` | Below threshold implies retry (workerRunning) |
 | `StuckDetection.lean` | `failure_count_update` | Failure count increments on same failures, resets on different failures |
+| `Termination.lean` | `verify_someFailed_outcomes` | verify+someFailed produces stuck, maxIterationsReached, or workerRunning |
 | `Termination.lean` | `verify_someFailed_terminates_or_increments` | Each verify+someFailed step either terminates or increments iteration |
+| `Termination.lean` | `verify_allPassed_terminates` | verify+allPassed always reaches terminal state (passed) |
+| `Termination.lean` | `verify_workerDone_stays` | verify+workerDone preserves terminal state |
+| `Termination.lean` | `workerRunning_transition` | workerRunning+workerDone always transitions to verifying |
 | `Termination.lean` | `fuel_decreases_on_retry` | The fuel measure (maxIterations - iteration) strictly decreases on retry |
 | `Termination.lean` | `loop_progress` | Each non-terminal step either terminates or increments iteration (bounded by maxIterations) |
 | `Termination.lean` | `loop_terminates` | **[spec]** Full termination: each step terminates or strictly decreases fuel (maxIterations - iteration) |
@@ -50,16 +54,19 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `OutputCorrectness.lean` | `allPassed_iff_no_failures` | **[spec]** Pass/fail decision is correct: true iff no result is `.fail` |
 | `OutputCorrectness.lean` | `resultsToJson_has_required_fields` | **[spec]** JSON output always contains "spec", "passed", "criteria" fields |
 | `OutputCorrectness.lean` | `workerResultsToJson_has_required_fields` | **[spec]** Worker loop JSON always contains "spec", "state", "passed", "criteria" fields |
-| `ParserProperties.lean` | `parseCiSchedule_complete` | **[spec]** If parseCiSchedule succeeds, input was "always", "trunk", or "manual" |
-| `ParserProperties.lean` | `parseCiSchedule_rejects_invalid` | **[spec]** Any other string produces an error |
+| `ParserProperties.lean` | `parseSchedule_complete` | **[spec]** If parseSchedule succeeds, input was "always", "local", or "manual" |
+| `ParserProperties.lean` | `parseSchedule_always` | parseSchedule "always" = .ok .always |
+| `ParserProperties.lean` | `parseSchedule_local` | parseSchedule "local" = .ok .local |
+| `ParserProperties.lean` | `parseSchedule_manual` | parseSchedule "manual" = .ok .manual |
+| `ParserProperties.lean` | `parseSchedule_rejects_invalid` | **[spec]** Any other string produces an error |
 | `TomlProperties.lean` | `setNested_no_duplicate_at_leaf` | setNested inserts without duplicates when key is absent |
-| `TomlProperties.lean` | `setNested_rejects_duplicate` | setNested returns error when key already exists |
+| `TomlProperties.lean` | `setNested_rejects_duplicate` | **[spec]** setNested returns error when key already exists |
 | `TomlProperties.lean` | `setNested_empty_keys` | Empty key path is always rejected |
 | `TomlProperties.lean` | `appendArray_empty_keys` | Empty key path is always rejected |
 | `TomlProperties.lean` | `appendArray_creates_new` | Absent key creates new single-element array |
-| `TomlJsonValidity.lean` | `tomlToJson_total` | tomlToJson always returns Ok or Error (never diverges) |
-| `TomlJsonValidity.lean` | `tomlToJson_ok_implies_parseDoc_ok` | Successful conversion implies successful parse |
-| `TomlJsonValidity.lean` | `parseDoc_error_implies_tomlToJson_error` | Parse failure propagates to conversion failure |
+| `TomlJsonValidity.lean` | `tomlToJson_total` | **[spec]** tomlToJson always returns Ok or Error (never diverges) |
+| `TomlJsonValidity.lean` | `tomlToJson_ok_implies_parseDoc_ok` | **[spec]** Successful conversion implies successful parse |
+| `TomlJsonValidity.lean` | `parseDoc_error_implies_tomlToJson_error` | **[spec]** Parse failure propagates to conversion failure |
 | `TomlJsonValidity.lean` | `toJson_str` | String values map to JSON strings |
 | `TomlJsonValidity.lean` | `toJson_int` | Integer values map to JSON numbers |
 | `TomlJsonValidity.lean` | `toJson_bool` | Boolean values map to JSON booleans |
@@ -67,9 +74,11 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `TomlJsonValidity.lean` | `toJson_array` | Arrays map to JSON arrays via toJsonList |
 | `TomlJsonValidity.lean` | `toJson_empty_table` | Empty table produces empty JSON object |
 | `TomlJsonValidity.lean` | `toJson_empty_array` | Empty array produces empty JSON array |
-| `Roundtrip.lean` | `ciSchedule_roundtrip` | parseCiSchedule inverts ciScheduleToString |
+| `Roundtrip.lean` | `schedule_roundtrip` | parseSchedule inverts scheduleToString |
 | `Roundtrip.lean` | `verifyType_roundtrip` | parseVerifyType inverts verifyTypeToJson for every constructor |
 | `Roundtrip.lean` | `criterion_roundtrip` | parseCriterion inverts criterionToJson |
 | `Roundtrip.lean` | `workerConfig_roundtrip` | parseWorkerConfig inverts workerConfigToJson |
 | `Roundtrip.lean` | `criteria_list_roundtrip` | Element-wise roundtrip lifts to list-level mapM roundtrip |
+| `Roundtrip.lean` | `spec_verify_roundtrip` | parseFromJson inverts specToJson for verify-mode specs |
+| `Roundtrip.lean` | `spec_workerLoop_roundtrip` | parseFromJson inverts specToJson for workerLoop-mode specs |
 | `Roundtrip.lean` | `spec_roundtrip` | **[spec]** **Main theorem:** parseFromJson inverts specToJson for all well-formed specs |

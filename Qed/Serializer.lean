@@ -7,10 +7,10 @@ namespace Qed.Serializer
 
 open Lean Qed
 
-/-- Serialize a CiSchedule to its string representation. -/
-def ciScheduleToString : CiSchedule → String
+/-- Serialize a Schedule to its string representation. -/
+def scheduleToString : Schedule → String
   | .always => "always"
-  | .trunk => "trunk"
+  | .local => "local"
   | .manual => "manual"
 
 /-- Serialize a VerifyType to JSON. -/
@@ -44,7 +44,7 @@ def criterionToJson (criterion : AcceptanceCriterion) : Json :=
   let base := [
     ("description", Json.str criterion.description),
     ("verify", verifyTypeToJson criterion.verify),
-    ("ci", Json.str (ciScheduleToString criterion.ci))]
+    ("schedule", Json.str (scheduleToString criterion.schedule))]
   let fields := match criterion.skip with
     | some reason => base ++ [("skip", Json.str reason)]
     | none => base

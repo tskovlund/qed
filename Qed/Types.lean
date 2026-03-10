@@ -34,14 +34,17 @@ inductive VerifyType where
   | human (instruction : String)
   deriving Repr, BEq
 
-/-- When a criterion runs in CI. Controls cost without special-casing
-    verification types — the CI runner filters by this field alone. -/
-inductive CiSchedule where
-  /-- Every CI run (PRs, pushes, merge queue). Default for automatable types. -/
+/-- When a criterion runs. Controls which execution contexts include it.
+    Forms a capability hierarchy: always > local > manual. -/
+inductive Schedule where
+  /-- Every run — CI, pre-push hooks, explicit invocation. Default for
+      automatable types (command, property, proof). -/
   | always
-  /-- Only when the default branch changes (merge or direct push). -/
-  | trunk
-  /-- Never in CI — only via explicit `qed run`. Default for `human`. -/
+  /-- Only in local contexts — pre-push hooks and explicit invocation,
+      not headless CI. Default for human verification. -/
+  | local
+  /-- Only via explicit invocation (`qed verify` / `qed run` without flags).
+      For expensive or non-deterministic criteria (e.g. agent reviews). -/
   | manual
   deriving Repr, BEq
 
@@ -49,9 +52,10 @@ inductive CiSchedule where
 structure AcceptanceCriterion where
   description : String
   verify : VerifyType
-  /-- When this criterion runs in CI. Defaults based on verify type. -/
-  ci : CiSchedule := match verify with
-    | .human _ => .manual
+  /-- When this criterion runs. Defaults based on verify type. -/
+  schedule : Schedule := match verify with
+    | .human _ => .local
+    | .agent _ _ _ => .manual
     | _ => .always
   /-- When set, the criterion is intentionally skipped with the given reason.
       Skipped criteria show `[SKIP]` in output and do not affect pass/fail. -/

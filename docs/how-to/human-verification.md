@@ -43,7 +43,7 @@ If the human rejects, the failure feeds back to the worker for another iteration
 
 ## In CI
 
-Human criteria default to `ci = "manual"`, so they are automatically excluded when running `qed verify --ci`. No configuration needed.
+Human criteria default to `schedule = "local"`, so they are automatically excluded when running `qed verify --ci`. No configuration needed.
 
 ## Non-interactive contexts
 

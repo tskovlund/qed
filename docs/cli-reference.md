@@ -18,7 +18,8 @@ qed help                  Show this help
 | Flag | Purpose |
 |------|---------|
 | `--json` | Machine-readable JSON output (position-independent) |
-| `--ci` | CI mode — skip criteria with `ci = "manual"` (position-independent) |
+| `--local` | Local mode — excludes `manual` criteria only (position-independent) |
+| `--ci` | CI mode — excludes `manual` and `local` criteria (position-independent) |
 
 ## Exit codes
 

@@ -40,12 +40,12 @@ Optional. If present, qed runs in worker loop mode. The worker is the command th
 
 ## Criterion
 
-Each criterion has a description, a verification strategy, and a CI schedule.
+Each criterion has a description, a verification strategy, and a schedule.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `ci` | [CiSchedule](#ci-schedule) | no | `"always"` | When this criterion runs in CI. Defaults: 'always' for automatable types, 'manual' for human. |
 | `description` | string | yes | — | Human-readable description of what this criterion verifies. |
+| `schedule` | [Schedule](#schedule) | no | `"always"` | When this criterion runs. Defaults: 'always' for command/property/proof, 'local' for human, 'manual' for agent. |
 | `skip` | string | no | — | Skip this criterion with the given reason. Skipped criteria show [SKIP] in output and do not affect the overall pass/fail result. |
 | `verify` | [VerifyType](#verification-types) | yes | — | How to verify this criterion. Discriminated by the 'type' field. |
 
@@ -96,21 +96,21 @@ Verify a formal proof target.
 
 ### `human`
 
-Ask a human to verify. Cannot run in CI (ci defaults to 'manual').
+Ask a human to verify. Requires interactive stdin (schedule defaults to 'local').
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `instruction` | string | yes | — | What the human should verify. |
 | `type` | `"human"` | yes | — |  |
 
-## CI schedule
+## Schedule
 
-Controls when a criterion runs in CI. The runner filters by this field — no special-casing of verification types.
+Controls when a criterion runs. The runner filters by this field based on the execution context (`--ci`, `--local`, or no flag).
 
 | Value | Description | Default for |
 |-------|-------------|-------------|
-| `always` | Every CI run (PRs, pushes, merge queue) | all automatable types |
-| `trunk` | Only when the default branch changes | — |
-| `manual` | Only via explicit `qed run` | `human` |
+| `always` | Every run — CI, pre-push, explicit | `command`, `property`, `proof` |
+| `local` | Pre-push and explicit invocation — excluded from CI | `human` |
+| `manual` | Only via explicit `qed run` or `qed verify` (no flags) | `agent` |
 
 See [architecture.md](architecture.md) for the full state machine diagram and transition rules.

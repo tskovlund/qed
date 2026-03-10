@@ -44,7 +44,7 @@ target = "Qed.Proofs.OutputCorrectness.workerResultsToJson_has_required_fields"
 
 [[criteria]]
 description = "CLI argument parsing, dispatch, and error handling are correct"
-ci = "manual"
+
 
 [criteria.verify]
 type = "agent"
@@ -52,15 +52,31 @@ prompt = """
 Review Main.lean and Qed/Output.lean. Verify:
 
 1. Every subcommand (run, verify, parse, version, help) is handled
-2. Unknown commands produce a clear error on stderr with exit code 1
-3. The --json flag is position-independent and works with all subcommands
+2. Unknown commands produce a clear error on stderr with exit code 2
+3. The --json, --ci, and --local flags are position-independent and work
+   with all subcommands
 4. Error output respects --json mode (JSON to stdout vs plain text to stderr)
 5. `qed run` dispatches correctly: verify-mode specs run single-pass
    verification, worker-loop specs run the worker loop via WorkerLoop.run
-6. No command loads the spec file more than once
-7. Help text documents all available commands and options
-8. JSON output has consistent structure (spec, passed, criteria fields)
-9. Every VerificationResult constructor is handled in Output serialization
+6. Schedule filtering: --ci excludes manual and local criteria,
+   --local excludes only manual criteria, no flag runs everything
+7. No command loads the spec file more than once
+8. Help text documents all available commands, options, and exit codes
+9. JSON output has consistent structure (spec, passed, criteria fields)
+10. Every VerificationResult constructor is handled in Output serialization
 
 Report any unreachable code paths, missing error handling, or UX issues.
 """
+
+# --- Human review ---
+
+[[criteria]]
+description = "CLI output is clear, scannable, and provides actionable feedback on failures"
+
+[criteria.verify]
+type = "human"
+instruction = """
+Run: .lake/build/bin/qed verify specs/
+Check that the output is clear and scannable — pass/fail is obvious at a \
+glance, failure details help you diagnose the issue, and the overall \
+summary tells you what to do next."""

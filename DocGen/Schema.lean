@@ -20,13 +20,13 @@ def verifyTypeConstructors : List String :=
     | .human _ => ()
   ["command", "agent", "property", "proof", "human"]
 
--- Exhaustive match on CiSchedule — compile error if constructors change
-def ciScheduleValues : List String :=
-  let _ : CiSchedule → Unit := fun
+-- Exhaustive match on Schedule — compile error if constructors change
+def scheduleValues : List String :=
+  let _ : Schedule → Unit := fun
     | .always => ()
-    | .trunk => ()
+    | .local => ()
     | .manual => ()
-  ["always", "trunk", "manual"]
+  ["always", "local", "manual"]
 
 -- Exhaustive match on SpecMode — compile error if constructors change
 def specModeValues : List String :=
@@ -61,7 +61,7 @@ def loopStateValues : List String :=
     actual type constructors — if a default changes, the schema updates. -/
 def generate : String :=
   let verifyTypes := verifyTypeConstructors
-  let ciSchedules := ciScheduleValues
+  let schedules := scheduleValues
   let loopConfig : LoopConfig := {}
   let worker : WorkerConfig := { command := some "echo hi" }
 s!"\{
@@ -174,7 +174,7 @@ s!"\{
               },
               \{
                 \"type\": \"object\",
-                \"description\": \"Ask a human to verify. Cannot run in CI (ci defaults to 'manual').\",
+                \"description\": \"Ask a human to verify. Requires interactive stdin (schedule defaults to 'local').\",
                 \"required\": [\"type\", \"instruction\"],
                 \"additionalProperties\": false,
                 \"properties\": \{
@@ -184,10 +184,10 @@ s!"\{
               }
             ]
           },
-          \"ci\": \{
+          \"schedule\": \{
             \"type\": \"string\",
-            \"description\": \"When this criterion runs in CI. Defaults: 'always' for automatable types, 'manual' for human.\",
-            \"enum\": [\"{ciSchedules[0]!}\", \"{ciSchedules[1]!}\", \"{ciSchedules[2]!}\"],
+            \"description\": \"When this criterion runs. Defaults: 'always' for command/property/proof, 'local' for human, 'manual' for agent.\",
+            \"enum\": [\"{schedules[0]!}\", \"{schedules[1]!}\", \"{schedules[2]!}\"],
             \"default\": \"always\"
           },
           \"skip\": \{

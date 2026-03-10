@@ -99,7 +99,7 @@ def generate (schemaString : String) : Except String String := do
   let items := getObject criteria "items"
   let itemProperties := getObject items "properties"
   let verify := getObject itemProperties "verify"
-  let ciProperty := getObject itemProperties "ci"
+  let scheduleProperty := getObject itemProperties "schedule"
   let variants := getArray verify "oneOf"
 
   -- Top-level structure table
@@ -115,20 +115,20 @@ def generate (schemaString : String) : Except String String := do
   -- Criterion table
   let criterionTable := renderPropertiesTable items {
     includeDescription := true
-    typeOverrides := [("verify", "[VerifyType](#verification-types)"), ("ci", "[CiSchedule](#ci-schedule)")]
+    typeOverrides := [("verify", "[VerifyType](#verification-types)"), ("schedule", "[Schedule](#schedule)")]
   }
 
   -- Verify type sections
   let verifySections := variants.map renderVerifyVariant
 
-  -- CI schedule table
-  let ciEnumValues := getArray ciProperty "enum"
-  let ciRows := ciEnumValues.map fun value =>
+  -- Schedule table
+  let scheduleEnumValues := getArray scheduleProperty "enum"
+  let scheduleRows := scheduleEnumValues.map fun value =>
     match value with
-    | Json.str schedule => match schedule with
-      | "always" => "| `always` | Every CI run (PRs, pushes, merge queue) | all automatable types |"
-      | "trunk" => "| `trunk` | Only when the default branch changes | — |"
-      | "manual" => "| `manual` | Only via explicit `qed run` | `human` |"
+    | Json.str s => match s with
+      | "always" => "| `always` | Every run — CI, pre-push, explicit | `command`, `property`, `proof` |"
+      | "local" => "| `local` | Pre-push and explicit invocation — excluded from CI | `human` |"
+      | "manual" => "| `manual` | Only via explicit `qed run` or `qed verify` (no flags) | `agent` |"
       | other => s!"| `{other}` | | |"
     | _ => ""
 
@@ -162,7 +162,7 @@ Optional. If present, qed runs in worker loop mode. The worker is the command th
 
 ## Criterion
 
-Each criterion has a description, a verification strategy, and a CI schedule.
+Each criterion has a description, a verification strategy, and a schedule.
 
 {criterionTable}
 
@@ -172,13 +172,13 @@ Five verification strategies, from lightweight to mathematical:
 
 {"\n\n".intercalate verifySections.toList}
 
-## CI schedule
+## Schedule
 
-Controls when a criterion runs in CI. The runner filters by this field — no special-casing of verification types.
+Controls when a criterion runs. The runner filters by this field based on the execution context (`--ci`, `--local`, or no flag).
 
 | Value | Description | Default for |
 |-------|-------------|-------------|
-{"\n".intercalate ciRows.toList}
+{"\n".intercalate scheduleRows.toList}
 
 See [architecture.md](architecture.md) for the full state machine diagram and transition rules."
 

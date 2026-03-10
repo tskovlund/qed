@@ -108,7 +108,7 @@
               },
               {
                 "type": "object",
-                "description": "Ask a human to verify. Cannot run in CI (ci defaults to 'manual').",
+                "description": "Ask a human to verify. Requires interactive stdin (schedule defaults to 'local').",
                 "required": ["type", "instruction"],
                 "additionalProperties": false,
                 "properties": {
@@ -118,10 +118,10 @@
               }
             ]
           },
-          "ci": {
+          "schedule": {
             "type": "string",
-            "description": "When this criterion runs in CI. Defaults: 'always' for automatable types, 'manual' for human.",
-            "enum": ["always", "trunk", "manual"],
+            "description": "When this criterion runs. Defaults: 'always' for command/property/proof, 'local' for human, 'manual' for agent.",
+            "enum": ["always", "local", "manual"],
             "default": "always"
           },
           "skip": {

@@ -72,12 +72,12 @@ private theorem specToJson_verify (name : String) (criteria : List AcceptanceCri
     verifyJson name (criteria.map criterionToJson).toArray := by rfl
 
 -- ═══════════════════════════════════════════════════════════════════
--- Level 1: CiSchedule roundtrip
+-- Level 1: Schedule roundtrip
 -- ═══════════════════════════════════════════════════════════════════
 
-/-- parseCiSchedule inverts ciScheduleToString for every constructor. -/
-theorem ciSchedule_roundtrip (cs : CiSchedule) :
-    parseCiSchedule (ciScheduleToString cs) = .ok cs := by
+/-- parseSchedule inverts scheduleToString for every constructor. -/
+theorem schedule_roundtrip (cs : Schedule) :
+    parseSchedule (scheduleToString cs) = .ok cs := by
   cases cs <;> rfl
 
 -- ═══════════════════════════════════════════════════════════════════
@@ -106,13 +106,13 @@ theorem verifyType_roundtrip (vt : VerifyType) :
 theorem criterion_roundtrip (criterion : AcceptanceCriterion) :
     parseCriterion (criterionToJson criterion) = .ok criterion := by
   cases criterion with
-  | mk description verify ci skip =>
+  | mk description verify schedule skip =>
     cases verify with
-    | command run timeout => cases ci <;> cases skip <;> rfl
-    | agent prompt model command => cases command <;> (cases ci <;> cases skip <;> rfl)
-    | property run timeout => cases ci <;> cases skip <;> rfl
-    | proof prover target => cases ci <;> cases skip <;> rfl
-    | human instruction => cases ci <;> cases skip <;> rfl
+    | command run timeout => cases schedule <;> cases skip <;> rfl
+    | agent prompt model command => cases command <;> (cases schedule <;> cases skip <;> rfl)
+    | property run timeout => cases schedule <;> cases skip <;> rfl
+    | proof prover target => cases schedule <;> cases skip <;> rfl
+    | human instruction => cases schedule <;> cases skip <;> rfl
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Level 4: WorkerConfig roundtrip

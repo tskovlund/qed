@@ -31,7 +31,7 @@ Qed/Proofs/
   VerifyMode.lean      Verify mode type-level separation proofs
   TypeProperties.lean  isTerminal decidability, isPassed/isFailed characterization
   OutputCorrectness.lean  allPassed correctness, JSON output contract
-  ParserProperties.lean   parseCiSchedule completeness and rejection
+  ParserProperties.lean   parseSchedule completeness and rejection
   TomlProperties.lean     setNested/appendArray structural integrity
   TomlJsonValidity.lean   TOML→JSON pipeline totality and error propagation
   Roundtrip.lean          Serializer↔parser roundtrip (parseFromJson ∘ specToJson = ok)

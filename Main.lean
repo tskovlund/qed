@@ -4,16 +4,26 @@ open Qed
 
 def version : String := "0.1.0-dev"
 
-/-- Filter criteria based on CI schedule. In CI mode, manual criteria are
-    excluded. Trunk criteria are included (trunk filtering requires git
-    context — not yet implemented). -/
-def filterForCi (criteria : List AcceptanceCriterion) (ciMode : Bool) : List AcceptanceCriterion :=
-  if ciMode then criteria.filter fun c => c.ci != .manual
-  else criteria
+/-- Execution context for schedule filtering. -/
+inductive RunContext where
+  /-- No filtering — all criteria run. -/
+  | full
+  /-- Local hook (pre-push) — exclude `manual`, include `local`. -/
+  | local
+  /-- CI pipeline — exclude `manual` and `local`. -/
+  | ci
+  deriving BEq
+
+/-- Filter criteria based on execution context and schedule. -/
+def filterBySchedule (criteria : List AcceptanceCriterion) (context : RunContext) : List AcceptanceCriterion :=
+  match context with
+  | .full => criteria
+  | .local => criteria.filter fun c => c.schedule != .manual
+  | .ci => criteria.filter fun c => c.schedule == .always
 
 /-- Run single-pass verification on an already-loaded spec. -/
-def verifySpec (spec : Spec) (jsonOutput : Bool) (ciMode : Bool := false) : IO UInt32 := do
-  let criteria := filterForCi spec.criteria ciMode
+def verifySpec (spec : Spec) (jsonOutput : Bool) (context : RunContext := .full) : IO UInt32 := do
+  let criteria := filterBySchedule spec.criteria context
   let results ← Verifier.verifyAll criteria
   if jsonOutput then
     let json := Output.resultsToJson spec.name results
@@ -53,15 +63,15 @@ private def reportError (message : String) (jsonOutput : Bool) : IO Unit := do
     IO.eprintln s!"error: {message}"
 
 /-- Load a spec and run single-pass verification. -/
-def runVerify (path : String) (jsonOutput : Bool) (ciMode : Bool := false) : IO UInt32 := do
+def runVerify (path : String) (jsonOutput : Bool) (context : RunContext := .full) : IO UInt32 := do
   match ← loadSpecSafe path with
   | .error message =>
     reportError message jsonOutput
     return 2
-  | .ok spec => verifySpec spec jsonOutput ciMode
+  | .ok spec => verifySpec spec jsonOutput context
 
 /-- Verify all specs in a directory. Returns 0 if all pass, 1 if any fail, 2 on error. -/
-def runVerifyAll (directory : String) (jsonOutput : Bool) (ciMode : Bool := false) : IO UInt32 := do
+def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext := .full) : IO UInt32 := do
   match ← SpecLoader.listAllSpecs directory with
   | .error message =>
     reportError message jsonOutput
@@ -72,7 +82,7 @@ def runVerifyAll (directory : String) (jsonOutput : Bool) (ciMode : Bool := fals
       return 2
     let mut anyFailed := false
     for specPath in specs do
-      let result ← runVerify specPath.toString jsonOutput ciMode
+      let result ← runVerify specPath.toString jsonOutput context
       if result == 1 then anyFailed := true
       if result == 2 then return 2
       if !jsonOutput then IO.println ""
@@ -115,7 +125,8 @@ def printHelp : IO Unit := do
   IO.println ""
   IO.println "Options:"
   IO.println "  --json                    Output results as JSON"
-  IO.println "  --ci                      CI mode — skip criteria with ci = \"manual\""
+  IO.println "  --local                   Local mode — exclude schedule = \"manual\" criteria"
+  IO.println "  --ci                      CI mode — exclude schedule = \"manual\" and \"local\" criteria"
   IO.println ""
   IO.println "Exit codes:"
   IO.println "  0  Success (all criteria passed)"
@@ -123,14 +134,16 @@ def printHelp : IO Unit := do
   IO.println "  2  Configuration or usage error (bad spec, missing file, unknown command)"
 
 /-- Extract flags and remaining args from the argument list. -/
-private def extractFlags (args : List String) : Bool × Bool × List String :=
+private def extractFlags (args : List String) : Bool × RunContext × List String :=
   let jsonFlag := args.any (· == "--json")
-  let ciFlag := args.any (· == "--ci")
-  let remaining := args.filter fun a => a != "--json" && a != "--ci"
-  (jsonFlag, ciFlag, remaining)
+  let context := if args.any (· == "--ci") then RunContext.ci
+    else if args.any (· == "--local") then RunContext.local
+    else RunContext.full
+  let remaining := args.filter fun a => a != "--json" && a != "--ci" && a != "--local"
+  (jsonFlag, context, remaining)
 
 def main (args : List String) : IO UInt32 := do
-  let (jsonOutput, ciMode, cleanArgs) := extractFlags args
+  let (jsonOutput, context, cleanArgs) := extractFlags args
   match cleanArgs with
   | ["version"] =>
     IO.println s!"qed {version}"
@@ -139,11 +152,11 @@ def main (args : List String) : IO UInt32 := do
     printHelp
     return 0
   | ["verify"] =>
-    runVerifyAll "." jsonOutput ciMode
+    runVerifyAll "." jsonOutput context
   | ["verify", path] =>
     let isDir ← (path : System.FilePath).isDir
-    if isDir then runVerifyAll path jsonOutput ciMode
-    else runVerify path jsonOutput ciMode
+    if isDir then runVerifyAll path jsonOutput context
+    else runVerify path jsonOutput context
   | ["run", path] =>
     match ← loadSpecSafe path with
     | .error message =>
@@ -151,7 +164,7 @@ def main (args : List String) : IO UInt32 := do
       return 2
     | .ok spec =>
       match spec.mode with
-      | .verify => verifySpec spec jsonOutput ciMode
+      | .verify => verifySpec spec jsonOutput context
       | .workerLoop worker loopConfig =>
         WorkerLoop.run spec worker loopConfig jsonOutput
   | ["parse", path] =>

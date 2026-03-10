@@ -58,7 +58,7 @@ target = "Qed.Proofs.WorkerLoopProperties.shellQuote_empty"
 [[criteria]]
 description = """Worker loop execution correctly drives the proven state machine \
 and handles both prompt tiers safely"""
-ci = "manual"
+
 
 [criteria.verify]
 type = "agent"

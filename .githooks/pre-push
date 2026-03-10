@@ -14,4 +14,4 @@ echo "pre-push: building..."
 lake build || exit 1
 
 echo "pre-push: verifying specs..."
-.lake/build/bin/qed verify || exit 1
+.lake/build/bin/qed verify --local || exit 1

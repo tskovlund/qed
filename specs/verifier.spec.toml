@@ -9,7 +9,7 @@ name = "verifier-correctness"
 
 [[criteria]]
 description = "Verifier handles all verification types and shell execution safely"
-ci = "manual"
+
 
 [criteria.verify]
 type = "agent"

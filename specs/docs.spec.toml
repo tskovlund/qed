@@ -20,7 +20,7 @@ run = "lake build docgen && .lake/build/bin/docgen markdown | diff docs/spec-for
 
 [[criteria]]
 description = "Architecture docs accurately describe the system"
-ci = "manual"
+
 
 [criteria.verify]
 type = "agent"
@@ -42,7 +42,7 @@ but missing from the docs, or documented but not in the code.
 
 [[criteria]]
 description = "README verification spectrum matches Types.lean"
-ci = "manual"
+
 
 [criteria.verify]
 type = "agent"

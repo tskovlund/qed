@@ -27,13 +27,13 @@ def optionalNat (json : Json) (field : String) (default : Nat) : Except String N
     | .error _ => .ok default
     | .ok _ => .error s!"field '{field}': expected non-negative integer"
 
-/-- Parse a CiSchedule from a JSON string value. -/
-def parseCiSchedule (value : String) : Except String CiSchedule :=
+/-- Parse a Schedule from a JSON string value. -/
+def parseSchedule (value : String) : Except String Schedule :=
   match value with
   | "always" => .ok .always
-  | "trunk" => .ok .trunk
+  | "local" => .ok .local
   | "manual" => .ok .manual
-  | other => .error s!"invalid ci schedule: '{other}' (expected always, trunk, or manual)"
+  | other => .error s!"invalid schedule: '{other}' (expected always, local, or manual)"
 
 /-- Parse a VerifyType from a JSON object (the "verify" field of a criterion). -/
 def parseVerifyType (json : Json) : Except String VerifyType := do
@@ -70,17 +70,18 @@ def parseCriterion (json : Json) : Except String AcceptanceCriterion := do
     | .ok value => .ok value
     | .error _ => .error "missing field 'verify'"
   let verify ← parseVerifyType verifyJson
-  let ci ← match json.getObjValAs? String "ci" with
-    | .ok value => parseCiSchedule value
+  let schedule ← match json.getObjValAs? String "schedule" with
+    | .ok value => parseSchedule value
     | .error _ =>
-      -- Default: manual for human, always for everything else
+      -- Default: local for human, manual for agent, always for everything else
       .ok (match verify with
-        | .human _ => .manual
+        | .human _ => .local
+        | .agent _ _ _ => .manual
         | _ => .always)
   let skip := match json.getObjValAs? String "skip" with
     | .ok value => some value
     | .error _ => none
-  .ok { description, verify, ci, skip }
+  .ok { description, verify, schedule, skip }
 
 /-- Parse a WorkerConfig from a JSON object. Does not validate that at least
     one of command/prompt is present — that check lives in parseFromJson. -/

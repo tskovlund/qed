@@ -47,7 +47,7 @@ target = "Qed.Proofs.VerifyMode.verify_independent_of_loop"
 description = """
 Verify mode design is correct and complete — single-pass verification \
 with no worker, no loop, no state machine dependency."""
-ci = "manual"
+
 
 [criteria.verify]
 type = "agent"

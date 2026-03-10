@@ -101,7 +101,7 @@ target = "Qed.Proofs.Invariants.ready_unreachable"
 
 [[criteria]]
 description = "Transition function is correct, total, and well-structured"
-ci = "manual"
+
 
 [criteria.verify]
 type = "agent"

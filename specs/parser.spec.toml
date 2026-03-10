@@ -11,22 +11,22 @@ name = "parser-correctness"
 # --- Proof criteria ---
 
 [[criteria]]
-description = "CI schedule parser accepts exactly the three valid strings"
+description = "Schedule parser accepts exactly the three valid strings"
 skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
 prover = "lean4"
-target = "Qed.Proofs.ParserProperties.parseCiSchedule_complete"
+target = "Qed.Proofs.ParserProperties.parseSchedule_complete"
 
 [[criteria]]
-description = "CI schedule parser rejects all invalid strings"
+description = "Schedule parser rejects all invalid strings"
 skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
 prover = "lean4"
-target = "Qed.Proofs.ParserProperties.parseCiSchedule_rejects_invalid"
+target = "Qed.Proofs.ParserProperties.parseSchedule_rejects_invalid"
 
 [[criteria]]
 description = "Serializer→parser roundtrip: parsing serialized JSON recovers the original spec exactly"
@@ -37,6 +37,44 @@ type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.Roundtrip.spec_roundtrip"
 
+# --- TOML proof criteria ---
+
+[[criteria]]
+description = "TOML→JSON conversion is total: always returns ok or error, never diverges"
+skip = "proof verification not yet implemented"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.TomlJsonValidity.tomlToJson_total"
+
+[[criteria]]
+description = "Successful TOML→JSON conversion implies the input was valid TOML"
+skip = "proof verification not yet implemented"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.TomlJsonValidity.tomlToJson_ok_implies_parseDoc_ok"
+
+[[criteria]]
+description = "TOML parse errors propagate to the conversion result (never swallowed)"
+skip = "proof verification not yet implemented"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.TomlJsonValidity.parseDoc_error_implies_tomlToJson_error"
+
+[[criteria]]
+description = "TOML parser rejects duplicate keys at the leaf level"
+skip = "proof verification not yet implemented"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.TomlProperties.setNested_rejects_duplicate"
+
 # --- Agent review ---
 
 [[criteria]]
@@ -44,7 +82,7 @@ description = """
 JSON parser faithfully maps JSON to the Spec type — no data loss, no \
 silent defaults where explicit values should be required, no ambiguous \
 error messages."""
-ci = "manual"
+
 
 [criteria.verify]
 type = "agent"
@@ -58,6 +96,8 @@ Review Qed/Parser.lean. Verify:
 5. The parser handles both execution modes correctly:
    - worker present → SpecMode.workerLoop with LoopConfig
    - worker absent → SpecMode.verify with ≥1 criteria validation
+6. Schedule field parsing: accepts "always", "local", "manual" with correct
+   defaults per verify type (human → local, agent → manual, others → always)
 
 Report any parsing bugs, missing validation, or data loss risks.
 """
@@ -67,7 +107,7 @@ description = """
 TOML parser correctly handles all value types and structural features \
 used in qed specs — arrays of tables with sub-tables, multi-line \
 strings, non-ASCII content, and duplicate key rejection."""
-ci = "manual"
+
 
 [criteria.verify]
 type = "agent"
