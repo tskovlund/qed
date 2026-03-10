@@ -11,9 +11,17 @@ private def runQed (args : List String) : IO (UInt32 × String × String) := do
   }
   return (result.exitCode, result.stdout, result.stderr)
 
+/-- Create a unique temporary directory for a test run. -/
+private def freshTempDir (label : String) : IO System.FilePath := do
+  let id ← IO.rand 100000 999999
+  let path : System.FilePath := s!"/tmp/qed-test-{label}-{id}"
+  IO.FS.createDirAll path
+  return path
+
 /-- Create a temporary spec file for testing, returning its path. -/
 private def writeTempSpec (content : String) : IO System.FilePath := do
-  let path : System.FilePath := "/tmp/qed-test-cli.spec.json"
+  let dir ← freshTempDir "cli"
+  let path := dir / "test.spec.json"
   IO.FS.writeFile path content
   return path
 
@@ -162,41 +170,42 @@ def testParseRejectsMaxIterationsWithoutWorker : IO Bool := do
   return exitCode == 2 && stderr.contains "maxIterations" && stderr.contains "worker"
 
 def testVerifyDirectoryRunsAllSpecs : IO Bool := do
-  -- Arrange: create a temp directory with two spec files
-  IO.FS.createDirAll "/tmp/qed-test-dir"
-  IO.FS.writeFile "/tmp/qed-test-dir/a.spec.json"
+  -- Arrange
+  let dir ← freshTempDir "dir"
+  IO.FS.writeFile (dir / "a.spec.json")
     "{\"name\": \"a\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
-  IO.FS.writeFile "/tmp/qed-test-dir/b.spec.json"
+  IO.FS.writeFile (dir / "b.spec.json")
     "{\"name\": \"b\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
   -- Act
-  let (exitCode, stdout, _) ← runQed ["verify", "/tmp/qed-test-dir"]
+  let (exitCode, stdout, _) ← runQed ["verify", dir.toString]
   -- Assert
   return exitCode == 0 && stdout.contains "a" && stdout.contains "b"
 
 def testVerifyDirectoryFailsOnBadSpec : IO Bool := do
   -- Arrange
-  IO.FS.createDirAll "/tmp/qed-test-dir-fail"
-  IO.FS.writeFile "/tmp/qed-test-dir-fail/fail.spec.json"
+  let dir ← freshTempDir "dir-fail"
+  IO.FS.writeFile (dir / "fail.spec.json")
     "{\"name\": \"fail\", \"criteria\": [{\"description\": \"fails\", \"verify\": {\"type\": \"command\", \"run\": \"false\"}}]}"
   -- Act
-  let (exitCode, _, _) ← runQed ["verify", "/tmp/qed-test-dir-fail"]
+  let (exitCode, _, _) ← runQed ["verify", dir.toString]
   -- Assert
   return exitCode == 1
 
 def testVerifyDirectoryFindsNestedSpecs : IO Bool := do
   -- Arrange: create a directory tree with specs at multiple levels
-  IO.FS.createDirAll "/tmp/qed-test-nested/sub/deep"
-  IO.FS.createDirAll "/tmp/qed-test-nested/.hidden"
-  IO.FS.writeFile "/tmp/qed-test-nested/root.spec.json"
+  let dir ← freshTempDir "nested"
+  IO.FS.createDirAll (dir / "sub" / "deep")
+  IO.FS.createDirAll (dir / ".hidden")
+  IO.FS.writeFile (dir / "root.spec.json")
     "{\"name\": \"root-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
-  IO.FS.writeFile "/tmp/qed-test-nested/sub/nested.spec.json"
+  IO.FS.writeFile (dir / "sub" / "nested.spec.json")
     "{\"name\": \"nested-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
-  IO.FS.writeFile "/tmp/qed-test-nested/sub/deep/deep.spec.toml"
+  IO.FS.writeFile (dir / "sub" / "deep" / "deep.spec.toml")
     "name = \"deep-spec\"\n\n[[criteria]]\ndescription = \"pass\"\n\n[criteria.verify]\ntype = \"command\"\nrun = \"true\"\n"
-  IO.FS.writeFile "/tmp/qed-test-nested/.hidden/hidden.spec.json"
+  IO.FS.writeFile (dir / ".hidden" / "hidden.spec.json")
     "{\"name\": \"hidden-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
   -- Act
-  let (exitCode, stdout, _) ← runQed ["verify", "/tmp/qed-test-nested"]
+  let (exitCode, stdout, _) ← runQed ["verify", dir.toString]
   -- Assert: finds root, nested, and deep specs; skips hidden directory
   return exitCode == 0 && stdout.contains "root-spec" && stdout.contains "nested-spec" &&
     stdout.contains "deep-spec" && !stdout.contains "hidden-spec"
