@@ -41,15 +41,15 @@ def parseVerifyType (json : Json) : Except String VerifyType := do
   match typeName with
   | "command" =>
     let run ← requireString json "run"
-    let timeout ← optionalNat json "timeout" 300
+    let timeout ← optionalNat json "timeout" defaultCommandTimeout
     .ok (.command run timeout)
   | "agent" =>
     let prompt ← requireString json "prompt"
-    let model := optionalString json "model" "claude-sonnet-4-6"
+    let model := optionalString json "model" defaultAgentModel
     .ok (.agent prompt model)
   | "property" =>
     let run ← requireString json "run"
-    let timeout ← optionalNat json "timeout" 600
+    let timeout ← optionalNat json "timeout" defaultPropertyTimeout
     .ok (.property run timeout)
   | "proof" =>
     let prover ← requireString json "prover"
@@ -83,7 +83,7 @@ def parseWorkerConfig (json : Json) : Except String WorkerConfig := do
     | .ok value => some value
     | .error _ => none
   let workdir := optionalString json "workdir" "."
-  let timeout ← optionalNat json "timeout" 3600
+  let timeout ← optionalNat json "timeout" defaultWorkerTimeout
   .ok { command, prompt, workdir, timeout }
 
 /-- Parse a Spec from a parsed JSON value. -/
@@ -101,12 +101,16 @@ def parseFromJson (json : Json) : Except String Spec := do
   let mode ← match json.getObjVal? "worker" with
     | .ok workerJson =>
       let worker ← parseWorkerConfig workerJson
-      let maxIterations ← optionalNat json "maxIterations" 10
-      let stuckThreshold ← optionalNat json "stuckThreshold" 3
+      let maxIterations ← optionalNat json "maxIterations" defaultMaxIterations
+      let stuckThreshold ← optionalNat json "stuckThreshold" defaultStuckThreshold
       .ok (SpecMode.workerLoop worker { maxIterations, stuckThreshold })
     | .error _ =>
-      -- Verify mode: must have at least one criterion
-      if criteria.isEmpty then
+      -- Verify mode: reject worker loop fields that don't apply
+      if (json.getObjVal? "maxIterations").isOk then
+        .error "'maxIterations' requires a [worker] section"
+      else if (json.getObjVal? "stuckThreshold").isOk then
+        .error "'stuckThreshold' requires a [worker] section"
+      else if criteria.isEmpty then
         .error "verify mode (no worker) requires at least one criterion"
       else
         .ok SpecMode.verify

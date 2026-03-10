@@ -67,9 +67,12 @@ Review Qed/WorkerLoop.lean. Verify:
 4. Shell quoting handles single quotes in prompts correctly
 5. The while loop correctly matches on workerRunning and verifying states
 6. Failure feedback includes criterion descriptions and verification output
-7. JSON output mode produces valid JSON with spec, state, passed, criteria
+7. JSON output uses Output.workerResultsToJson (shared serialization with
+   verify mode, extended with "state" field)
 8. Terminal state handling covers all cases (passed, stuck, maxIterations,
    escalated)
+9. Temp directory uses $TMPDIR with /tmp fallback (portable across platforms)
+10. Named constants used for stderr preview length (no magic numbers)
 
 Report any shell injection risks, state machine misuse, or missing cases.
 """

@@ -34,4 +34,22 @@ theorem resultsToJson_has_required_fields (specName : String)
   unfold resultsToJson
   exact ⟨_, _, _, rfl⟩
 
+-- 3. workerResultsToJson always contains required fields
+
+/-- The worker loop JSON output always contains "spec", "state", "passed", and
+"criteria" fields. This extends the verify-mode contract with the additional
+"state" field used by worker loop output. -/
+theorem workerResultsToJson_has_required_fields (specName : String)
+    (stateDescription : String)
+    (results : List (String × VerificationResult)) :
+    ∃ (specVal stateVal passedVal criteriaVal : Lean.Json),
+      workerResultsToJson specName stateDescription results = Lean.Json.mkObj [
+        ("spec", specVal),
+        ("state", stateVal),
+        ("passed", passedVal),
+        ("criteria", criteriaVal)
+      ] := by
+  unfold workerResultsToJson
+  exact ⟨_, _, _, _, rfl⟩
+
 end Qed.Proofs.OutputCorrectness

@@ -1,13 +1,31 @@
 namespace Qed
 
+/-- Default timeout for command verification (seconds). -/
+def defaultCommandTimeout : Nat := 300
+
+/-- Default timeout for property-based testing (seconds). -/
+def defaultPropertyTimeout : Nat := 600
+
+/-- Default timeout for the worker process (seconds). -/
+def defaultWorkerTimeout : Nat := 3600
+
+/-- Default model for agent verification. -/
+def defaultAgentModel : String := "claude-opus-4-6"
+
+/-- Default maximum iterations for the worker loop. -/
+def defaultMaxIterations : Nat := 10
+
+/-- Default consecutive failure threshold for stuck detection. -/
+def defaultStuckThreshold : Nat := 3
+
 /-- How a single acceptance criterion is verified. -/
 inductive VerifyType where
   /-- Run a shell command, check exit code. -/
-  | command (run : String) (timeout : Nat := 300)
+  | command (run : String) (timeout : Nat := defaultCommandTimeout)
   /-- Spawn an independent LLM agent to review the diff. -/
-  | agent (prompt : String) (model : String := "claude-sonnet-4-6")
+  | agent (prompt : String) (model : String := defaultAgentModel)
   /-- Run property-based tests. -/
-  | property (run : String) (timeout : Nat := 600)
+  | property (run : String) (timeout : Nat := defaultPropertyTimeout)
   /-- Run a formal proof checker. -/
   | proof (prover : String) (target : String)
   /-- Ask a human to verify. -/
@@ -46,13 +64,13 @@ structure WorkerConfig where
   command : String
   prompt : Option String := none
   workdir : String := "."
-  timeout : Nat := 3600
+  timeout : Nat := defaultWorkerTimeout
   deriving Repr, BEq
 
 /-- Configuration for the loop controller. -/
 structure LoopConfig where
-  maxIterations : Nat := 10
-  stuckThreshold : Nat := 3
+  maxIterations : Nat := defaultMaxIterations
+  stuckThreshold : Nat := defaultStuckThreshold
   deriving Repr, BEq
 
 /-- How the spec is executed. Worker loop mode iterates a worker against

@@ -45,7 +45,7 @@ def runVerify (path : String) (jsonOutput : Bool) : IO UInt32 := do
   match ← loadSpecSafe path with
   | .error message =>
     reportError message jsonOutput
-    return 1
+    return 2
   | .ok spec => verifySpec spec jsonOutput
 
 /-- Parse and validate a spec file, printing the parsed result. -/
@@ -53,7 +53,7 @@ def runParse (path : String) (jsonOutput : Bool) : IO UInt32 := do
   match ← loadSpecSafe path with
   | .error message =>
     reportError message jsonOutput
-    return 1
+    return 2
   | .ok spec =>
     if jsonOutput then
       let modeStr := match spec.mode with
@@ -84,6 +84,11 @@ def printHelp : IO Unit := do
   IO.println ""
   IO.println "Options:"
   IO.println "  --json                    Output results as JSON"
+  IO.println ""
+  IO.println "Exit codes:"
+  IO.println "  0  Success (all criteria passed)"
+  IO.println "  1  Verification failure (one or more criteria failed)"
+  IO.println "  2  Configuration or usage error (bad spec, missing file, unknown command)"
 
 /-- Extract --json flag and remaining args from the argument list. -/
 private def extractFlags (args : List String) : Bool × List String :=
@@ -106,7 +111,7 @@ def main (args : List String) : IO UInt32 := do
     match ← loadSpecSafe path with
     | .error message =>
       reportError message jsonOutput
-      return 1
+      return 2
     | .ok spec =>
       match spec.mode with
       | .verify => verifySpec spec jsonOutput
@@ -120,4 +125,4 @@ def main (args : List String) : IO UInt32 := do
   | _ =>
     IO.eprintln s!"error: unknown command '{String.intercalate " " cleanArgs}'"
     IO.eprintln s!"Run `qed help` for usage information."
-    return 1
+    return 2

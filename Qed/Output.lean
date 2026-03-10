@@ -48,4 +48,17 @@ def resultsToJson (specName : String) (results : List (String × VerificationRes
     ("criteria", Json.arr criteriaJson.toArray)
   ]
 
+/-- Serialize worker loop results with spec name, state description, and overall pass/fail.
+    Extends resultsToJson with a "state" field for worker loop context. -/
+def workerResultsToJson (specName : String) (stateDescription : String)
+    (results : List (String × VerificationResult)) : Json :=
+  let criteriaJson := results.map fun (description, result) =>
+    resultToJson description result
+  Json.mkObj [
+    ("spec", Json.str specName),
+    ("state", Json.str stateDescription),
+    ("passed", Json.bool (allPassed results)),
+    ("criteria", Json.arr criteriaJson.toArray)
+  ]
+
 end Qed.Output

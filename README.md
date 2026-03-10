@@ -50,13 +50,13 @@ qed run state-machine.spec.toml
 
 ## Verification spectrum
 
-| Type | Strategy | Guarantee |
-|------|----------|-----------|
-| `human` | Manual sign-off | Human judgment |
-| `agent` | Independent LLM review | Probabilistic |
-| `command` | Shell command, exit code | Deterministic |
-| `property` | Hypothesis / QuickCheck | Statistical |
-| `proof` | Lean 4 / Coq / Agda | Mathematical |
+| Type | Strategy | Guarantee | Status |
+|------|----------|-----------|--------|
+| `human` | Manual sign-off | Human judgment | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
+| `agent` | Independent LLM review | Probabilistic | ![planned](https://img.shields.io/badge/planned-yellow) |
+| `command` | Shell command, exit code | Deterministic | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
+| `property` | Hypothesis / QuickCheck | Statistical | ![planned](https://img.shields.io/badge/planned-yellow) |
+| `proof` | Lean 4 / Coq / Agda | Mathematical | ![planned](https://img.shields.io/badge/planned-yellow) |
 
 ## Proven properties
 
@@ -80,8 +80,9 @@ Formal proofs verified by Lean 4's kernel:
 - **Shell quoting** — shellQuote wraps input correctly in single quotes
 
 **Types, output, and parsing:**
+- **Result complete partition** — every result is exactly one variant; pass/fail predicates agree with the constructor
 - **Pass/fail decision correctness** — `allPassed` returns true iff no result is `.fail`
-- **JSON output contract** — output always contains "spec", "passed", "criteria" fields
+- **JSON output contract** — both verify and worker loop JSON contain their required fields
 - **CI schedule parser completeness** — accepts exactly "always", "trunk", "manual"
 - **TOML key integrity** — `setNested` rejects duplicate keys, `appendArray` creates correctly
 - **TOML→JSON pipeline** — successful conversion implies successful parse; parse errors propagate

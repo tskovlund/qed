@@ -32,9 +32,9 @@ The foundation. Everything compiles, tests pass, no incomplete proofs. If this f
 
 ### 2. State machine correctness (`state-machine.spec.toml`)
 
-Five top-level formal proofs verify the state machine's mathematical properties, organized by what they guarantee:
+Six top-level formal proofs verify the state machine's mathematical properties, organized by what they guarantee:
 
-- **Safety:** terminal states are absorbing, no skipped verification
+- **Safety:** terminal states are absorbing, no skipped verification, iteration count bounded by maxIterations
 - **Liveness:** the loop terminates within maxIterations
 - **Correctness:** stuck detection fires iff repeated failures reach the threshold, ready state is never revisited
 
@@ -42,7 +42,7 @@ Building-block lemmas (fuel measures, monotonicity, phase tracking, determinism)
 
 ### 3. Verify mode correctness (`verify-mode.spec.toml`)
 
-Two formal proofs verify the type-level separation between modes: verify mode cannot carry a WorkerConfig or LoopConfig, and is independent of the state machine. Building-block proofs (isTerminal decidability, isPassed/isFailed mutual exclusivity) live in the proof files but are not spec criteria. Structural assertions check the schema and documentation.
+Two formal proofs verify the type-level separation between modes: verify mode cannot carry a WorkerConfig or LoopConfig, and is independent of the state machine. Building-block proofs (isTerminal decidability) live in the proof files but are not spec criteria. Structural assertions check the schema and documentation.
 
 ### 4. Parser correctness (`parser.spec.toml`)
 
@@ -54,7 +54,7 @@ Five formal proofs verify the worker loop execution engine: the loop drives the 
 
 ### 6. CLI and output correctness (`cli.spec.toml`)
 
-One formal proof verifies output correctness: the pass/fail decision is correct (allPassed iff no failures). The JSON structure proof lives in the proof file but is not a spec criterion. An agent review verifies CLI dispatch logic.
+Two formal proofs verify output correctness: the result complete partition (every result is exactly one variant, predicates agree) and the pass/fail decision (allPassed iff no failures). Building-block proofs (JSON structure contract for both verify and worker loop modes) live in the proof file but are not spec criteria. An agent review verifies CLI dispatch logic.
 
 ### 7. Verifier correctness (`verifier.spec.toml`)
 

@@ -124,12 +124,61 @@ The architecture follows a strict separation:
 
 | Layer | IO? | What lives here |
 |-------|-----|-----------------|
-| **Pure core** | No | Types, StateMachine, Parser, TomlParser, TomlConverter, Output, Proofs |
+| **Pure core** | No | Types, StateMachine, Parser, TomlParser, TomlConverter, Output, Serializer, Proofs |
 | **IO shell** | Yes | WorkerLoop, Verifier, SpecLoader, CLI |
 
 The pure core is where all proofs live. It has no side effects, no process spawning, no file access. The IO shell wraps the pure core with real-world effects — parsing files, running commands, reporting results.
 
 This separation means proofs about the state machine are proofs about the actual system behavior, not about a model of it.
+
+## Configuration
+
+All meaningful parameters are configurable at the spec level — defaults are sensible but overridable:
+
+| Parameter | Default | Where set |
+|-----------|---------|-----------|
+| `maxIterations` | 10 | Spec file (worker loop) |
+| `stuckThreshold` | 3 | Spec file (worker loop) |
+| `timeout` (worker) | 3600s | Spec file (`[worker]`) |
+| `timeout` (command) | 300s | Spec file (`[[criteria]]`) |
+| `timeout` (property) | 600s | Spec file (`[[criteria]]`) |
+| `model` (agent) | `claude-opus-4-6` | Spec file (`[[criteria]]`) |
+| `workdir` | `.` | Spec file (`[worker]`) |
+
+Environment variables consumed by qed:
+
+| Variable | Purpose |
+|----------|---------|
+| `TMPDIR` | Temp directory for failure files (falls back to `/tmp`) |
+
+Environment variables set by qed for workers:
+
+| Variable | Purpose |
+|----------|---------|
+| `QED_PROMPT` | Full prompt with failure feedback (Tier 1 only) |
+| `QED_ITERATION` | Current iteration number |
+| `QED_FAILURES_FILE` | Path to JSON file with failure details |
+
+CLI flags:
+
+| Flag | Purpose |
+|------|---------|
+| `--json` | Machine-readable JSON output (position-independent) |
+
+Exit codes:
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success — all criteria passed |
+| 1 | Verification failure — one or more criteria failed |
+| 2 | Configuration or usage error — bad spec, missing file, unknown command |
+
+Named constants in the IO shell (not configurable — reasonable defaults):
+
+| Constant | Value | Location |
+|----------|-------|----------|
+| `maxOutputLength` | 2000 chars | `Verifier.lean` — output truncation (keeps tail) |
+| `stderrPreviewLength` | 200 chars | `WorkerLoop.lean` — stderr preview in terminal |
 
 ## Spec format
 
