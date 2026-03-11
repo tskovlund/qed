@@ -22,6 +22,15 @@ qed help                  Show this help
 | `--ci`    | CI mode — excludes `manual` and `local` criteria (auto-detected when `CI=true`) |
 | `--pin`   | Require spec files to match their git-committed version (position-independent)  |
 
+## Recommended usage
+
+| Context        | Command                    | Why                                                       |
+| -------------- | -------------------------- | --------------------------------------------------------- |
+| CI             | `qed verify --pin`         | CI mode is auto-detected; `--pin` ensures committed specs |
+| Pre-push hooks | `qed verify --local --pin` | Excludes manual criteria; pins to committed version       |
+| Local dev      | `qed verify`               | No flags needed — runs everything                         |
+| Worker loop    | `qed run spec.toml --pin`  | Pin recommended for automated runs                        |
+
 ## Exit codes
 
 | Code | Meaning                                                                                        |

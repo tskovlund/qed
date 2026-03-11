@@ -6,16 +6,18 @@ Run `qed verify` in your CI pipeline to check all specs on every push.
 
 ```yaml
 - name: Verify specs
-  run: qed verify --ci
+  run: qed verify --pin
 ```
 
-The `--ci` flag excludes criteria with `schedule = "manual"` or `schedule = "local"` — only `always` criteria run. This recursively finds all `.spec.json` and `.spec.toml` files in the repository and verifies them. qed exits with code 0 if all criteria pass, 1 if any fail, and 2 on configuration errors.
+CI mode is auto-detected — when the `CI` environment variable is set to `true` (which GitHub Actions, GitLab CI, and most CI providers do automatically), qed excludes `manual` and `local` criteria without needing an explicit `--ci` flag. The `--pin` flag ensures each spec matches its git-committed version — results from locally modified specs are rejected.
+
+qed recursively finds all `.spec.json` and `.spec.toml` files in the repository and verifies them. It exits with code 0 if all criteria pass, 1 if any fail, and 2 on configuration errors.
 
 For JSON output (useful for downstream parsing):
 
 ```yaml
 - name: Verify specs
-  run: qed verify --json
+  run: qed verify --pin --json
 ```
 
 ## Controlling what runs in CI
@@ -99,6 +101,7 @@ No flags means no filtering — all criteria run regardless of schedule.
 
 **Recommended practices:**
 
+- **Use `--pin` in CI** to ensure specs match their committed version. Without it, a modified-but-uncommitted spec could pass verification against the wrong definition.
 - **Before merging structural PRs**, run `qed verify` without flags to validate agent and human criteria. Add this as a PR checklist item.
 - **For agent criteria in CI**, consider a scheduled workflow (e.g. nightly or weekly) that runs `qed verify` without flags. This catches drift between scheduled runs. Ensure the agent binary and any API keys are available as CI secrets.
 - **Override the default** if a human or agent criterion should run more frequently. Set `schedule = "always"` or `schedule = "local"` explicitly to include it in CI or pre-push hooks.
