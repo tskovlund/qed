@@ -81,7 +81,7 @@ def spawnWorker (worker : WorkerConfig)
        worker.command.getD "true")
   let shellCommand := Shell.buildShellCommand envVars command
   let workdir := if worker.workdir == "." then none else some worker.workdir
-  Shell.runShellCommand shellCommand workdir
+  Shell.runShellCommandWithTimeout shellCommand worker.timeout workdir
 
 /-- Run the worker loop: spawn worker, verify, feed failures back, repeat.
     Handles interruption (SIGINT) gracefully — Lean's runtime converts the
@@ -111,7 +111,9 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
           IO.println "  Running worker..."
         let (exitCode, stdout, stderr) ← spawnWorker worker lastFailures iteration
         if !jsonOutput then
-          if exitCode != 0 then
+          if exitCode == 124 then
+            IO.println s!"  {Output.ansiRed}Worker timed out after {worker.timeout}s{Output.ansiReset}"
+          else if exitCode != 0 then
             IO.println s!"  Worker exited with code {exitCode}"
           else
             IO.println s!"  Worker completed (stdout: {stdout.length} chars)"

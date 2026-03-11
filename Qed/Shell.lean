@@ -37,4 +37,55 @@ def runShellCommand (command : String) (workdir : Option String := none)
   catch error =>
     return ((1 : UInt32), "", s!"process error: {error}")
 
+/-- Polling interval for process timeout checks (milliseconds). -/
+private def pollIntervalMs : UInt32 := 100
+
+/-- Run a shell command with a timeout (in seconds). Returns (exitCode, stdout, stderr).
+    If the process exceeds the timeout, it is killed and a timeout exit code (124,
+    matching GNU coreutils `timeout` convention) is returned.
+    Uses `setsid := true` on Unix to kill the entire process group. -/
+def runShellCommandWithTimeout (command : String) (timeoutSeconds : Nat)
+    (workdir : Option String := none) : IO (UInt32 × String × String) := do
+  let (cmd, flag) := shellCmd
+  try
+    let child ← IO.Process.spawn {
+      cmd := cmd
+      args := #[flag, command]
+      cwd := workdir
+      stdout := .piped
+      stderr := .piped
+      stdin := .null
+      setsid := !System.Platform.isWindows
+    }
+    let stdoutTask ← IO.asTask child.stdout.readToEnd Task.Priority.dedicated
+    let stderrTask ← IO.asTask child.stderr.readToEnd Task.Priority.dedicated
+    let budgetMs := timeoutSeconds * 1000
+    let mut elapsed : Nat := 0
+    let mut result : Option UInt32 := none
+    while elapsed < budgetMs do
+      match ← child.tryWait with
+      | some exitCode =>
+        result := some exitCode
+        break
+      | none =>
+        IO.sleep pollIntervalMs
+        elapsed := elapsed + pollIntervalMs.toNat
+    match result with
+    | some exitCode =>
+      let stdout ← IO.ofExcept stdoutTask.get
+      let stderr ← IO.ofExcept stderrTask.get
+      return (exitCode, stdout, stderr)
+    | none =>
+      -- Timeout: kill the process and collect partial output
+      child.kill
+      let _ ← child.wait
+      let stdout ← IO.ofExcept stdoutTask.get
+      let stderr ← IO.ofExcept stderrTask.get
+      let timeoutMsg := s!"timed out after {timeoutSeconds}s"
+      let stderrWithTimeout := if stderr.isEmpty then timeoutMsg
+        else stderr ++ "\n" ++ timeoutMsg
+      return ((124 : UInt32), stdout, stderrWithTimeout)
+  catch error =>
+    return ((1 : UInt32), "", s!"process error: {error}")
+
 end Qed.Shell

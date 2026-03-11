@@ -224,6 +224,15 @@ def testVerifyHandlesNonUtf8Output : IO Bool := do
   -- Assert — should not crash; either pass (if shell handles it) or fail gracefully
   return exitCode == 0 || (exitCode == 1 && stdout.length > 0)
 
+def testVerifyCommandTimeoutEndToEnd : IO Bool := do
+  -- Arrange: command sleeps for 10s, timeout is 1s
+  let specContent := "{\"name\": \"timeout-test\", \"criteria\": [{\"description\": \"slow\", \"verify\": {\"type\": \"command\", \"run\": \"sleep 10\", \"timeout\": 1}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act: use --json to see failure details
+  let (exitCode, stdout, _) ← runQed ["verify", "--json", specPath.toString]
+  -- Assert: should fail (exit 1) with timeout in JSON details
+  return exitCode == 1 && stdout.contains "timed out"
+
 def cliTests : List (String × IO Bool) := [
   ("testVersionPrintsVersionString", testVersionPrintsVersionString),
   ("testHelpPrintsUsageInfo", testHelpPrintsUsageInfo),
@@ -244,5 +253,6 @@ def cliTests : List (String × IO Bool) := [
   ("testVerifyDirectoryRunsAllSpecs", testVerifyDirectoryRunsAllSpecs),
   ("testVerifyDirectoryFailsOnBadSpec", testVerifyDirectoryFailsOnBadSpec),
   ("testVerifyDirectoryFindsNestedSpecs", testVerifyDirectoryFindsNestedSpecs),
-  ("testVerifyHandlesNonUtf8Output", testVerifyHandlesNonUtf8Output)
+  ("testVerifyHandlesNonUtf8Output", testVerifyHandlesNonUtf8Output),
+  ("testVerifyCommandTimeoutEndToEnd", testVerifyCommandTimeoutEndToEnd)
 ]
