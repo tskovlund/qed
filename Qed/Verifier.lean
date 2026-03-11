@@ -155,10 +155,10 @@ def targetToModule (target : String) : Option String :=
 def moduleToPath (module : String) : String :=
   module.replace "." "/" ++ ".lean"
 
-/-- Whether a string is a valid Lean module name (dot-separated identifiers,
-    each starting with a letter/underscore and containing only alphanumeric
-    characters, underscores, and single quotes). Prevents shell injection
-    when the module name is passed to `lake build`. -/
+/-- Whether a string is a valid Lean module name (dot-separated non-empty
+    segments containing only alphanumeric characters, underscores, and single
+    quotes). Prevents shell injection when the module name is passed to
+    `lake build`. -/
 def isValidModuleName (name : String) : Bool :=
   let parts := name.splitOn "."
   parts.length > 0 && parts.all fun part =>
