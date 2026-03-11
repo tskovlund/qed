@@ -72,7 +72,6 @@ Report any unreachable code paths, missing error handling, or UX issues.
 
 [[criteria]]
 description = "CLI output is clear, scannable, and provides actionable feedback on failures"
-schedule = "manual"
 
 [criteria.verify]
 type = "human"
