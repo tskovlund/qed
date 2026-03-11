@@ -80,7 +80,7 @@ def testTomlMultiLineStringPreservesContent : IO Bool := do
       match spec.criteria.head? with
       | some criterion =>
         return match criterion.verify with
-          | .agent prompt _ => prompt.contains "Correctness" && prompt.contains "Style"
+          | .agent prompt _ _ _ => prompt.contains "Correctness" && prompt.contains "Style"
           | _ => false
       | none => return false
 

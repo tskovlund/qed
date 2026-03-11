@@ -96,6 +96,12 @@
                   "command": {
                     "type": "string",
                     "description": "Shell command to invoke the agent. Receives prompt via $QED_VERIFIER_PROMPT. Defaults to Claude CLI."
+                  },
+                  "timeout": {
+                    "type": "integer",
+                    "default": 600,
+                    "minimum": 1,
+                    "description": "Timeout in seconds."
                   }
                 }
               },

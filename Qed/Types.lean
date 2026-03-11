@@ -6,6 +6,9 @@ def defaultCommandTimeout : Nat := 300
 /-- Default timeout for property-based testing (seconds). -/
 def defaultPropertyTimeout : Nat := 600
 
+/-- Default timeout for agent verification (seconds). -/
+def defaultAgentTimeout : Nat := 600
+
 /-- Default timeout for the worker process (seconds). -/
 def defaultWorkerTimeout : Nat := 3600
 
@@ -25,7 +28,7 @@ inductive VerifyType where
   /-- Spawn an independent LLM agent to review the criterion.
       `command` is a shell command that receives the prompt via `$QED_VERIFIER_PROMPT`.
       Defaults to Claude CLI. -/
-  | agent (prompt : String) (model : String := defaultAgentModel) (command : Option String := none)
+  | agent (prompt : String) (model : String := defaultAgentModel) (command : Option String := none) (timeout : Nat := defaultAgentTimeout)
   /-- Run property-based tests. -/
   | property (run : String) (timeout : Nat := defaultPropertyTimeout)
   /-- Run a formal proof checker. -/
@@ -58,7 +61,7 @@ structure AcceptanceCriterion where
       everything else defaults to `always`. -/
   schedule : Schedule := match verify with
     | .human _ => .manual
-    | .agent _ _ _ => .heavy
+    | .agent _ _ _ _ => .heavy
     | _ => .always
   /-- When set, the criterion is intentionally skipped with the given reason.
       Skipped criteria show `[SKIP]` in output and do not affect pass/fail. -/

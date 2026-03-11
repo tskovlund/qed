@@ -49,7 +49,8 @@ def parseVerifyType (json : Json) : Except String VerifyType := do
     let command := match json.getObjVal? "command" with
       | .ok (Json.str s) => some s
       | _ => none
-    .ok (.agent prompt model command)
+    let timeout ← optionalNat json "timeout" defaultAgentTimeout
+    .ok (.agent prompt model command timeout)
   | "property" =>
     let run ← requireString json "run"
     let timeout ← optionalNat json "timeout" defaultPropertyTimeout
@@ -73,10 +74,10 @@ def parseCriterion (json : Json) : Except String AcceptanceCriterion := do
   let schedule ← match json.getObjValAs? String "schedule" with
     | .ok value => parseSchedule value
     | .error _ =>
-      -- Default: manual for human and agent, always for everything else
+      -- Default: manual for human, heavy for agent, always for everything else
       .ok (match verify with
         | .human _ => .manual
-        | .agent _ _ _ => .manual
+        | .agent _ _ _ _ => .heavy
         | _ => .always)
   let skip := match json.getObjValAs? String "skip" with
     | .ok value => some value

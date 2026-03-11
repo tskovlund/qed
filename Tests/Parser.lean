@@ -83,7 +83,7 @@ def testParseJsonExtractsAgentReviewFields : IO Bool := do
     match spec.criteria.head? with
     | some criterion =>
       return match criterion.verify with
-        | .agent prompt model => prompt == "check it" && model == "claude-opus-4-6"
+        | .agent prompt model _ _ => prompt == "check it" && model == "claude-opus-4-6"
         | _ => false
     | none => return false
   | .error _ => return false
@@ -99,7 +99,7 @@ def testParseJsonExtractsAgentCustomCommand : IO Bool := do
     match spec.criteria.head? with
     | some criterion =>
       return match criterion.verify with
-        | .agent prompt _ command => prompt == "check it" && command == some "ollama run llama3"
+        | .agent prompt _ command _ => prompt == "check it" && command == some "ollama run llama3"
         | _ => false
     | none => return false
   | .error _ => return false
@@ -115,7 +115,7 @@ def testParseJsonDefaultsAgentCommandToNone : IO Bool := do
     match spec.criteria.head? with
     | some criterion =>
       return match criterion.verify with
-        | .agent _ _ command => command == none
+        | .agent _ _ command _ => command == none
         | _ => false
     | none => return false
   | .error _ => return false
@@ -131,8 +131,53 @@ def testParseJsonDefaultsAgentReviewModelToSonnet : IO Bool := do
     match spec.criteria.head? with
     | some criterion =>
       return match criterion.verify with
-        | .agent _ model => model == Qed.defaultAgentModel
+        | .agent _ model _ _ => model == Qed.defaultAgentModel
         | _ => false
+    | none => return false
+  | .error _ => return false
+
+def testParseJsonDefaultsAgentTimeoutTo600 : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    match spec.criteria.head? with
+    | some criterion =>
+      return match criterion.verify with
+        | .agent _ _ _ timeout => timeout == Qed.defaultAgentTimeout
+        | _ => false
+    | none => return false
+  | .error _ => return false
+
+def testParseJsonAppliesCustomAgentTimeout : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check\", \"timeout\": 120}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    match spec.criteria.head? with
+    | some criterion =>
+      return match criterion.verify with
+        | .agent _ _ _ timeout => timeout == 120
+        | _ => false
+    | none => return false
+  | .error _ => return false
+
+def testParseJsonDefaultsAgentScheduleToHeavy : IO Bool := do
+  -- Arrange
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check\"}}]}"
+  -- Act
+  let result := Parser.parseJson json
+  -- Assert
+  match result with
+  | .ok spec =>
+    match spec.criteria.head? with
+    | some criterion => return criterion.schedule == .heavy
     | none => return false
   | .error _ => return false
 
@@ -222,7 +267,7 @@ def testParseJsonPreservesMultipleCriteria : IO Bool := do
     let types := spec.criteria.map fun c => match c.verify with
       | .command _ _ => "command"
       | .proof _ _ => "proof"
-      | .agent _ _ => "agent"
+      | .agent _ _ _ _ => "agent"
       | _ => "other"
     return types == ["command", "proof", "agent"]
   | .error e =>
@@ -464,6 +509,9 @@ def parserTests : List (String × IO Bool) := [
   ("testParseJsonExtractsAgentCustomCommand", testParseJsonExtractsAgentCustomCommand),
   ("testParseJsonDefaultsAgentCommandToNone", testParseJsonDefaultsAgentCommandToNone),
   ("testParseJsonDefaultsAgentReviewModelToSonnet", testParseJsonDefaultsAgentReviewModelToSonnet),
+  ("testParseJsonDefaultsAgentTimeoutTo600", testParseJsonDefaultsAgentTimeoutTo600),
+  ("testParseJsonAppliesCustomAgentTimeout", testParseJsonAppliesCustomAgentTimeout),
+  ("testParseJsonDefaultsAgentScheduleToHeavy", testParseJsonDefaultsAgentScheduleToHeavy),
   ("testParseJsonExtractsProofFields", testParseJsonExtractsProofFields),
   ("testParseJsonExtractsPropertyFieldsWithDefault", testParseJsonExtractsPropertyFieldsWithDefault),
   ("testParseJsonExtractsHumanInstruction", testParseJsonExtractsHumanInstruction),
