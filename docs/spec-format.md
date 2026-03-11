@@ -96,7 +96,7 @@ Verify a formal proof target.
 
 ### `human`
 
-Ask a human to verify. Requires interactive stdin (schedule defaults to 'local').
+Ask a human to verify. Requires interactive stdin (schedule defaults to 'manual').
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
