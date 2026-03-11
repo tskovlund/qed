@@ -264,28 +264,28 @@ def testIsValidModuleNameRejectsDoubleDot : IO Bool := do
   -- Arrange / Act / Assert
   return !isValidModuleName "Qed..Proofs"
 
-def testContainsPlaceholderDetectsStandalone : IO Bool := do
+def testContainsSorryDetectsStandalone : IO Bool := do
   -- Arrange / Act / Assert
   return containsSorry "theorem foo : True := sorry"
 
-def testContainsPlaceholderIgnoresInsideIdentifier : IO Bool := do
+def testContainsSorryIgnoresInsideIdentifier : IO Bool := do
   -- Arrange / Act / Assert
   return !containsSorry "def sorryHandler := 42"
 
-def testContainsPlaceholderDetectsInStringLiteral : IO Bool := do
+def testContainsSorryDetectsInStringLiteral : IO Bool := do
   -- Arrange / Act / Assert
   -- Word boundary check flags this — acceptable false positive for proof files
   return containsSorry "let msg := \"no sorry here\""
 
-def testContainsPlaceholderDetectsAtStartOfFile : IO Bool := do
+def testContainsSorryDetectsAtStartOfFile : IO Bool := do
   -- Arrange / Act / Assert
   return containsSorry "sorry\ntheorem foo : True := by trivial"
 
-def testContainsPlaceholderDetectsAtEndOfFile : IO Bool := do
+def testContainsSorryDetectsAtEndOfFile : IO Bool := do
   -- Arrange / Act / Assert
   return containsSorry "theorem foo : True := sorry"
 
-def testContainsPlaceholderCleanFile : IO Bool := do
+def testContainsSorryCleanFile : IO Bool := do
   -- Arrange / Act / Assert
   return !containsSorry "theorem foo : True := by trivial\ndef bar := 42"
 
@@ -319,10 +319,10 @@ def verifierTests : List (String × IO Bool) := [
   ("testIsValidModuleNameRejectsShellInjection", testIsValidModuleNameRejectsShellInjection),
   ("testIsValidModuleNameRejectsEmpty", testIsValidModuleNameRejectsEmpty),
   ("testIsValidModuleNameRejectsDoubleDot", testIsValidModuleNameRejectsDoubleDot),
-  ("testContainsPlaceholderDetectsStandalone", testContainsPlaceholderDetectsStandalone),
-  ("testContainsPlaceholderIgnoresInsideIdentifier", testContainsPlaceholderIgnoresInsideIdentifier),
-  ("testContainsPlaceholderDetectsInStringLiteral", testContainsPlaceholderDetectsInStringLiteral),
-  ("testContainsPlaceholderDetectsAtStartOfFile", testContainsPlaceholderDetectsAtStartOfFile),
-  ("testContainsPlaceholderDetectsAtEndOfFile", testContainsPlaceholderDetectsAtEndOfFile),
-  ("testContainsPlaceholderCleanFile", testContainsPlaceholderCleanFile)
+  ("testContainsSorryDetectsStandalone", testContainsSorryDetectsStandalone),
+  ("testContainsSorryIgnoresInsideIdentifier", testContainsSorryIgnoresInsideIdentifier),
+  ("testContainsSorryDetectsInStringLiteral", testContainsSorryDetectsInStringLiteral),
+  ("testContainsSorryDetectsAtStartOfFile", testContainsSorryDetectsAtStartOfFile),
+  ("testContainsSorryDetectsAtEndOfFile", testContainsSorryDetectsAtEndOfFile),
+  ("testContainsSorryCleanFile", testContainsSorryCleanFile)
 ]
