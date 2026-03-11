@@ -48,7 +48,7 @@ Or directly (inside devbox shell / after direnv allow):
 ```bash
 lake build            # build — also type-checks all proofs
 lake test             # run the test suite
-qed                   # run the binary (alias defined by devbox init_hook)
+qed                   # run the binary (.lake/build/bin on PATH via .envrc)
 ```
 
 ## Code style

@@ -137,7 +137,7 @@ Or directly (inside devbox shell / after direnv allow):
 ```bash
 lake build            # build the qed binary
 lake test             # run tests
-qed                   # run the binary (alias defined by devbox init_hook)
+qed                   # run the binary (.lake/build/bin on PATH via .envrc)
 ```
 
 ## Proven properties

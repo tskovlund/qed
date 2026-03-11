@@ -1,10 +1,7 @@
 {
   "packages": ["elan@latest", "nodejs@22"],
   "shell": {
-    "init_hook": [
-      "git config core.hooksPath .githooks",
-      "qed() { if [ -x .lake/build/bin/qed ]; then .lake/build/bin/qed \"$@\"; else echo 'qed not built. Run: devbox run build' >&2; return 1; fi; }"
-    ],
+    "init_hook": ["git config core.hooksPath .githooks"],
     "scripts": {
       "build": "lake build",
       "test": "lake test",
