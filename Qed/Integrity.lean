@@ -31,8 +31,9 @@ def hashFile (path : System.FilePath) : IO String := do
     Writes to a temp file to avoid TOCTOU races (hash the bytes we actually parsed). -/
 def hashContents (contents : String) : IO String := do
   let timestamp ← IO.monoMsNow
+  let pid ← IO.Process.getPID
   let tmpDir := (← IO.getEnv "TMPDIR").getD "/tmp"
-  let tmpPath : System.FilePath := s!"{tmpDir}/qed-hash-{timestamp}"
+  let tmpPath : System.FilePath := s!"{tmpDir}/qed-hash-{pid}-{timestamp}"
   IO.FS.writeFile tmpPath contents
   try
     let hash ← hashFile tmpPath
