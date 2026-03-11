@@ -28,7 +28,20 @@ def colorStatusIndicator : VerificationResult → String
   | .needsHuman _ => s!"{ansiCyan}NEEDS-HUMAN{ansiReset}"
   | .skipped _ => s!"{ansiYellow}SKIP{ansiReset}"
 
-/-- Word-wrap text to fit within `width` characters. Splits on word boundaries only. -/
+/-- Compute the visible length of a string, ignoring ANSI escape sequences. -/
+private partial def visibleLength (s : String) : Nat :=
+  go s.toList 0 false
+where
+  go : List Char → Nat → Bool → Nat
+    | [], count, _ => count
+    | '\x1b' :: rest, count, _ => go rest count true
+    | 'm' :: rest, count, true => go rest count false
+    | _ :: rest, count, true => go rest count true
+    | _ :: rest, count, false => go rest (count + 1) false
+
+/-- Word-wrap text to fit within `width` visible characters.
+    Splits on word boundaries only. Ignores ANSI escape sequences when
+    measuring line length. -/
 def wordWrap (text : String) (width : Nat) : List String :=
   if width < 20 then [text]
   else
@@ -37,20 +50,29 @@ def wordWrap (text : String) (width : Nat) : List String :=
     | [] => []
     | first :: rest =>
       let (revLines, lastLine) := rest.foldl (init := ([], first)) fun (revLines, current) word =>
-        if current.length + 1 + word.length > width then
+        if visibleLength current + 1 + visibleLength word > width then
           (current :: revLines, word)
         else
           (revLines, current ++ " " ++ word)
       (lastLine :: revLines).reverse
 
-/-- Get the terminal width, defaulting to 80 if detection fails. -/
+/-- Get the terminal width. Tries `stty size` via `/dev/tty` (works even when
+    stdout is piped), falls back to `$COLUMNS`, then defaults to 80. -/
 def getTerminalWidth : IO Nat := do
-  try
-    let result ← IO.Process.output { cmd := "tput", args := #["cols"] }
-    match result.stdout.trimAscii.toString.toNat? with
-    | some w => return w
-    | none => return 80
-  catch _ => return 80
+  let width ← try
+    let result ← IO.Process.output {
+      cmd := "sh"
+      args := #["-c", "stty size </dev/tty 2>/dev/null"]
+    }
+    let parts := result.stdout.trimAscii.toString.splitOn " "
+    match parts with
+    | [_, cols] => pure (cols.toNat?.getD 0)
+    | _ => pure 0
+  catch _ => pure 0
+  if width > 0 then return width
+  match ← IO.getEnv "COLUMNS" with
+  | some val => return val.toNat?.getD 80
+  | none => return 80
 
 /-- Print a line with word-wrapping. The first line starts with `firstPrefix`,
     continuation lines are indented to `continuationIndent` spaces to align
