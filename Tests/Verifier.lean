@@ -222,72 +222,9 @@ def testVerifyCommandTimeoutCapturesPartialOutput : IO Bool := do
   | .fail details => return details.contains "timed out" && details.contains "partial-output-before-timeout"
   | _ => return false
 
--- Pure function tests
-
-def testTargetToModuleExtractsModule : IO Bool := do
-  -- Arrange / Act / Assert
-  return targetToModule "Qed.Proofs.Termination.loop_terminates" == some "Qed.Proofs.Termination"
-
-def testTargetToModuleSingleDot : IO Bool := do
-  -- Arrange / Act / Assert
-  return targetToModule "Module.theorem" == some "Module"
-
-def testTargetToModuleRejectsNoDot : IO Bool := do
-  -- Arrange / Act / Assert
-  return targetToModule "nodot" == none
-
-def testTargetToModuleRejectsEmpty : IO Bool := do
-  -- Arrange / Act / Assert
-  return targetToModule "" == none
-
-def testModuleToPathConverts : IO Bool := do
-  -- Arrange / Act / Assert
-  return moduleToPath "Qed.Proofs.Termination" == "Qed/Proofs/Termination.lean"
-
-def testModuleToPathSingleSegment : IO Bool := do
-  -- Arrange / Act / Assert
-  return moduleToPath "Main" == "Main.lean"
-
-def testIsValidModuleNameAcceptsValid : IO Bool := do
-  -- Arrange / Act / Assert
-  return isValidModuleName "Qed.Proofs.Termination"
-
-def testIsValidModuleNameRejectsShellInjection : IO Bool := do
-  -- Arrange / Act / Assert
-  return !isValidModuleName "Qed; rm -rf /"
-
-def testIsValidModuleNameRejectsEmpty : IO Bool := do
-  -- Arrange / Act / Assert
-  return !isValidModuleName ""
-
-def testIsValidModuleNameRejectsDoubleDot : IO Bool := do
-  -- Arrange / Act / Assert
-  return !isValidModuleName "Qed..Proofs"
-
-def testContainsSorryDetectsStandalone : IO Bool := do
-  -- Arrange / Act / Assert
-  return containsSorry "theorem foo : True := sorry"
-
-def testContainsSorryIgnoresInsideIdentifier : IO Bool := do
-  -- Arrange / Act / Assert
-  return !containsSorry "def sorryHandler := 42"
-
-def testContainsSorryDetectsInStringLiteral : IO Bool := do
-  -- Arrange / Act / Assert
-  -- Word boundary check flags this — acceptable false positive for proof files
-  return containsSorry "let msg := \"no sorry here\""
-
-def testContainsSorryDetectsAtStartOfFile : IO Bool := do
-  -- Arrange / Act / Assert
-  return containsSorry "sorry\ntheorem foo : True := by trivial"
-
-def testContainsSorryDetectsAtEndOfFile : IO Bool := do
-  -- Arrange / Act / Assert
-  return containsSorry "theorem foo : True := sorry"
-
-def testContainsSorryCleanFile : IO Bool := do
-  -- Arrange / Act / Assert
-  return !containsSorry "theorem foo : True := by trivial\ndef bar := 42"
+-- Pure function tests for targetToModule, moduleToPath, isValidModuleName,
+-- and containsSorry have been replaced by universal proofs in
+-- Qed/Proofs/VerifierProperties.lean (strictly stronger: ∀ inputs, not examples).
 
 def verifierTests : List (String × IO Bool) := [
   ("testVerifyCommandReturnsPassOnExitZero", testVerifyCommandReturnsPassOnExitZero),
@@ -309,20 +246,4 @@ def verifierTests : List (String × IO Bool) := [
   ("testVerifyCommandTimesOutSlowProcess", testVerifyCommandTimesOutSlowProcess),
   ("testVerifyCommandCompletesBeforeTimeout", testVerifyCommandCompletesBeforeTimeout),
   ("testVerifyCommandTimeoutCapturesPartialOutput", testVerifyCommandTimeoutCapturesPartialOutput),
-  ("testTargetToModuleExtractsModule", testTargetToModuleExtractsModule),
-  ("testTargetToModuleSingleDot", testTargetToModuleSingleDot),
-  ("testTargetToModuleRejectsNoDot", testTargetToModuleRejectsNoDot),
-  ("testTargetToModuleRejectsEmpty", testTargetToModuleRejectsEmpty),
-  ("testModuleToPathConverts", testModuleToPathConverts),
-  ("testModuleToPathSingleSegment", testModuleToPathSingleSegment),
-  ("testIsValidModuleNameAcceptsValid", testIsValidModuleNameAcceptsValid),
-  ("testIsValidModuleNameRejectsShellInjection", testIsValidModuleNameRejectsShellInjection),
-  ("testIsValidModuleNameRejectsEmpty", testIsValidModuleNameRejectsEmpty),
-  ("testIsValidModuleNameRejectsDoubleDot", testIsValidModuleNameRejectsDoubleDot),
-  ("testContainsSorryDetectsStandalone", testContainsSorryDetectsStandalone),
-  ("testContainsSorryIgnoresInsideIdentifier", testContainsSorryIgnoresInsideIdentifier),
-  ("testContainsSorryDetectsInStringLiteral", testContainsSorryDetectsInStringLiteral),
-  ("testContainsSorryDetectsAtStartOfFile", testContainsSorryDetectsAtStartOfFile),
-  ("testContainsSorryDetectsAtEndOfFile", testContainsSorryDetectsAtEndOfFile),
-  ("testContainsSorryCleanFile", testContainsSorryCleanFile)
 ]

@@ -6,10 +6,24 @@ namespace Qed.Proofs.TypeProperties
 
 open Qed
 
--- 1. isTerminal decidability
+-- 1. isTerminal characterization
+
+/-- isTerminal returns true if and only if the state is one of the five
+terminal states: passed, stuck, maxIterationsReached, escalated, or
+integrityViolation. Non-terminal states (ready, workerRunning, verifying)
+return false. This subsumes decidability and characterizes exactly which
+states are terminal. -/
+theorem isTerminal_iff (state : LoopState) :
+    state.isTerminal = true ↔
+    (∃ n, state = .passed n) ∨
+    (∃ n fs, state = .stuck n fs) ∨
+    (∃ n, state = .maxIterationsReached n) ∨
+    (∃ n, state = .escalated n) ∨
+    (∃ n, state = .integrityViolation n) := by
+  cases state <;> simp [LoopState.isTerminal]
 
 /-- Every LoopState is either terminal or not — the terminal predicate is
-decidable. This follows from the exhaustive pattern match in `isTerminal`. -/
+decidable. Follows directly from isTerminal_iff. -/
 theorem isTerminal_decidable (state : LoopState) :
     state.isTerminal = true ∨ state.isTerminal = false := by
   cases state <;> simp [LoopState.isTerminal]

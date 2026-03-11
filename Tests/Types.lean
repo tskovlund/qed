@@ -2,33 +2,8 @@ import Qed
 
 open Qed
 
-def testIsTerminalReturnsTrueForPassed : IO Bool := do
-  -- Arrange
-  let state := LoopState.passed 3
-  -- Act / Assert
-  return state.isTerminal
+-- isTerminal behavior tests have been replaced by the universal proof
+-- isTerminal_iff in Qed/Proofs/TypeProperties.lean, which characterizes
+-- exactly which states are terminal for ALL states, not just specific examples.
 
-def testIsTerminalReturnsTrueForStuck : IO Bool := do
-  -- Arrange
-  let state := LoopState.stuck 3 ["test"]
-  -- Act / Assert
-  return state.isTerminal
-
-def testIsTerminalReturnsFalseForReady : IO Bool := do
-  -- Arrange
-  let state := LoopState.ready
-  -- Act / Assert
-  return !state.isTerminal
-
-def testIsTerminalReturnsFalseForWorkerRunning : IO Bool := do
-  -- Arrange
-  let state := LoopState.workerRunning 1
-  -- Act / Assert
-  return !state.isTerminal
-
-def typeTests : List (String × IO Bool) := [
-  ("testIsTerminalReturnsTrueForPassed", testIsTerminalReturnsTrueForPassed),
-  ("testIsTerminalReturnsTrueForStuck", testIsTerminalReturnsTrueForStuck),
-  ("testIsTerminalReturnsFalseForReady", testIsTerminalReturnsFalseForReady),
-  ("testIsTerminalReturnsFalseForWorkerRunning", testIsTerminalReturnsFalseForWorkerRunning)
-]
+def typeTests : List (String × IO Bool) := []
