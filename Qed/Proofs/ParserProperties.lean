@@ -9,11 +9,11 @@ open Qed Qed.Parser
 
 -- 1. parseSchedule is complete over valid inputs
 
-/-- `parseSchedule` accepts exactly the two valid schedule strings.
-If it succeeds, the input was one of "always" or "manual". -/
+/-- `parseSchedule` accepts exactly the three valid schedule strings.
+If it succeeds, the input was one of "always", "heavy", or "manual". -/
 theorem parseSchedule_complete (s : String) (cs : Schedule)
     (h : parseSchedule s = .ok cs) :
-    s = "always" ∨ s = "manual" := by
+    s = "always" ∨ s = "heavy" ∨ s = "manual" := by
   simp [parseSchedule] at h
   split at h <;> simp_all
 
@@ -22,17 +22,21 @@ theorem parseSchedule_complete (s : String) (cs : Schedule)
 theorem parseSchedule_always : parseSchedule "always" = .ok Schedule.always := by
   rfl
 
+theorem parseSchedule_heavy : parseSchedule "heavy" = .ok Schedule.heavy := by
+  rfl
+
 theorem parseSchedule_manual : parseSchedule "manual" = .ok Schedule.manual := by
   rfl
 
 -- 3. parseSchedule rejects invalid inputs
 
-/-- Any string that isn't "always" or "manual" produces an error. -/
+/-- Any string that isn't "always", "heavy", or "manual" produces an error. -/
 theorem parseSchedule_rejects_invalid (s : String)
-    (h1 : s ≠ "always") (h2 : s ≠ "manual") :
+    (h1 : s ≠ "always") (h2 : s ≠ "heavy") (h3 : s ≠ "manual") :
     ∃ e, parseSchedule s = .error e := by
   unfold parseSchedule
   split
+  · simp_all
   · simp_all
   · simp_all
   · exact ⟨_, rfl⟩

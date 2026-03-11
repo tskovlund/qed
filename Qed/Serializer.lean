@@ -10,6 +10,7 @@ open Lean Qed
 /-- Serialize a Schedule to its string representation. -/
 def scheduleToString : Schedule → String
   | .always => "always"
+  | .heavy => "heavy"
   | .manual => "manual"
 
 /-- Serialize a VerifyType to JSON. -/

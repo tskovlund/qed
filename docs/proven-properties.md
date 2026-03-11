@@ -62,8 +62,9 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `OutputCorrectness.lean` | `allPassed_iff_no_failures`               | **[spec]** Pass/fail decision is correct: true iff no result is `.fail`                  |
 | `OutputCorrectness.lean` | `resultsToJson_has_required_fields`       | **[spec]** JSON output always contains "spec", "passed", "criteria" fields               |
 | `OutputCorrectness.lean` | `workerResultsToJson_has_required_fields` | **[spec]** Worker loop JSON always contains "spec", "state", "passed", "criteria" fields |
-| `ParserProperties.lean`  | `parseSchedule_complete`                  | **[spec]** If parseSchedule succeeds, input was "always" or "manual"                     |
+| `ParserProperties.lean`  | `parseSchedule_complete`                  | **[spec]** If parseSchedule succeeds, input was "always", "heavy", or "manual"           |
 | `ParserProperties.lean`  | `parseSchedule_always`                    | parseSchedule "always" = .ok .always                                                     |
+| `ParserProperties.lean`  | `parseSchedule_heavy`                     | parseSchedule "heavy" = .ok .heavy                                                       |
 | `ParserProperties.lean`  | `parseSchedule_manual`                    | parseSchedule "manual" = .ok .manual                                                     |
 | `ParserProperties.lean`  | `parseSchedule_rejects_invalid`           | **[spec]** Any other string produces an error                                            |
 | `TomlProperties.lean`    | `setNested_no_duplicate_at_leaf`          | setNested inserts without duplicates when key is absent                                  |

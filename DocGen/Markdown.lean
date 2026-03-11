@@ -152,7 +152,8 @@ def generate (schemaString : String) : Except String String := do
     match value with
     | Json.str s => match s with
       | "always" => some ["`always`", "Every run — CI, pre-push, explicit", "`command`, `property`, `proof`"]
-      | "manual" => some ["`manual`", "Only via explicit `qed run` or `qed verify` (no flags)", "`human`, `agent`"]
+      | "heavy" => some ["`heavy`", "Included with `--extended`, excluded by default in CI", "`agent`"]
+      | "manual" => some ["`manual`", "Only via explicit `qed run` or `qed verify` (no flags)", "`human`"]
       | other => some [s!"`{other}`", "", ""]
     | _ => none
   let scheduleTable := renderPaddedTable ["Value", "Description", "Default for"] scheduleData

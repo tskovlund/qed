@@ -4,11 +4,14 @@ open Qed
 
 def version : String := "0.1.0-dev"
 
-/-- Execution context for schedule filtering. -/
+/-- Execution context for schedule filtering.
+    Forms a hierarchy: full ⊃ extended ⊃ auto. -/
 inductive RunContext where
   /-- No filtering — all criteria run (including manual). -/
   | full
-  /-- Automated mode — exclude `manual` criteria. For CI, hooks, scripts. -/
+  /-- Extended — include heavy criteria, exclude manual. For thorough CI runs. -/
+  | extended
+  /-- Automated mode — exclude heavy and manual criteria. For CI, hooks, scripts. -/
   | auto
   deriving BEq
 
@@ -16,7 +19,8 @@ inductive RunContext where
 def filterBySchedule (criteria : List AcceptanceCriterion) (context : RunContext) : List AcceptanceCriterion :=
   match context with
   | .full => criteria
-  | .auto => criteria.filter fun c => c.schedule != .manual
+  | .extended => criteria.filter fun c => c.schedule != .manual
+  | .auto => criteria.filter fun c => c.schedule == .always
 
 /-- Report an error, using JSON format when --json is active. -/
 private def reportError (message : String) (jsonOutput : Bool) : IO Unit := do
@@ -177,7 +181,9 @@ def printHelp : IO Unit := do
   IO.println ""
   IO.println "Options:"
   IO.println "  --json                    Output results as JSON"
-  IO.println "  --auto                    Skip manual criteria (auto-detected when CI=true)"
+  IO.println "  --auto                    Skip heavy and manual criteria (auto-detected when CI=true)"
+  IO.println "  --extended                Include heavy criteria, skip manual (for thorough CI runs)"
+  IO.println "  --full                    Run all criteria including manual (overrides CI auto-detection)"
   IO.println "  --pin                     Require spec files to match their git-committed version"
   IO.println ""
   IO.println "Exit codes:"
@@ -186,13 +192,16 @@ def printHelp : IO Unit := do
   IO.println "  2  Configuration or usage error (bad spec, missing file, unknown command)"
 
 /-- Extract flags and remaining args from the argument list.
-    Returns `none` for context when no explicit `--auto` flag is given. -/
+    Returns `none` for context when no explicit flag is given. -/
 private def extractFlags (args : List String) : Bool × Option RunContext × Bool × List String :=
   let jsonFlag := args.any (· == "--json")
   let pinFlag := args.any (· == "--pin")
   let context := if args.any (· == "--auto") then some RunContext.auto
+    else if args.any (· == "--extended") then some RunContext.extended
+    else if args.any (· == "--full") then some RunContext.full
     else none
-  let remaining := args.filter fun a => a != "--json" && a != "--auto" && a != "--pin"
+  let remaining := args.filter fun a =>
+    a != "--json" && a != "--auto" && a != "--extended" && a != "--full" && a != "--pin"
   (jsonFlag, context, pinFlag, remaining)
 
 /-- Resolve the execution context: explicit flag > CI env var > full. -/

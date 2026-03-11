@@ -100,19 +100,19 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
 
 ## Recommended setup
 
-Add `qed verify` to your CI pipeline and pre-push hook. Use `--pin` to ensure specs match their committed version — results from modified specs are rejected.
+Add `qed verify` to your CI pipeline and pre-push hook. Use `--pin` to ensure specs match their committed version — results from modified specs are rejected. CI mode is auto-detected when `CI=true` is set.
 
 ```yaml
-# CI — auto-detects CI mode, no --ci flag needed
+# CI — skips heavy (agent) and manual (human) criteria automatically
 - run: qed verify --pin
 ```
 
 ```bash
-# Pre-push hook — excludes manual criteria, pins to committed version
+# Pre-push hook — same filtering, pinned to committed version
 qed verify --auto --pin
 ```
 
-Run `qed verify` with no flags for the full suite, including agent and human criteria.
+Run `qed verify` with no flags for the full suite, or `--extended` to include agent reviews without human criteria.
 
 ## Documentation
 

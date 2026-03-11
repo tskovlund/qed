@@ -34,13 +34,17 @@ inductive VerifyType where
   | human (instruction : String)
   deriving Repr, BEq
 
-/-- When a criterion runs. Controls which execution contexts include it. -/
+/-- When a criterion runs. Controls which execution contexts include it.
+    Forms a hierarchy: always ⊃ heavy ⊃ manual. -/
 inductive Schedule where
   /-- Every run — CI, pre-push hooks, explicit invocation. Default for
       automatable types (command, property, proof). -/
   | always
+  /-- Resource-heavy — included with `--extended`, excluded by default in
+      CI and `--auto`. Default for agent verification. -/
+  | heavy
   /-- Only via explicit invocation (`qed verify` / `qed run` without flags).
-      For interactive or expensive criteria (human sign-offs, agent reviews). -/
+      For interactive criteria requiring human presence. -/
   | manual
   deriving Repr, BEq
 
@@ -49,11 +53,12 @@ structure AcceptanceCriterion where
   description : String
   verify : VerifyType
   /-- When this criterion runs. Defaults based on verify type:
-      human and agent default to `manual` (interactive / expensive),
+      human defaults to `manual` (interactive),
+      agent defaults to `heavy` (automated but resource-heavy),
       everything else defaults to `always`. -/
   schedule : Schedule := match verify with
     | .human _ => .manual
-    | .agent _ _ _ => .manual
+    | .agent _ _ _ => .heavy
     | _ => .always
   /-- When set, the criterion is intentionally skipped with the given reason.
       Skipped criteria show `[SKIP]` in output and do not affect pass/fail. -/

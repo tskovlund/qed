@@ -15,20 +15,23 @@ qed help                  Show this help
 
 ## CLI flags
 
-| Flag     | Purpose                                                                        |
-| -------- | ------------------------------------------------------------------------------ |
-| `--json` | Machine-readable JSON output (position-independent)                            |
-| `--auto` | Skip manual criteria (auto-detected when `CI=true`)                            |
-| `--pin`  | Require spec files to match their git-committed version (position-independent) |
+| Flag         | Purpose                                                                        |
+| ------------ | ------------------------------------------------------------------------------ |
+| `--json`     | Machine-readable JSON output (position-independent)                            |
+| `--auto`     | Skip heavy and manual criteria (auto-detected when `CI=true`)                  |
+| `--extended` | Include heavy criteria, skip manual (for thorough CI runs)                     |
+| `--full`     | Run all criteria including manual (overrides CI auto-detection)                |
+| `--pin`      | Require spec files to match their git-committed version (position-independent) |
 
 ## Recommended usage
 
-| Context        | Command                   | Why                                                       |
-| -------------- | ------------------------- | --------------------------------------------------------- |
-| CI             | `qed verify --pin`        | CI mode is auto-detected; `--pin` ensures committed specs |
-| Pre-push hooks | `qed verify --auto --pin` | Excludes manual criteria; pins to committed version       |
-| Local dev      | `qed verify`              | No flags needed — runs everything                         |
-| Worker loop    | `qed run spec.toml --pin` | Pin recommended for automated runs                        |
+| Context        | Command                       | What runs          |
+| -------------- | ----------------------------- | ------------------ |
+| CI (default)   | `qed verify --pin`            | `always` only      |
+| CI (thorough)  | `qed verify --extended --pin` | `always` + `heavy` |
+| Pre-push hooks | `qed verify --auto --pin`     | `always` only      |
+| Local dev      | `qed verify`                  | everything         |
+| Worker loop    | `qed run spec.toml --pin`     | everything         |
 
 ## Exit codes
 
