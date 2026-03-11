@@ -21,20 +21,19 @@ private def truncate (s : String) (maxLength : Nat) : String :=
 /-- Run a shell command and return pass/fail based on exit code.
     Captures stdout and stderr, truncates to last `maxOutputLength` chars.
     Enforces the configured timeout — kills the process if it exceeds it. -/
+private def formatOutput (stdout stderr : String) : String :=
+  let stdoutStr := stdout.trimAscii.toString
+  let stderrStr := stderr.trimAscii.toString
+  let combined := stdoutStr ++ (if stderrStr.isEmpty then "" else "\nSTDERR:\n" ++ stderrStr)
+  truncate combined maxOutputLength
+
 private def verifyCommand (command : String) (timeout : Nat) : IO VerificationResult := do
   let result ← Shell.runShellCommandWithTimeout command timeout
   match result with
   | .timedOut stdout stderr =>
-    let stdoutStr := stdout.trimAscii.toString
-    let stderrStr := stderr.trimAscii.toString
-    let combined := stdoutStr ++ (if stderrStr.isEmpty then "" else "\nSTDERR:\n" ++ stderrStr)
-    let details := truncate combined maxOutputLength
-    return .fail s!"timed out after {timeout}s\n{details}"
+    return .fail s!"timed out after {timeout}s\n{formatOutput stdout stderr}"
   | .completed exitCode stdout stderr =>
-    let stdoutStr := stdout.trimAscii.toString
-    let stderrStr := stderr.trimAscii.toString
-    let combined := stdoutStr ++ (if stderrStr.isEmpty then "" else "\nSTDERR:\n" ++ stderrStr)
-    let details := truncate combined maxOutputLength
+    let details := formatOutput stdout stderr
     if exitCode == 0 then
       return .pass details
     else
