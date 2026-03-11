@@ -9,7 +9,7 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | File                  | Theorem                                      | Property                                                                                                              |
 | --------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `FinalStates.lean`    | `terminal_absorbing`                         | **[spec]** Terminal states ignore all events — transitioning from a terminal state returns the same state and context |
-| `Monotonic.lean`      | `iteration_monotonic`                        | **[spec]** The iteration count never decreases across transitions                                                     |
+| `Monotonic.lean`      | `iteration_monotonic`                        | **[spec]** The iteration count never decreases across transitions, or the result is terminal                          |
 | `NoSkip.lean`         | `no_skip_verification`                       | **[spec]** Cannot reach `passed` without going through `verifying` first                                              |
 | `NoSkip.lean`         | `worker_before_verification`                 | `verifying(n)` is only reachable from `workerRunning(n)` or `verifying(n)`                                            |
 | `StuckDetection.lean` | `stuck_iff_threshold`                        | **[spec]** Stuck detection fires iff consecutive failure count reaches the threshold                                  |
@@ -20,7 +20,7 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `Termination.lean`    | `verify_someFailed_terminates_or_increments` | Each verify+someFailed step either terminates or increments iteration                                                 |
 | `Termination.lean`    | `verify_allPassed_terminates`                | verify+allPassed always reaches terminal state (passed)                                                               |
 | `Termination.lean`    | `verify_workerDone_stays`                    | verify+workerDone preserves terminal state                                                                            |
-| `Termination.lean`    | `workerRunning_transition`                   | workerRunning+workerDone always transitions to verifying                                                              |
+| `Termination.lean`    | `workerRunning_transition`                   | workerRunning transitions to verifying, stays, or terminates (integrityViolation)                                     |
 | `Termination.lean`    | `fuel_decreases_on_retry`                    | The fuel measure (maxIterations - iteration) strictly decreases on retry                                              |
 | `Termination.lean`    | `loop_progress`                              | Each non-terminal step either terminates or increments iteration (bounded by maxIterations)                           |
 | `Termination.lean`    | `loop_terminates`                            | **[spec]** Full termination: each step terminates or strictly decreases fuel (maxIterations - iteration)              |
@@ -30,6 +30,14 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `Invariants.lean`     | `iteration_bounded`                          | **[spec]** Iteration count never exceeds `maxIterations` (given `maxIterations ≥ 1`)                                  |
 | `VerifyMode.lean`     | `verify_has_no_worker`                       | **[spec]** `SpecMode.verify` cannot carry a `WorkerConfig` or `LoopConfig`                                            |
 | `VerifyMode.lean`     | `verify_independent_of_loop`                 | **[spec]** Verify mode is independent of the worker loop machinery                                                    |
+
+## Spec integrity
+
+| File                       | Theorem                          | Property                                                                                  |
+| -------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------- |
+| `IntegrityProperties.lean` | `integrity_violation_terminal`   | integrityViolation event from any non-terminal state produces terminal integrityViolation |
+| `IntegrityProperties.lean` | `integrity_violation_absorbing`  | integrityViolation state is absorbing (no event transitions out)                          |
+| `IntegrityProperties.lean` | `integrity_violation_not_passed` | integrityViolation from a non-terminal state can never produce passed                     |
 
 ## Worker loop (execution engine)
 

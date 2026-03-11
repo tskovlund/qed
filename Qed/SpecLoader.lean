@@ -1,22 +1,27 @@
 import Qed.Types
 import Qed.Parser
 import Qed.TomlConverter
+import Qed.Integrity
 
 namespace Qed.SpecLoader
 
 open Qed
 
-/-- Load a spec file from disk and parse it into a Spec.
-Dispatches to JSON or TOML parser based on file extension. -/
-def loadSpec (path : System.FilePath) : IO (Except String Spec) := do
+/-- Load a spec file from disk, parse it, and pin it to the file's current state.
+    Returns a `Spec.Pinned` with the SHA-256 hash of the raw file bytes. -/
+def loadSpec (path : System.FilePath) : IO (Except String Spec.Pinned) := do
   let contents ← IO.FS.readFile path
+  let contentHash ← Integrity.hashFile path
   let pathStr := path.toString
-  if pathStr.endsWith ".toml" then
+  let specResult := if pathStr.endsWith ".toml" then
     match TomlConverter.tomlToJson contents with
-    | .error e => return .error e
-    | .ok json => return Parser.parseJson json
+    | .error e => .error e
+    | .ok json => Parser.parseJson json
   else
-    return Parser.parseJson contents
+    Parser.parseJson contents
+  match specResult with
+  | .error e => return .error e
+  | .ok spec => return .ok { spec, path, contentHash }
 
 /-- List all spec files in a directory matching the given extension. -/
 def listSpecs (directory : System.FilePath) (extension : String := ".spec.json")

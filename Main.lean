@@ -21,13 +21,43 @@ def filterBySchedule (criteria : List AcceptanceCriterion) (context : RunContext
   | .local => criteria.filter fun c => c.schedule != .manual
   | .ci => criteria.filter fun c => c.schedule == .always
 
+/-- Report an error, using JSON format when --json is active. -/
+private def reportError (message : String) (jsonOutput : Bool) : IO Unit := do
+  if jsonOutput then
+    IO.println (Lean.Json.mkObj [
+      ("error", Lean.Json.str message)
+    ] |>.pretty 2)
+  else
+    IO.eprintln s!"error: {message}"
+
 /-- Run single-pass verification on an already-loaded spec.
     In text mode, results are streamed (displayed as each criterion completes)
     so human criteria prompts appear inline. -/
-def verifySpec (spec : Spec) (jsonOutput : Bool) (context : RunContext := .full) : IO UInt32 := do
+def verifySpec (pinnedSpec : Spec.Pinned) (jsonOutput : Bool) (context : RunContext := .full)
+    (pinned : Bool := false) : IO UInt32 := do
+  let spec := pinnedSpec.spec
+  -- Pin check at load time
+  if pinned then
+    match ← Integrity.checkGitClean pinnedSpec.path with
+    | .error reason =>
+      reportError s!"pin violation: {reason}" jsonOutput
+      return 2
+    | .ok () => pure ()
+  -- Integrity check: before verification
+  match ← Integrity.checkIntegrity pinnedSpec.path pinnedSpec.contentHash with
+  | .error reason =>
+    reportError s!"integrity violation: {reason}" jsonOutput
+    return 2
+  | .ok () => pure ()
   let criteria := filterBySchedule spec.criteria context
   if jsonOutput then
     let results ← Verifier.verifyAll criteria
+    -- Integrity check: after verification (catches verifier tampering)
+    match ← Integrity.checkIntegrity pinnedSpec.path pinnedSpec.contentHash with
+    | .error reason =>
+      reportError s!"integrity violation: {reason}" jsonOutput
+      return 2
+    | .ok () => pure ()
     let json := Output.resultsToJson spec.name results
     IO.println (json.pretty 2)
     let anyFailed := results.any fun (_, result) => result.isFailed
@@ -58,6 +88,13 @@ def verifySpec (spec : Spec) (jsonOutput : Bool) (context : RunContext := .full)
         | .skipped reason => s!"{criterion.description} {Output.ansiDim}— {reason}{Output.ansiReset}"
         | _ => criterion.description
       Output.printWrapped linePrefix continuationIndent text termWidth
+    -- Integrity check: after verification (catches verifier tampering)
+    match ← Integrity.checkIntegrity pinnedSpec.path pinnedSpec.contentHash with
+    | .error reason =>
+      IO.eprintln ""
+      reportError s!"integrity violation: {reason}" jsonOutput
+      return 2
+    | .ok () => pure ()
     IO.println ""
     if failedCount == 0 then
       if skippedCount == total then
@@ -70,31 +107,24 @@ def verifySpec (spec : Spec) (jsonOutput : Bool) (context : RunContext := .full)
     return if anyFailed then 1 else 0
 
 /-- Load a spec file, handling IO exceptions (e.g., missing files). -/
-def loadSpecSafe (path : String) : IO (Except String Spec) := do
+def loadSpecSafe (path : String) : IO (Except String Spec.Pinned) := do
   try
     SpecLoader.loadSpec path
   catch error =>
     return .error s!"cannot read '{path}': {error}"
 
-/-- Report an error, using JSON format when --json is active. -/
-private def reportError (message : String) (jsonOutput : Bool) : IO Unit := do
-  if jsonOutput then
-    IO.println (Lean.Json.mkObj [
-      ("error", Lean.Json.str message)
-    ] |>.pretty 2)
-  else
-    IO.eprintln s!"error: {message}"
-
 /-- Load a spec and run single-pass verification. -/
-def runVerify (path : String) (jsonOutput : Bool) (context : RunContext := .full) : IO UInt32 := do
+def runVerify (path : String) (jsonOutput : Bool) (context : RunContext := .full)
+    (pinned : Bool := false) : IO UInt32 := do
   match ← loadSpecSafe path with
   | .error message =>
     reportError message jsonOutput
     return 2
-  | .ok spec => verifySpec spec jsonOutput context
+  | .ok pinnedSpec => verifySpec pinnedSpec jsonOutput context pinned
 
 /-- Verify all specs in a directory. Returns 0 if all pass, 1 if any fail, 2 on error. -/
-def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext := .full) : IO UInt32 := do
+def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext := .full)
+    (pinned : Bool := false) : IO UInt32 := do
   match ← SpecLoader.listAllSpecs directory with
   | .error message =>
     reportError message jsonOutput
@@ -106,7 +136,7 @@ def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext 
     let mut passedSpecs : Nat := 0
     let mut failedSpecs : Nat := 0
     for specPath in specs do
-      let result ← runVerify specPath.toString jsonOutput context
+      let result ← runVerify specPath.toString jsonOutput context pinned
       if result == 1 then failedSpecs := failedSpecs + 1
       else if result == 0 then passedSpecs := passedSpecs + 1
       if result == 2 then return 2
@@ -125,7 +155,8 @@ def runParse (path : String) (jsonOutput : Bool) : IO UInt32 := do
   | .error message =>
     reportError message jsonOutput
     return 2
-  | .ok spec =>
+  | .ok pinnedSpec =>
+    let spec := pinnedSpec.spec
     if jsonOutput then
       let modeStr := match spec.mode with
         | .verify => "verify"
@@ -158,6 +189,7 @@ def printHelp : IO Unit := do
   IO.println "  --json                    Output results as JSON"
   IO.println "  --local                   Local mode — exclude schedule = \"manual\" criteria"
   IO.println "  --ci                      CI mode — exclude schedule = \"manual\" and \"local\" criteria"
+  IO.println "  --pin                     Require spec files to match their git-committed version"
   IO.println ""
   IO.println "Exit codes:"
   IO.println "  0  Success (all criteria passed)"
@@ -165,16 +197,17 @@ def printHelp : IO Unit := do
   IO.println "  2  Configuration or usage error (bad spec, missing file, unknown command)"
 
 /-- Extract flags and remaining args from the argument list. -/
-private def extractFlags (args : List String) : Bool × RunContext × List String :=
+private def extractFlags (args : List String) : Bool × RunContext × Bool × List String :=
   let jsonFlag := args.any (· == "--json")
+  let pinFlag := args.any (· == "--pin")
   let context := if args.any (· == "--ci") then RunContext.ci
     else if args.any (· == "--local") then RunContext.local
     else RunContext.full
-  let remaining := args.filter fun a => a != "--json" && a != "--ci" && a != "--local"
-  (jsonFlag, context, remaining)
+  let remaining := args.filter fun a => a != "--json" && a != "--ci" && a != "--local" && a != "--pin"
+  (jsonFlag, context, pinFlag, remaining)
 
 def main (args : List String) : IO UInt32 := do
-  let (jsonOutput, context, cleanArgs) := extractFlags args
+  let (jsonOutput, context, pinned, cleanArgs) := extractFlags args
   match cleanArgs with
   | ["version"] =>
     IO.println s!"qed {version}"
@@ -183,21 +216,21 @@ def main (args : List String) : IO UInt32 := do
     printHelp
     return 0
   | ["verify"] =>
-    runVerifyAll "." jsonOutput context
+    runVerifyAll "." jsonOutput context pinned
   | ["verify", path] =>
     let isDir ← (path : System.FilePath).isDir
-    if isDir then runVerifyAll path jsonOutput context
-    else runVerify path jsonOutput context
+    if isDir then runVerifyAll path jsonOutput context pinned
+    else runVerify path jsonOutput context pinned
   | ["run", path] =>
     match ← loadSpecSafe path with
     | .error message =>
       reportError message jsonOutput
       return 2
-    | .ok spec =>
-      match spec.mode with
-      | .verify => verifySpec spec jsonOutput context
+    | .ok pinnedSpec =>
+      match pinnedSpec.spec.mode with
+      | .verify => verifySpec pinnedSpec jsonOutput context pinned
       | .workerLoop worker loopConfig =>
-        WorkerLoop.run spec worker loopConfig jsonOutput
+        WorkerLoop.run pinnedSpec worker loopConfig jsonOutput pinned
   | ["parse", path] =>
     runParse path jsonOutput
   | [] =>

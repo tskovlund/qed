@@ -15,19 +15,20 @@ qed help                  Show this help
 
 ## CLI flags
 
-| Flag      | Purpose                                                                 |
-| --------- | ----------------------------------------------------------------------- |
-| `--json`  | Machine-readable JSON output (position-independent)                     |
-| `--local` | Local mode — excludes `manual` criteria only (position-independent)     |
-| `--ci`    | CI mode — excludes `manual` and `local` criteria (position-independent) |
+| Flag      | Purpose                                                                        |
+| --------- | ------------------------------------------------------------------------------ |
+| `--json`  | Machine-readable JSON output (position-independent)                            |
+| `--local` | Local mode — excludes `manual` criteria only (position-independent)            |
+| `--ci`    | CI mode — excludes `manual` and `local` criteria (position-independent)        |
+| `--pin`   | Require spec files to match their git-committed version (position-independent) |
 
 ## Exit codes
 
-| Code | Meaning                                                                |
-| ---- | ---------------------------------------------------------------------- |
-| 0    | Success — all criteria passed                                          |
-| 1    | Verification failure — one or more criteria failed                     |
-| 2    | Configuration or usage error — bad spec, missing file, unknown command |
+| Code | Meaning                                                                                        |
+| ---- | ---------------------------------------------------------------------------------------------- |
+| 0    | Success — all criteria passed                                                                  |
+| 1    | Verification failure — one or more criteria failed                                             |
+| 2    | Configuration or usage error — bad spec, missing file, unknown command, or integrity violation |
 
 ## Configuration
 

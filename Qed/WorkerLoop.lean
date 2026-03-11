@@ -5,6 +5,7 @@ import Qed.Agent
 import Qed.StateMachine
 import Qed.Verifier
 import Qed.Output
+import Qed.Integrity
 
 namespace Qed.WorkerLoop
 
@@ -86,8 +87,9 @@ def spawnWorker (worker : WorkerConfig)
 /-- Run the worker loop: spawn worker, verify, feed failures back, repeat.
     Handles interruption (SIGINT) gracefully — Lean's runtime converts the
     signal into an IO exception, which we catch to report partial progress. -/
-def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
-    (jsonOutput : Bool) : IO UInt32 := do
+def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopConfig)
+    (jsonOutput : Bool) (pinned : Bool := false) : IO UInt32 := do
+  let spec := pinnedSpec.spec
   let mut state : LoopState := .ready
   let mut context : StateMachine.LoopContext := StateMachine.LoopContext.initial
   let mut lastFailures : List (String × VerificationResult) := []
@@ -106,6 +108,12 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
     while !state.isTerminal do
       match state with
       | .workerRunning iteration =>
+        -- Integrity check: before spawning worker
+        match ← Integrity.verify pinnedSpec pinned with
+        | .error reason =>
+          let (s, c) := step loopConfig state context (.integrityViolation reason)
+          state := s; context := c; continue
+        | .ok () => pure ()
         if !jsonOutput then
           IO.println s!"{Output.ansiBold}── Iteration {iteration} ──{Output.ansiReset}"
           IO.println "  Running worker..."
@@ -128,6 +136,12 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
         state := s
         context := c
       | .verifying _ =>
+        -- Integrity check: before running verifiers
+        match ← Integrity.verify pinnedSpec pinned with
+        | .error reason =>
+          let (s, c) := step loopConfig state context (.integrityViolation reason)
+          state := s; context := c; continue
+        | .ok () => pure ()
         if !jsonOutput then
           IO.println "  Verifying criteria..."
         let results ← Verifier.verifyAll spec.criteria
@@ -143,6 +157,12 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
               | .skipped reason => s!"{description} {Output.ansiDim}— {reason}{Output.ansiReset}"
               | _ => description
             Output.printWrapped linePrefix continuationIndent text termWidth
+        -- Integrity check: after running verifiers (catches verifier tampering)
+        match ← Integrity.verify pinnedSpec pinned with
+        | .error reason =>
+          let (s, c) := step loopConfig state context (.integrityViolation reason)
+          state := s; context := c; continue
+        | .ok () => pure ()
         if failed.isEmpty then
           let (s, c) := step loopConfig state context .allPassed
           state := s
@@ -175,6 +195,7 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
       | .stuck iterations _ => s!"stuck after {iterations} iterations"
       | .maxIterationsReached iterations => s!"max iterations reached ({iterations})"
       | .escalated reason => s!"escalated: {reason}"
+      | .integrityViolation reason => s!"integrity violation: {reason}"
       | _ => "unknown"
     let resultJson := Output.workerResultsToJson spec.name stateStr allResults
     IO.println (resultJson.pretty 2)
@@ -191,6 +212,8 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
       IO.eprintln s!"{Output.ansiRed}Reached maximum iterations ({iterations}).{Output.ansiReset}"
     | .escalated reason =>
       IO.eprintln s!"{Output.ansiRed}Escalated: {reason}{Output.ansiReset}"
+    | .integrityViolation reason =>
+      IO.eprintln s!"{Output.ansiRed}Integrity violation: {reason}{Output.ansiReset}"
     | _ => pure ()
   return match state with
     | .passed _ => 0

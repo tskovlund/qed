@@ -57,8 +57,9 @@ def loopStateValues : List String :=
     | .stuck _ _ => ()
     | .maxIterationsReached _ => ()
     | .escalated _ => ()
+    | .integrityViolation _ => ()
   ["ready", "workerRunning", "verifying", "passed", "stuck",
-   "maxIterationsReached", "escalated"]
+   "maxIterationsReached", "escalated", "integrityViolation"]
 
 /-- Ordered JSON value type. Unlike `Lean.Json`, objects preserve field order. -/
 inductive JsonValue where

@@ -30,8 +30,8 @@ def testLoadSpecParsesJsonFile : IO Bool := do
   let result ← SpecLoader.loadSpec "specs/build.spec.json"
   -- Assert
   match result with
-  | .ok spec =>
-    return spec.name.contains "build" && spec.mode == SpecMode.verify
+  | .ok pinnedSpec =>
+    return pinnedSpec.spec.name.contains "build" && pinnedSpec.spec.mode == SpecMode.verify
   | .error e =>
     IO.eprintln s!"  load error: {e}"
     return false
@@ -41,10 +41,10 @@ def testLoadSpecParsesTomlFile : IO Bool := do
   let result ← SpecLoader.loadSpec "specs/state-machine.spec.toml"
   -- Assert
   match result with
-  | .ok spec =>
-    return spec.name == "state-machine-correctness" &&
-      spec.mode == SpecMode.verify &&
-      spec.criteria.length > 0
+  | .ok pinnedSpec =>
+    return pinnedSpec.spec.name == "state-machine-correctness" &&
+      pinnedSpec.spec.mode == SpecMode.verify &&
+      pinnedSpec.spec.criteria.length > 0
   | .error e =>
     IO.eprintln s!"  load error: {e}"
     return false

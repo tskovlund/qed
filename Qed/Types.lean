@@ -102,6 +102,15 @@ structure Spec where
   criteria : List AcceptanceCriterion
   deriving Repr
 
+/-- A spec pinned to a specific file state. Carries the file path and a
+    SHA-256 hash of the raw file bytes at load time for integrity verification.
+    Not serialized — this is runtime-only provenance tracking. -/
+structure Spec.Pinned where
+  spec : Spec
+  path : System.FilePath
+  contentHash : String
+  deriving Repr
+
 /-- The result of verifying a single acceptance criterion. -/
 inductive VerificationResult where
   /-- The criterion passed. -/
@@ -145,6 +154,8 @@ inductive LoopState where
   | maxIterationsReached (iterations : Nat)
   /-- Escalated due to stuck or max iterations. -/
   | escalated (reason : String)
+  /-- Spec file was tampered with during execution. -/
+  | integrityViolation (reason : String)
   deriving Repr, BEq
 
 /-- Whether a LoopState is terminal (no further transitions). -/
@@ -153,6 +164,7 @@ def LoopState.isTerminal : LoopState → Bool
   | .stuck _ _ => true
   | .maxIterationsReached _ => true
   | .escalated _ => true
+  | .integrityViolation _ => true
   | _ => false
 
 end Qed
