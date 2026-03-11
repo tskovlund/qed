@@ -69,7 +69,7 @@ Five verification types, from human judgment to mathematical proof:
 | `property` | Hypothesis / QuickCheck  | Statistical    | ![planned](https://img.shields.io/badge/planned-yellow)              |
 | `proof`    | Lean 4 / Coq / Agda      | Mathematical   | ![planned](https://img.shields.io/badge/planned-yellow)              |
 
-Every criterion must pass, be explicitly skipped, or have its tool available — qed never silently skips verification. Use `skip` to intentionally disable criteria, and `schedule` to control when criteria run (`always`, `local`, or `manual`).
+Every criterion must pass, be explicitly skipped, or have its tool available — qed never silently skips verification. Use `skip` to intentionally disable criteria, and `schedule` to control when criteria run (`always`, `heavy`, or `manual`).
 
 ## Formally proven
 
