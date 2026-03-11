@@ -191,7 +191,7 @@ def printHelp : IO Unit := do
   IO.println "  2  Configuration or usage error (bad spec, missing file, unknown command)"
 
 /-- Extract flags and remaining args from the argument list.
-    Returns `none` for context when no explicit flag is given. -/
+    Returns `none` for context when no explicit `--ci` or `--local` flag is given. -/
 private def extractFlags (args : List String) : Bool × Option RunContext × Bool × List String :=
   let jsonFlag := args.any (· == "--json")
   let pinFlag := args.any (· == "--pin")
