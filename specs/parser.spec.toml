@@ -12,7 +12,6 @@ name = "parser-correctness"
 
 [[criteria]]
 description = "Schedule parser accepts exactly the three valid strings"
-skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -21,7 +20,6 @@ target = "Qed.Proofs.ParserProperties.parseSchedule_complete"
 
 [[criteria]]
 description = "Schedule parser rejects all invalid strings"
-skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -30,7 +28,6 @@ target = "Qed.Proofs.ParserProperties.parseSchedule_rejects_invalid"
 
 [[criteria]]
 description = "Serializer→parser roundtrip: parsing serialized JSON recovers the original spec exactly"
-skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"
@@ -41,7 +38,7 @@ target = "Qed.Proofs.Roundtrip.spec_roundtrip"
 
 [[criteria]]
 description = "TOML→JSON conversion is total: always returns ok or error, never diverges"
-skip = "proof verification not yet implemented"
+skip = "ambiguous toJson name — needs qualified references (TSK-173)"
 
 [criteria.verify]
 type = "proof"
@@ -50,7 +47,7 @@ target = "Qed.Proofs.TomlJsonValidity.tomlToJson_total"
 
 [[criteria]]
 description = "Successful TOML→JSON conversion implies the input was valid TOML"
-skip = "proof verification not yet implemented"
+skip = "ambiguous toJson name — needs qualified references (TSK-173)"
 
 [criteria.verify]
 type = "proof"
@@ -59,7 +56,7 @@ target = "Qed.Proofs.TomlJsonValidity.tomlToJson_ok_implies_parseDoc_ok"
 
 [[criteria]]
 description = "TOML parse errors propagate to the conversion result (never swallowed)"
-skip = "proof verification not yet implemented"
+skip = "ambiguous toJson name — needs qualified references (TSK-173)"
 
 [criteria.verify]
 type = "proof"
@@ -68,7 +65,6 @@ target = "Qed.Proofs.TomlJsonValidity.parseDoc_error_implies_tomlToJson_error"
 
 [[criteria]]
 description = "TOML parser rejects duplicate keys at the leaf level"
-skip = "proof verification not yet implemented"
 
 [criteria.verify]
 type = "proof"

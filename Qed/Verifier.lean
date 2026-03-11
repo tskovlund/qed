@@ -143,6 +143,48 @@ private def verifyHuman (_description : String) (instruction : String) : IO Veri
   let stdin ← IO.getStdin
   promptLoop stdin
 
+/-- Derive the Lean module name from a fully qualified theorem target.
+    E.g., `Qed.Proofs.Termination.loop_terminates` → `Qed.Proofs.Termination`. -/
+private def targetToModule (target : String) : Option String :=
+  let parts := target.splitOn "."
+  if parts.length < 2 then none
+  else some (String.intercalate "." (parts.dropLast))
+
+/-- Derive the source file path from a Lean module name.
+    E.g., `Qed.Proofs.Termination` → `Qed/Proofs/Termination.lean`. -/
+private def moduleToPath (module : String) : String :=
+  module.replace "." "/" ++ ".lean"
+
+/-- The placeholder axiom that marks incomplete proofs in Lean 4. -/
+private def sorryKeyword : String := "sorry"
+
+/-- Verify a formal proof by checking that the target's module compiles
+    and contains no incomplete proof placeholders. Currently supports Lean 4 only. -/
+private def verifyProof (prover : String) (target : String) : IO VerificationResult := do
+  if prover != "lean4" then
+    return .fail s!"unsupported prover: '{prover}' (supported: lean4)"
+  match targetToModule target with
+  | none => return .fail s!"invalid target: '{target}' (expected fully qualified name like Module.theorem)"
+  | some module =>
+    let sourcePath := moduleToPath module
+    if !(← System.FilePath.pathExists sourcePath) then
+      return .fail s!"source file not found: {sourcePath}"
+    -- Reject files containing incomplete proof placeholders
+    let contents ← IO.FS.readFile sourcePath
+    let hasPlaceholder := (contents.splitOn sorryKeyword).length > 1
+    if hasPlaceholder then
+      return .fail s!"source file contains {sorryKeyword}: {sourcePath}"
+    -- Build the module to verify the proof typechecks
+    let buildResult ← Shell.runShellCommandWithTimeout s!"lake build {module}" defaultCommandTimeout
+    match buildResult with
+    | .timedOut stdout stderr =>
+      return .fail s!"proof build timed out after {defaultCommandTimeout}s\n{formatOutput stdout stderr}"
+    | .completed exitCode stdout stderr =>
+      if exitCode == 0 then
+        return .pass s!"theorem {target} verified (module {module} builds, complete)"
+      else
+        return .fail s!"proof build failed\n{formatOutput stdout stderr}"
+
 /-- Verify a single acceptance criterion. Skipped criteria return immediately
     without dispatching to any verifier. -/
 def verifyCriterion (criterion : AcceptanceCriterion) : IO VerificationResult := do
@@ -152,10 +194,8 @@ def verifyCriterion (criterion : AcceptanceCriterion) : IO VerificationResult :=
     match criterion.verify with
     | .command run timeout => verifyCommand run timeout
     | .agent prompt model command timeout => verifyAgent prompt model command timeout
-    | .property run timeout =>
-      return .fail s!"property testing not yet implemented (run: {run}, timeout: {timeout})"
-    | .proof prover target =>
-      return .fail s!"proof verification not yet implemented (prover: {prover}, target: {target})"
+    | .property run timeout => verifyCommand run timeout
+    | .proof prover target => verifyProof prover target
     | .human instruction =>
       verifyHuman criterion.description instruction
 
