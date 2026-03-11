@@ -276,7 +276,7 @@ def generate : String :=
                     ("type", obj [("const", str verifyTypes[3]!)]),
                     ("prover", obj [
                       ("type", str "string"),
-                      ("description", str "Proof system (e.g. lean4, coq, agda).")
+                      ("description", str "Proof system. Currently supported: lean4.")
                     ]),
                     ("target", obj [
                       ("type", str "string"),

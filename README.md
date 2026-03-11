@@ -66,8 +66,8 @@ Five verification types, from human judgment to mathematical proof:
 | `human`    | Interactive sign-off     | Human judgment | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
 | `agent`    | Independent LLM review   | Probabilistic  | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
 | `command`  | Shell command, exit code | Deterministic  | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
-| `property` | Hypothesis / QuickCheck  | Statistical    | ![planned](https://img.shields.io/badge/planned-yellow)              |
-| `proof`    | Lean 4 / Coq / Agda      | Mathematical   | ![planned](https://img.shields.io/badge/planned-yellow)              |
+| `property` | Hypothesis / QuickCheck  | Statistical    | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
+| `proof`    | Lean 4                   | Mathematical   | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
 
 Every criterion must pass, be explicitly skipped, or have its tool available — qed never silently skips verification. Use `skip` to intentionally disable criteria, and `schedule` to control when criteria run (`always`, `heavy`, or `manual`).
 

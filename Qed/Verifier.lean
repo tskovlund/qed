@@ -194,8 +194,8 @@ def containsSorry (contents : String) : Bool :=
 /-- Verify a formal proof by checking that the target's module compiles
     and contains no sorry. Currently supports Lean 4 only. -/
 private def verifyProof (prover : String) (target : String) : IO VerificationResult := do
-  if prover != "lean4" then
-    return .fail s!"unsupported prover: '{prover}' (supported: lean4)"
+  if prover ∉ supportedProvers then
+    return .fail s!"unsupported prover: '{prover}' (supported: {", ".intercalate supportedProvers})"
   match targetToModule target with
   | none => return .fail s!"invalid target: '{target}' (expected fully qualified name like Module.theorem)"
   | some module =>

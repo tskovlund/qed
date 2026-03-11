@@ -101,7 +101,7 @@ flowchart LR
     verify -->|agent| agent[LLM agent\nprompt-based review]
     verify -->|command| shell[Shell command\nexit code check]
     verify -->|property| prop[Property tests\nHypothesis / QuickCheck]
-    verify -->|proof| prover[Formal proof\nLean 4 / Coq / Agda]
+    verify -->|proof| prover[Formal proof\nLean 4]
 ```
 
 The verification type determines both **what runs** and **what guarantee you get**:
