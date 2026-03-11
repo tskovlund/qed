@@ -6,6 +6,7 @@ import Qed.Parser
 import Qed.Serializer
 import Qed.TomlParser
 import Qed.TomlConverter
+import Qed.Integrity
 import Qed.SpecLoader
 import Qed.Verifier
 import Qed.WorkerLoop
@@ -22,4 +23,5 @@ import Qed.Proofs.Roundtrip
 import Qed.Proofs.TypeProperties
 import Qed.Proofs.OutputCorrectness
 import Qed.Proofs.ParserProperties
+import Qed.Proofs.IntegrityProperties
 import Qed.Proofs.TomlProperties

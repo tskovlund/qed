@@ -9,10 +9,11 @@ Follow the code standards in [CONVENTIONS.md](CONVENTIONS.md).
 ```
 Main.lean              CLI entry point (qed run, qed verify, qed parse, qed version, qed help)
 Qed/
-  Types.lean           Core types (VerifyType, SpecMode, Spec, LoopState)
+  Types.lean           Core types (VerifyType, SpecMode, Spec, Spec.Pinned, LoopState)
   Shell.lean           Shell command execution and quoting utilities
   Agent.lean           Shared agent invocation (env var constants, default commands)
-  SpecLoader.lean      Load and list spec files from disk
+  Integrity.lean       Content-addressed spec integrity (SHA-256 hashing, git checks)
+  SpecLoader.lean      Load and pin spec files from disk (returns Spec.Pinned)
   Parser.lean          JSON spec parser (Lean.Json → Spec, parseFromJson for roundtrip proofs)
   TomlParser.lean      Pure Lean TOML parser (no external dependencies)
   TomlConverter.lean   TOML → JSON conversion (thin wrapper around TomlParser)
@@ -35,6 +36,7 @@ Qed/Proofs/
   TomlProperties.lean     setNested/appendArray structural integrity
   TomlJsonValidity.lean   TOML→JSON pipeline totality and error propagation
   Roundtrip.lean          Serializer↔parser roundtrip (parseFromJson ∘ specToJson = ok)
+  IntegrityProperties.lean  Spec integrity: violation → terminal, absorbing, not passed
   WorkerLoopProperties.lean  step=transition, buildPrompt, shellQuote proofs
 Tests/
   Main.lean            Test runner (imports all test modules)

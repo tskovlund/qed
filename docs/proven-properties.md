@@ -9,7 +9,7 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | File                  | Theorem                                      | Property                                                                                                              |
 | --------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `FinalStates.lean`    | `terminal_absorbing`                         | **[spec]** Terminal states ignore all events — transitioning from a terminal state returns the same state and context |
-| `Monotonic.lean`      | `iteration_monotonic`                        | **[spec]** The iteration count never decreases across transitions                                                     |
+| `Monotonic.lean`      | `iteration_monotonic`                        | **[spec]** The iteration count never decreases across transitions, or the result is terminal                          |
 | `NoSkip.lean`         | `no_skip_verification`                       | **[spec]** Cannot reach `passed` without going through `verifying` first                                              |
 | `NoSkip.lean`         | `worker_before_verification`                 | `verifying(n)` is only reachable from `workerRunning(n)` or `verifying(n)`                                            |
 | `StuckDetection.lean` | `stuck_iff_threshold`                        | **[spec]** Stuck detection fires iff consecutive failure count reaches the threshold                                  |
@@ -20,7 +20,7 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `Termination.lean`    | `verify_someFailed_terminates_or_increments` | Each verify+someFailed step either terminates or increments iteration                                                 |
 | `Termination.lean`    | `verify_allPassed_terminates`                | verify+allPassed always reaches terminal state (passed)                                                               |
 | `Termination.lean`    | `verify_workerDone_stays`                    | verify+workerDone preserves terminal state                                                                            |
-| `Termination.lean`    | `workerRunning_transition`                   | workerRunning+workerDone always transitions to verifying                                                              |
+| `Termination.lean`    | `workerRunning_transition`                   | workerRunning transitions to verifying, stays, or terminates (integrityViolation)                                     |
 | `Termination.lean`    | `fuel_decreases_on_retry`                    | The fuel measure (maxIterations - iteration) strictly decreases on retry                                              |
 | `Termination.lean`    | `loop_progress`                              | Each non-terminal step either terminates or increments iteration (bounded by maxIterations)                           |
 | `Termination.lean`    | `loop_terminates`                            | **[spec]** Full termination: each step terminates or strictly decreases fuel (maxIterations - iteration)              |
@@ -30,6 +30,14 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `Invariants.lean`     | `iteration_bounded`                          | **[spec]** Iteration count never exceeds `maxIterations` (given `maxIterations ≥ 1`)                                  |
 | `VerifyMode.lean`     | `verify_has_no_worker`                       | **[spec]** `SpecMode.verify` cannot carry a `WorkerConfig` or `LoopConfig`                                            |
 | `VerifyMode.lean`     | `verify_independent_of_loop`                 | **[spec]** Verify mode is independent of the worker loop machinery                                                    |
+
+## Spec integrity
+
+| File                       | Theorem                          | Property                                                                                  |
+| -------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------- |
+| `IntegrityProperties.lean` | `integrity_violation_terminal`   | integrityViolation event from any non-terminal state produces terminal integrityViolation |
+| `IntegrityProperties.lean` | `integrity_violation_absorbing`  | integrityViolation state is absorbing (no event transitions out)                          |
+| `IntegrityProperties.lean` | `integrity_violation_not_passed` | integrityViolation from a non-terminal state can never produce passed                     |
 
 ## Worker loop (execution engine)
 
@@ -54,9 +62,9 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `OutputCorrectness.lean` | `allPassed_iff_no_failures`               | **[spec]** Pass/fail decision is correct: true iff no result is `.fail`                  |
 | `OutputCorrectness.lean` | `resultsToJson_has_required_fields`       | **[spec]** JSON output always contains "spec", "passed", "criteria" fields               |
 | `OutputCorrectness.lean` | `workerResultsToJson_has_required_fields` | **[spec]** Worker loop JSON always contains "spec", "state", "passed", "criteria" fields |
-| `ParserProperties.lean`  | `parseSchedule_complete`                  | **[spec]** If parseSchedule succeeds, input was "always", "local", or "manual"           |
+| `ParserProperties.lean`  | `parseSchedule_complete`                  | **[spec]** If parseSchedule succeeds, input was "always", "heavy", or "manual"           |
 | `ParserProperties.lean`  | `parseSchedule_always`                    | parseSchedule "always" = .ok .always                                                     |
-| `ParserProperties.lean`  | `parseSchedule_local`                     | parseSchedule "local" = .ok .local                                                       |
+| `ParserProperties.lean`  | `parseSchedule_heavy`                     | parseSchedule "heavy" = .ok .heavy                                                       |
 | `ParserProperties.lean`  | `parseSchedule_manual`                    | parseSchedule "manual" = .ok .manual                                                     |
 | `ParserProperties.lean`  | `parseSchedule_rejects_invalid`           | **[spec]** Any other string produces an error                                            |
 | `TomlProperties.lean`    | `setNested_no_duplicate_at_leaf`          | setNested inserts without duplicates when key is absent                                  |

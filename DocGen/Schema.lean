@@ -27,9 +27,9 @@ def verifyTypeConstructors : List String :=
 def scheduleValues : List String :=
   let _ : Schedule → Unit := fun
     | .always => ()
-    | .local => ()
+    | .heavy => ()
     | .manual => ()
-  ["always", "local", "manual"]
+  ["always", "heavy", "manual"]
 
 -- Exhaustive match on SpecMode — compile error if constructors change
 def specModeValues : List String :=
@@ -57,8 +57,9 @@ def loopStateValues : List String :=
     | .stuck _ _ => ()
     | .maxIterationsReached _ => ()
     | .escalated _ => ()
+    | .integrityViolation _ => ()
   ["ready", "workerRunning", "verifying", "passed", "stuck",
-   "maxIterationsReached", "escalated"]
+   "maxIterationsReached", "escalated", "integrityViolation"]
 
 /-- Ordered JSON value type. Unlike `Lean.Json`, objects preserve field order. -/
 inductive JsonValue where
@@ -294,7 +295,7 @@ def generate : String :=
             ]),
             ("schedule", obj [
               ("type", str "string"),
-              ("description", str "When this criterion runs. Defaults: 'always' for command/property/proof, 'manual' for human and agent."),
+              ("description", str "When this criterion runs. Defaults: 'always' for command/property/proof, 'heavy' for agent, 'manual' for human."),
               ("enum", arr (schedules.map fun s => DocGen.Schema.str s)),
               ("default", str "always")
             ]),

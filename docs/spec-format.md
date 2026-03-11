@@ -45,7 +45,7 @@ Each criterion has a description, a verification strategy, and a schedule.
 | Field         | Type                              | Required | Default    | Description                                                                                                                       |
 | ------------- | --------------------------------- | -------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `description` | string                            | yes      | —          | Human-readable description of what this criterion verifies.                                                                       |
-| `schedule`    | [Schedule](#schedule)             | no       | `"always"` | When this criterion runs. Defaults: 'always' for command/property/proof, 'manual' for human and agent.                            |
+| `schedule`    | [Schedule](#schedule)             | no       | `"always"` | When this criterion runs. Defaults: 'always' for command/property/proof, 'heavy' for agent, 'manual' for human.                   |
 | `skip`        | string                            | no       | —          | Skip this criterion with the given reason. Skipped criteria show [SKIP] in output and do not affect the overall pass/fail result. |
 | `verify`      | [VerifyType](#verification-types) | yes      | —          | How to verify this criterion. Discriminated by the 'type' field.                                                                  |
 
@@ -105,12 +105,12 @@ Ask a human to verify. Requires interactive stdin (schedule defaults to 'manual'
 
 ## Schedule
 
-Controls when a criterion runs. The runner filters by this field based on the execution context (`--ci`, `--local`, or no flag).
+Controls when a criterion runs. The runner filters by this field based on the execution context (`--auto`, `--extended`, `--full`, or no flag).
 
 | Value    | Description                                            | Default for                    |
 | -------- | ------------------------------------------------------ | ------------------------------ |
 | `always` | Every run — CI, pre-push, explicit                     | `command`, `property`, `proof` |
-| `local`  | Pre-push and explicit invocation — excluded from CI    | —                              |
-| `manual` | Only via explicit `qed run` or `qed verify` (no flags) | `human`, `agent`               |
+| `heavy`  | Included with `--extended`, excluded by default in CI  | `agent`                        |
+| `manual` | Only via explicit `qed run` or `qed verify` (no flags) | `human`                        |
 
 See [architecture.md](architecture.md) for the full state machine diagram and transition rules.

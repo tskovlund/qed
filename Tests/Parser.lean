@@ -186,14 +186,14 @@ def testParseJsonExtractsHumanInstruction : IO Bool := do
 
 def testParseJsonAppliesScheduleOverride : IO Bool := do
   -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}, \"schedule\": \"local\"}]}"
+  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}, \"schedule\": \"manual\"}]}"
   -- Act
   let result := Parser.parseJson json
   -- Assert
   match result with
   | .ok spec =>
     match spec.criteria.head? with
-    | some criterion => return criterion.schedule == Schedule.local
+    | some criterion => return criterion.schedule == Schedule.manual
     | none => return false
   | .error _ => return false
 

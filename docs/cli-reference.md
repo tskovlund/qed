@@ -15,19 +15,43 @@ qed help                  Show this help
 
 ## CLI flags
 
-| Flag      | Purpose                                                                 |
-| --------- | ----------------------------------------------------------------------- |
-| `--json`  | Machine-readable JSON output (position-independent)                     |
-| `--local` | Local mode — excludes `manual` criteria only (position-independent)     |
-| `--ci`    | CI mode — excludes `manual` and `local` criteria (position-independent) |
+| Flag         | Purpose                                                                        |
+| ------------ | ------------------------------------------------------------------------------ |
+| `--json`     | Machine-readable JSON output (position-independent)                            |
+| `--auto`     | Skip heavy and manual criteria (auto-detected when `CI=true`)                  |
+| `--extended` | Include heavy criteria, skip manual (for thorough CI runs)                     |
+| `--full`     | Run all criteria including manual (overrides CI auto-detection)                |
+| `--pin`      | Require spec files to match their git-committed version (position-independent) |
+
+## Schedule filtering
+
+Each criterion has a `schedule` value describing its nature. Flags control which schedules run:
+
+|                                | `always` | `heavy`  | `manual` |
+| ------------------------------ | -------- | -------- | -------- |
+| `--auto` / no flag (`CI=true`) | **runs** | skipped  | skipped  |
+| `--extended`                   | **runs** | **runs** | skipped  |
+| `--full` / no flag (local)     | **runs** | **runs** | **runs** |
+
+Schedule defaults: `always` for command/property/proof, `heavy` for agent, `manual` for human.
+
+## Recommended usage
+
+| Context        | Command                       | What runs          |
+| -------------- | ----------------------------- | ------------------ |
+| CI (default)   | `qed verify --pin`            | `always` only      |
+| CI (thorough)  | `qed verify --extended --pin` | `always` + `heavy` |
+| Pre-push hooks | `qed verify --auto --pin`     | `always` only      |
+| Local dev      | `qed verify`                  | everything         |
+| Worker loop    | `qed run spec.toml --pin`     | everything         |
 
 ## Exit codes
 
-| Code | Meaning                                                                |
-| ---- | ---------------------------------------------------------------------- |
-| 0    | Success — all criteria passed                                          |
-| 1    | Verification failure — one or more criteria failed                     |
-| 2    | Configuration or usage error — bad spec, missing file, unknown command |
+| Code | Meaning                                                                                        |
+| ---- | ---------------------------------------------------------------------------------------------- |
+| 0    | Success — all criteria passed                                                                  |
+| 1    | Verification failure — one or more criteria failed                                             |
+| 2    | Configuration or usage error — bad spec, missing file, unknown command, or integrity violation |
 
 ## Configuration
 
@@ -47,9 +71,10 @@ All meaningful parameters are configurable at the spec level — defaults are se
 
 ### Consumed by qed
 
-| Variable | Purpose                                                 |
-| -------- | ------------------------------------------------------- |
-| `TMPDIR` | Temp directory for failure files (falls back to `/tmp`) |
+| Variable | Purpose                                                  |
+| -------- | -------------------------------------------------------- |
+| `CI`     | When `true`, auto-enables `--auto` mode if no flag given |
+| `TMPDIR` | Temp directory for failure files (falls back to `/tmp`)  |
 
 ### Set by qed for workers
 

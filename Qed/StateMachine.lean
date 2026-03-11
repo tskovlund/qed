@@ -12,6 +12,8 @@ inductive LoopEvent where
   | allPassed
   /-- Some criteria failed. Carries the list of failing criterion descriptions. -/
   | someFailed (failingCriteria : List String)
+  /-- Spec file integrity violation detected. -/
+  | integrityViolation (reason : String)
   deriving Repr, BEq
 
 /-- Internal state tracking consecutive identical failures for stuck detection. -/
@@ -43,6 +45,10 @@ def transition (config : LoopConfig) (state : LoopState) (context : LoopContext)
     (state, context)
   else
     match state, event with
+    -- Integrity violation: immediate terminal from any non-terminal state
+    | _, .integrityViolation reason =>
+      (.integrityViolation reason, context)
+
     -- ready → workerRunning(1) on any event (start the loop)
     | .ready, _ =>
       (.workerRunning 1, context)
@@ -83,5 +89,6 @@ def transition (config : LoopConfig) (state : LoopState) (context : LoopContext)
     | .stuck iterations failingCriteria, _ => (.stuck iterations failingCriteria, context)
     | .maxIterationsReached iterations, _ => (.maxIterationsReached iterations, context)
     | .escalated reason, _ => (.escalated reason, context)
+    | .integrityViolation reason, _ => (.integrityViolation reason, context)
 
 end Qed.StateMachine

@@ -19,6 +19,7 @@ def statePhase : LoopState → Nat
   | .stuck _ _ => 2
   | .maxIterationsReached _ => 2
   | .escalated _ => 2
+  | .integrityViolation _ => 2
 
 -- 1. Determinism
 
@@ -57,10 +58,12 @@ theorem ready_unreachable (config : LoopConfig) (state : LoopState)
       split
       · simp
       · split <;> split <;> simp
+    | integrityViolation _ => simp
   | passed _ => simp [LoopState.isTerminal] at hnonterm
   | stuck _ _ => simp [LoopState.isTerminal] at hnonterm
   | maxIterationsReached _ => simp [LoopState.isTerminal] at hnonterm
   | escalated _ => simp [LoopState.isTerminal] at hnonterm
+  | integrityViolation _ => simp [LoopState.isTerminal] at hnonterm
 
 -- 3. State phase is monotonically non-decreasing
 
@@ -86,10 +89,12 @@ theorem phase_monotonic (config : LoopConfig) (state : LoopState)
         split
         · simp [statePhase]
         · split <;> split <;> simp [statePhase]
+      | integrityViolation _ => simp [statePhase]
     | passed _ => simp [LoopState.isTerminal] at h
     | stuck _ _ => simp [LoopState.isTerminal] at h
     | maxIterationsReached _ => simp [LoopState.isTerminal] at h
     | escalated _ => simp [LoopState.isTerminal] at h
+    | integrityViolation _ => simp [LoopState.isTerminal] at h
   case true =>
     simp only [↓reduceIte]
     exact Nat.le_refl _
@@ -126,10 +131,12 @@ theorem iteration_bounded (config : LoopConfig) (state : LoopState)
         · rename_i hlt
           split <;> split <;> simp [Monotonic.iterationOf]
           all_goals omega
+      | integrityViolation _ => simp [Monotonic.iterationOf]
     | passed _ => simp [LoopState.isTerminal] at h
     | stuck _ _ => simp [LoopState.isTerminal] at h
     | maxIterationsReached _ => simp [LoopState.isTerminal] at h
     | escalated _ => simp [LoopState.isTerminal] at h
+    | integrityViolation _ => simp [LoopState.isTerminal] at h
   case true =>
     simp only [↓reduceIte]
     exact hbound

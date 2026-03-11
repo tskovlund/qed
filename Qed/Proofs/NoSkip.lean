@@ -27,6 +27,7 @@ theorem no_skip_verification (config : LoopConfig) (state : LoopState)
   | stuck _ _ => simp [LoopState.isTerminal] at hnonterm
   | maxIterationsReached _ => simp [LoopState.isTerminal] at hnonterm
   | escalated _ => simp [LoopState.isTerminal] at hnonterm
+  | integrityViolation _ => simp [LoopState.isTerminal] at hnonterm
 
 /-- `verifying(n)` is only reachable from `workerRunning(n)` via a single
 non-terminal transition. If a non-terminal state transitions to `.verifying m`,
@@ -48,6 +49,7 @@ theorem worker_before_verification (config : LoopConfig) (state : LoopState)
       simp at h; left; congr
     | allPassed => simp at h
     | someFailed _ => simp at h
+    | integrityViolation _ => simp at h
   | verifying k =>
     cases event with
     | allPassed => simp at h
@@ -59,9 +61,11 @@ theorem worker_before_verification (config : LoopConfig) (state : LoopState)
       · split at h <;> (split at h <;> simp at h)
     | workerDone =>
       simp at h; right; congr
+    | integrityViolation _ => simp at h
   | passed _ => simp [LoopState.isTerminal] at hnonterm
   | stuck _ _ => simp [LoopState.isTerminal] at hnonterm
   | maxIterationsReached _ => simp [LoopState.isTerminal] at hnonterm
   | escalated _ => simp [LoopState.isTerminal] at hnonterm
+  | integrityViolation _ => simp [LoopState.isTerminal] at hnonterm
 
 end Qed.Proofs.NoSkip

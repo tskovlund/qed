@@ -35,16 +35,16 @@ inductive VerifyType where
   deriving Repr, BEq
 
 /-- When a criterion runs. Controls which execution contexts include it.
-    Forms a capability hierarchy: always > local > manual. -/
+    Forms a hierarchy: always ⊃ heavy ⊃ manual. -/
 inductive Schedule where
   /-- Every run — CI, pre-push hooks, explicit invocation. Default for
       automatable types (command, property, proof). -/
   | always
-  /-- Only in local contexts — pre-push hooks and explicit invocation,
-      not headless CI. -/
-  | local
+  /-- Resource-heavy — included with `--extended`, excluded by default in
+      CI and `--auto`. Default for agent verification. -/
+  | heavy
   /-- Only via explicit invocation (`qed verify` / `qed run` without flags).
-      For expensive or non-deterministic criteria (e.g. agent reviews). -/
+      For interactive criteria requiring human presence. -/
   | manual
   deriving Repr, BEq
 
@@ -53,11 +53,12 @@ structure AcceptanceCriterion where
   description : String
   verify : VerifyType
   /-- When this criterion runs. Defaults based on verify type:
-      human and agent default to `manual` (interactive / expensive),
+      human defaults to `manual` (interactive),
+      agent defaults to `heavy` (automated but resource-heavy),
       everything else defaults to `always`. -/
   schedule : Schedule := match verify with
     | .human _ => .manual
-    | .agent _ _ _ => .manual
+    | .agent _ _ _ => .heavy
     | _ => .always
   /-- When set, the criterion is intentionally skipped with the given reason.
       Skipped criteria show `[SKIP]` in output and do not affect pass/fail. -/
@@ -100,6 +101,15 @@ structure Spec where
   name : String
   mode : SpecMode
   criteria : List AcceptanceCriterion
+  deriving Repr
+
+/-- A spec pinned to a specific file state. Carries the file path and a
+    SHA-256 hash of the raw file bytes at load time for integrity verification.
+    Not serialized — this is runtime-only provenance tracking. -/
+structure Spec.Pinned where
+  spec : Spec
+  path : System.FilePath
+  contentHash : String
   deriving Repr
 
 /-- The result of verifying a single acceptance criterion. -/
@@ -145,6 +155,8 @@ inductive LoopState where
   | maxIterationsReached (iterations : Nat)
   /-- Escalated due to stuck or max iterations. -/
   | escalated (reason : String)
+  /-- Spec file was tampered with during execution. -/
+  | integrityViolation (reason : String)
   deriving Repr, BEq
 
 /-- Whether a LoopState is terminal (no further transitions). -/
@@ -153,6 +165,7 @@ def LoopState.isTerminal : LoopState → Bool
   | .stuck _ _ => true
   | .maxIterationsReached _ => true
   | .escalated _ => true
+  | .integrityViolation _ => true
   | _ => false
 
 end Qed

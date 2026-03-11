@@ -96,8 +96,9 @@ Review Qed/Parser.lean. Verify:
 5. The parser handles both execution modes correctly:
    - worker present → SpecMode.workerLoop with LoopConfig
    - worker absent → SpecMode.verify with ≥1 criteria validation
-6. Schedule field parsing: accepts "always", "local", "manual" with correct
-   defaults per verify type (human → local, agent → manual, others → always)
+6. Schedule field parsing: accepts "always", "heavy", and "manual" with
+   correct defaults per verify type (human → manual, agent → heavy,
+   others → always)
 
 Report any parsing bugs, missing validation, or data loss risks.
 """

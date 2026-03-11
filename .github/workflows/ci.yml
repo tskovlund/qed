@@ -26,4 +26,4 @@ jobs:
       - name: Verify specs
         run: |
           lake build docgen
-          .lake/build/bin/qed verify --ci
+          .lake/build/bin/qed verify --pin

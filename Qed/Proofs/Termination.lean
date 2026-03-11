@@ -66,17 +66,20 @@ theorem verify_workerDone_stays (config : LoopConfig) (iteration : Nat)
   simp [LoopState.isTerminal]
 
 /-- A non-terminal transition from `workerRunning` either stays in
-`workerRunning` (on non-workerDone events) or advances to `verifying`. -/
+`workerRunning` (on non-workerDone events), advances to `verifying`,
+or terminates (on integrityViolation). -/
 theorem workerRunning_transition (config : LoopConfig) (iteration : Nat)
     (context : LoopContext) (event : LoopEvent) :
     let result := transition config (.workerRunning iteration) context event
-    result.1 = .workerRunning iteration ∨ result.1 = .verifying iteration := by
+    result.1 = .workerRunning iteration ∨ result.1 = .verifying iteration
+    ∨ result.1.isTerminal = true := by
   unfold transition
   simp [LoopState.isTerminal]
   cases event with
-  | workerDone => right; rfl
+  | workerDone => right; left; rfl
   | allPassed => left; rfl
   | someFailed _ => left; rfl
+  | integrityViolation _ => right; right; rfl
 
 /-- The fuel measure: maxIterations - current iteration. For any non-terminal
 transition from `verifying` with `someFailed` that doesn't terminate, the fuel

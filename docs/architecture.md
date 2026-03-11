@@ -46,18 +46,23 @@ stateDiagram-v2
     verifying --> stuck : someFailed\n[same failures ≥ stuckThreshold]
     verifying --> maxIterationsReached : someFailed\n[n ≥ maxIterations]
 
+    workerRunning --> integrityViolation : integrityViolation
+    verifying --> integrityViolation : integrityViolation
+
     passed --> [*]
     stuck --> [*]
     maxIterationsReached --> [*]
+    integrityViolation --> [*]
 ```
 
 ### Events
 
-| Event        | Description                                             |
-| ------------ | ------------------------------------------------------- |
-| `workerDone` | Worker has completed its run                            |
-| `allPassed`  | All auto-verifiable criteria passed                     |
-| `someFailed` | Some criteria failed (carries the failing descriptions) |
+| Event                | Description                                             |
+| -------------------- | ------------------------------------------------------- |
+| `workerDone`         | Worker has completed its run                            |
+| `allPassed`          | All auto-verifiable criteria passed                     |
+| `someFailed`         | Some criteria failed (carries the failing descriptions) |
+| `integrityViolation` | Spec file was modified during execution                 |
 
 ### Terminal states
 
@@ -69,6 +74,7 @@ Terminal states are **absorbing** — once reached, all events are ignored. This
 | `stuck`                | Same failures repeated for `stuckThreshold` consecutive iterations |
 | `maxIterationsReached` | Hit the iteration cap                                              |
 | `escalated`            | Reserved for future human-in-the-loop escalation                   |
+| `integrityViolation`   | Spec file was modified during execution — results rejected         |
 
 ### Stuck detection
 
@@ -103,7 +109,7 @@ The verification type determines both **what runs** and **what guarantee you get
 | Type       | Runs                    | Guarantee      | CI default |
 | ---------- | ----------------------- | -------------- | ---------- |
 | `human`    | Nothing (waits)         | Human judgment | `manual`   |
-| `agent`    | LLM agent (any backend) | Probabilistic  | `always`   |
+| `agent`    | LLM agent (any backend) | Probabilistic  | `heavy`    |
 | `command`  | Shell command           | Deterministic  | `always`   |
 | `property` | Test framework          | Statistical    | `always`   |
 | `proof`    | Proof checker           | Mathematical   | `always`   |
@@ -113,10 +119,12 @@ The verification type determines both **what runs** and **what guarantee you get
 Specs are files in the repo — version-controlled, schema-validated, colocated with the code they specify. `SpecLoader` reads and lists spec files from disk:
 
 ```lean
-def loadSpec (path : System.FilePath) : IO (Except String Spec)
+def loadSpec (path : System.FilePath) : IO (Except String Spec.Pinned)
 def listSpecs (directory : System.FilePath) (extension : String) : IO (Except String (List System.FilePath))
 def listAllSpecs (directory : System.FilePath) : IO (Except String (List System.FilePath))  -- recursive
 ```
+
+`loadSpec` returns a `Spec.Pinned` — the parsed spec plus the file path and SHA-256 hash of the raw file bytes at load time. This hash is used for integrity verification throughout execution.
 
 `listAllSpecs` recursively searches for `.spec.json` and `.spec.toml` files, skipping hidden directories and build artifacts. `qed verify` with no argument defaults to the current directory.
 
@@ -127,11 +135,23 @@ The architecture follows a strict separation:
 | Layer         | IO? | What lives here                                                                           |
 | ------------- | --- | ----------------------------------------------------------------------------------------- |
 | **Pure core** | No  | Types, Agent, StateMachine, Parser, TomlParser, TomlConverter, Output, Serializer, Proofs |
-| **IO shell**  | Yes | Shell, WorkerLoop, Verifier, SpecLoader, CLI                                              |
+| **IO shell**  | Yes | Shell, Integrity, WorkerLoop, Verifier, SpecLoader, CLI                                   |
 
 The pure core is where all proofs live. It has no side effects, no process spawning, no file access. The IO shell wraps the pure core with real-world effects — parsing files, running commands, reporting results.
 
 This separation means proofs about the state machine are proofs about the actual system behavior, not about a model of it.
+
+## Spec integrity
+
+qed content-addresses spec files to detect tampering during execution. At load time, the raw file bytes are hashed (SHA-256) and stored in `Spec.Pinned`. Integrity is verified at three points per worker loop iteration:
+
+1. **Before worker spawn** — catches tampering between iterations
+2. **Before verification** — catches worker tampering
+3. **After verification** — catches verifier tampering
+
+If the hash doesn't match, a `LoopEvent.integrityViolation` transitions the state machine to a terminal `integrityViolation` state. Formally proven: this event always produces a terminal state (no results accepted).
+
+The `--pin` flag adds a `git diff --exit-code` check — the spec must match its committed version. This answers a stronger question: not just "the spec didn't change during this run" but "the spec matches what's in version control."
 
 ## Further reading
 

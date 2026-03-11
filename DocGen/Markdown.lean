@@ -152,8 +152,8 @@ def generate (schemaString : String) : Except String String := do
     match value with
     | Json.str s => match s with
       | "always" => some ["`always`", "Every run — CI, pre-push, explicit", "`command`, `property`, `proof`"]
-      | "local" => some ["`local`", "Pre-push and explicit invocation — excluded from CI", "—"]
-      | "manual" => some ["`manual`", "Only via explicit `qed run` or `qed verify` (no flags)", "`human`, `agent`"]
+      | "heavy" => some ["`heavy`", "Included with `--extended`, excluded by default in CI", "`agent`"]
+      | "manual" => some ["`manual`", "Only via explicit `qed run` or `qed verify` (no flags)", "`human`"]
       | other => some [s!"`{other}`", "", ""]
     | _ => none
   let scheduleTable := renderPaddedTable ["Value", "Description", "Default for"] scheduleData
@@ -200,7 +200,7 @@ Five verification strategies, from lightweight to mathematical:
 
 ## Schedule
 
-Controls when a criterion runs. The runner filters by this field based on the execution context (`--ci`, `--local`, or no flag).
+Controls when a criterion runs. The runner filters by this field based on the execution context (`--auto`, `--extended`, `--full`, or no flag).
 
 {scheduleTable}
 

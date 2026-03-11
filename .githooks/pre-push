@@ -13,9 +13,5 @@ fi
 echo "pre-push: building..."
 lake build || exit 1
 
-# Redirect stdin from terminal — git uses stdin for ref data,
-# but human criteria need interactive input.
-exec < /dev/tty
-
 echo "pre-push: verifying specs..."
-.lake/build/bin/qed verify --local || exit 1
+.lake/build/bin/qed verify --auto --pin || exit 1

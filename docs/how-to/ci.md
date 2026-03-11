@@ -6,16 +6,25 @@ Run `qed verify` in your CI pipeline to check all specs on every push.
 
 ```yaml
 - name: Verify specs
-  run: qed verify --ci
+  run: qed verify --pin
 ```
 
-The `--ci` flag excludes criteria with `schedule = "manual"` or `schedule = "local"` — only `always` criteria run. This recursively finds all `.spec.json` and `.spec.toml` files in the repository and verifies them. qed exits with code 0 if all criteria pass, 1 if any fail, and 2 on configuration errors.
+CI mode is auto-detected — when the `CI` environment variable is set to `true` (which GitHub Actions, GitLab CI, and most CI providers do automatically), qed runs in `--auto` mode: only `schedule = "always"` criteria run. The `--pin` flag ensures each spec matches its git-committed version — results from locally modified specs are rejected.
+
+qed recursively finds all `.spec.json` and `.spec.toml` files in the repository and verifies them. It exits with code 0 if all criteria pass, 1 if any fail, and 2 on configuration errors.
+
+For thorough CI runs (e.g. nightly) that include agent reviews:
+
+```yaml
+- name: Verify specs (extended)
+  run: qed verify --extended --pin
+```
 
 For JSON output (useful for downstream parsing):
 
 ```yaml
 - name: Verify specs
-  run: qed verify --json
+  run: qed verify --pin --json
 ```
 
 ## Controlling what runs in CI
@@ -29,21 +38,21 @@ verify = { type = "command", run = "make build" }
 schedule = "always"        # every run (default for command/property/proof)
 
 [[criteria]]
+description = "Code review"
+verify = { type = "agent", prompt = "Review the implementation." }
+# schedule defaults to "heavy" for agent criteria
+
+[[criteria]]
 description = "Design review"
 verify = { type = "human", instruction = "Check the UI" }
 # schedule defaults to "manual" for human criteria
-
-[[criteria]]
-description = "Full agent review"
-verify = { type = "agent", prompt = "Review everything." }
-# schedule defaults to "manual" for agent criteria
 ```
 
-| Value    | When it runs                               | Excluded by       | Default for              |
-| -------- | ------------------------------------------ | ----------------- | ------------------------ |
-| `always` | Every run (CI, local, explicit)            | —                 | command, property, proof |
-| `local`  | Pre-push and explicit invocation           | `--ci`            | —                        |
-| `manual` | Only via explicit invocation without flags | `--ci`, `--local` | human, agent             |
+| Value    | When it runs                               | Excluded by            | Default for              |
+| -------- | ------------------------------------------ | ---------------------- | ------------------------ |
+| `always` | Every run (CI, hooks, explicit)            | —                      | command, property, proof |
+| `heavy`  | Explicit invocation and `--extended`       | `--auto`               | agent                    |
+| `manual` | Only via explicit invocation without flags | `--auto`, `--extended` | human                    |
 
 ## Criteria that require external tools
 
@@ -53,17 +62,12 @@ To exclude criteria from CI where their tools aren't installed, set `schedule = 
 
 ```toml
 [[criteria]]
-description = "Code review"
-schedule = "manual"
-verify = { type = "agent", prompt = "Review the implementation." }
-
-[[criteria]]
 description = "Termination proof"
 schedule = "manual"
 verify = { type = "proof", prover = "lean4", target = "Proofs.Termination.loop_terminates" }
 ```
 
-This keeps the criteria in the spec but only runs them via explicit invocation without flags, not in CI or local mode. To run them in CI, ensure the required tools are installed and any API keys are available as secrets.
+This keeps the criteria in the spec but only runs them via explicit invocation without flags, not in CI or hooks. To run them in CI, ensure the required tools are installed and any API keys are available as secrets.
 
 Alternatively, use `skip` to disable a criterion entirely (in all environments) with a documented reason:
 
@@ -87,7 +91,7 @@ This limits verification to specs in the `specs/` directory and its subdirectori
 
 ## Ensuring manual criteria get validated
 
-Human and agent criteria default to `schedule = "manual"`, which means they are excluded from `--ci` and `--local` (pre-push hooks). This is intentional — human criteria require interactive input, and agent criteria are expensive — but it means they only run during explicit invocation.
+Human criteria default to `schedule = "manual"`, which means they never run in automated contexts. This is intentional — they require interactive input. Agent criteria default to `schedule = "heavy"` — excluded from default CI but includable with `--extended`.
 
 To run everything, including manual criteria:
 
@@ -99,6 +103,7 @@ No flags means no filtering — all criteria run regardless of schedule.
 
 **Recommended practices:**
 
-- **Before merging structural PRs**, run `qed verify` without flags to validate agent and human criteria. Add this as a PR checklist item.
-- **For agent criteria in CI**, consider a scheduled workflow (e.g. nightly or weekly) that runs `qed verify` without flags. This catches drift between scheduled runs. Ensure the agent binary and any API keys are available as CI secrets.
-- **Override the default** if a human or agent criterion should run more frequently. Set `schedule = "always"` or `schedule = "local"` explicitly to include it in CI or pre-push hooks.
+- **Use `--pin` in CI** to ensure specs match their committed version. Without it, a modified-but-uncommitted spec could pass verification against the wrong definition.
+- **Use `--extended` for nightly CI** to include agent reviews. This catches issues that deterministic checks miss.
+- **Before merging structural PRs**, run `qed verify` without flags to validate all criteria including human sign-offs.
+- **Override the default** if a criterion should run more frequently. Set `schedule = "always"` explicitly to include it in every CI run.

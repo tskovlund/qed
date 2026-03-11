@@ -69,7 +69,7 @@ Five verification types, from human judgment to mathematical proof:
 | `property` | Hypothesis / QuickCheck  | Statistical    | ![planned](https://img.shields.io/badge/planned-yellow)              |
 | `proof`    | Lean 4 / Coq / Agda      | Mathematical   | ![planned](https://img.shields.io/badge/planned-yellow)              |
 
-Every criterion must pass, be explicitly skipped, or have its tool available — qed never silently skips verification. Use `skip` to intentionally disable criteria, and `schedule` to control when criteria run (`always`, `local`, or `manual`).
+Every criterion must pass, be explicitly skipped, or have its tool available — qed never silently skips verification. Use `skip` to intentionally disable criteria, and `schedule` to control when criteria run (`always`, `heavy`, or `manual`).
 
 ## Formally proven
 
@@ -97,6 +97,22 @@ qed verify specs/     # verify qed's own specs
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
+
+## Recommended setup
+
+Add `qed verify` to your CI pipeline and pre-push hook. Use `--pin` to ensure specs match their committed version — results from modified specs are rejected. CI mode is auto-detected when `CI=true` is set.
+
+```yaml
+# CI — skips heavy (agent) and manual (human) criteria automatically
+- run: qed verify --pin
+```
+
+```bash
+# Pre-push hook — same filtering, pinned to committed version
+qed verify --auto --pin
+```
+
+Run `qed verify` with no flags for the full suite, or `--extended` to include agent reviews without human criteria.
 
 ## Documentation
 
