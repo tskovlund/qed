@@ -52,6 +52,21 @@ def getTerminalWidth : IO Nat := do
     | none => return 80
   catch _ => return 80
 
+/-- Print a line with word-wrapping. The first line starts with `firstPrefix`,
+    continuation lines are indented to `continuationIndent` spaces to align
+    with the text start. -/
+def printWrapped (firstPrefix : String) (continuationIndent : Nat)
+    (text : String) (termWidth : Nat) : IO Unit := do
+  let wrapWidth := if termWidth > continuationIndent + 20 then termWidth - continuationIndent else 60
+  let wrapped := wordWrap text wrapWidth
+  match wrapped with
+  | [] => IO.println firstPrefix
+  | first :: rest =>
+    IO.println s!"{firstPrefix}{first}"
+    let pad := String.ofList (List.replicate continuationIndent ' ')
+    for line in rest do
+      IO.println s!"{pad}{line}"
+
 /-- Serialize a VerificationResult to a JSON-friendly result string. -/
 def resultStatus : VerificationResult → String
   | .pass _ => "passed"

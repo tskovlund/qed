@@ -33,6 +33,7 @@ def verifySpec (spec : Spec) (jsonOutput : Bool) (context : RunContext := .full)
     let anyFailed := results.any fun (_, result) => result.isFailed
     return if anyFailed then 1 else 0
   else
+    let termWidth ← Output.getTerminalWidth
     IO.println s!"{Output.ansiBold}Verifying: {spec.name}{Output.ansiReset}"
     IO.println ""
     if criteria.isEmpty then
@@ -42,6 +43,8 @@ def verifySpec (spec : Spec) (jsonOutput : Bool) (context : RunContext := .full)
     let mut total : Nat := 0
     let mut failedCount : Nat := 0
     let mut skippedCount : Nat := 0
+    -- Visible width of "  [XXXX] " prefix (2 + 1 + 4 + 1 + 1 = 9)
+    let continuationIndent : Nat := 9
     for criterion in criteria do
       let result ← Verifier.verifyCriterion criterion
       total := total + 1
@@ -50,11 +53,11 @@ def verifySpec (spec : Spec) (jsonOutput : Bool) (context : RunContext := .full)
         failedCount := failedCount + 1
       if result.isSkipped then
         skippedCount := skippedCount + 1
-      match result with
-      | .skipped reason =>
-        IO.println s!"  [{Output.colorStatusIndicator result}] {criterion.description} {Output.ansiDim}— {reason}{Output.ansiReset}"
-      | _ =>
-        IO.println s!"  [{Output.colorStatusIndicator result}] {criterion.description}"
+      let linePrefix := s!"  [{Output.colorStatusIndicator result}] "
+      let text := match result with
+        | .skipped reason => s!"{criterion.description} {Output.ansiDim}— {reason}{Output.ansiReset}"
+        | _ => criterion.description
+      Output.printWrapped linePrefix continuationIndent text termWidth
     IO.println ""
     if failedCount == 0 then
       if skippedCount == total then

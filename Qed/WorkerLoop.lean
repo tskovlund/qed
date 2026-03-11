@@ -128,12 +128,15 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
         allResults := results
         let failed := results.filter fun (_, result) => result.isFailed
         if !jsonOutput then
+          let termWidth ← Output.getTerminalWidth
+          -- Visible width of "    [XXXX] " prefix (4 + 1 + 4 + 1 + 1 = 11)
+          let continuationIndent : Nat := 11
           for (description, result) in results do
-            match result with
-            | .skipped reason =>
-              IO.println s!"    [{Output.colorStatusIndicator result}] {description} {Output.ansiDim}— {reason}{Output.ansiReset}"
-            | _ =>
-              IO.println s!"    [{Output.colorStatusIndicator result}] {description}"
+            let linePrefix := s!"    [{Output.colorStatusIndicator result}] "
+            let text := match result with
+              | .skipped reason => s!"{description} {Output.ansiDim}— {reason}{Output.ansiReset}"
+              | _ => description
+            Output.printWrapped linePrefix continuationIndent text termWidth
         if failed.isEmpty then
           let (s, c) := step loopConfig state context .allPassed
           state := s
