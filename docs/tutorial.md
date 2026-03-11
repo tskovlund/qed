@@ -149,7 +149,7 @@ When qed reaches the human criterion, it prints the instruction and waits:
     Accept? [y/n]: y
 ```
 
-Type `y` to pass, `n` to fail. Human criteria default to `schedule = "local"`, so they're automatically excluded from CI runs (`qed verify --ci`).
+Type `y` to pass, `n` to fail. Human criteria default to `schedule = "manual"`, so they're automatically excluded from automated runs (`qed verify --auto` or CI).
 
 ## Step 6: Verify a directory
 

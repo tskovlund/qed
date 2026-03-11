@@ -27,9 +27,8 @@ def verifyTypeConstructors : List String :=
 def scheduleValues : List String :=
   let _ : Schedule → Unit := fun
     | .always => ()
-    | .local => ()
     | .manual => ()
-  ["always", "local", "manual"]
+  ["always", "manual"]
 
 -- Exhaustive match on SpecMode — compile error if constructors change
 def specModeValues : List String :=

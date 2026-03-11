@@ -43,7 +43,7 @@ If the human rejects, the failure feeds back to the worker for another iteration
 
 ## In CI
 
-Human criteria default to `schedule = "manual"`, so they are automatically excluded from `--ci` and `--local` (pre-push hooks). They only run during explicit invocation without flags. See [How to add qed to CI](ci.md#ensuring-manual-criteria-get-validated) for recommendations on validating them regularly.
+Human criteria default to `schedule = "manual"`, so they are automatically excluded from `--auto` and CI. They only run during explicit invocation without flags. See [How to add qed to CI](ci.md#ensuring-manual-criteria-get-validated) for recommendations on validating them regularly.
 
 ## Non-interactive contexts
 

@@ -31,9 +31,8 @@ def optionalNat (json : Json) (field : String) (default : Nat) : Except String N
 def parseSchedule (value : String) : Except String Schedule :=
   match value with
   | "always" => .ok .always
-  | "local" => .ok .local
   | "manual" => .ok .manual
-  | other => .error s!"invalid schedule: '{other}' (expected always, local, or manual)"
+  | other => .error s!"invalid schedule: '{other}' (expected always or manual)"
 
 /-- Parse a VerifyType from a JSON object (the "verify" field of a criterion). -/
 def parseVerifyType (json : Json) : Except String VerifyType := do

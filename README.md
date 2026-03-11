@@ -109,7 +109,7 @@ Add `qed verify` to your CI pipeline and pre-push hook. Use `--pin` to ensure sp
 
 ```bash
 # Pre-push hook — excludes manual criteria, pins to committed version
-qed verify --local --pin
+qed verify --auto --pin
 ```
 
 Run `qed verify` with no flags for the full suite, including agent and human criteria.

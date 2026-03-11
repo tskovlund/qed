@@ -6,20 +6,17 @@ def version : String := "0.1.0-dev"
 
 /-- Execution context for schedule filtering. -/
 inductive RunContext where
-  /-- No filtering — all criteria run. -/
+  /-- No filtering — all criteria run (including manual). -/
   | full
-  /-- Local hook (pre-push) — exclude `manual`, include `local`. -/
-  | local
-  /-- CI pipeline — exclude `manual` and `local`. -/
-  | ci
+  /-- Automated mode — exclude `manual` criteria. For CI, hooks, scripts. -/
+  | auto
   deriving BEq
 
 /-- Filter criteria based on execution context and schedule. -/
 def filterBySchedule (criteria : List AcceptanceCriterion) (context : RunContext) : List AcceptanceCriterion :=
   match context with
   | .full => criteria
-  | .local => criteria.filter fun c => c.schedule != .manual
-  | .ci => criteria.filter fun c => c.schedule == .always
+  | .auto => criteria.filter fun c => c.schedule != .manual
 
 /-- Report an error, using JSON format when --json is active. -/
 private def reportError (message : String) (jsonOutput : Bool) : IO Unit := do
@@ -180,9 +177,7 @@ def printHelp : IO Unit := do
   IO.println ""
   IO.println "Options:"
   IO.println "  --json                    Output results as JSON"
-  IO.println "  --local                   Local mode — exclude schedule = \"manual\" criteria"
-  IO.println "  --ci                      CI mode — exclude schedule = \"manual\" and \"local\" criteria"
-  IO.println "                            (auto-detected when CI=true is set)"
+  IO.println "  --auto                    Skip manual criteria (auto-detected when CI=true)"
   IO.println "  --pin                     Require spec files to match their git-committed version"
   IO.println ""
   IO.println "Exit codes:"
@@ -191,14 +186,13 @@ def printHelp : IO Unit := do
   IO.println "  2  Configuration or usage error (bad spec, missing file, unknown command)"
 
 /-- Extract flags and remaining args from the argument list.
-    Returns `none` for context when no explicit `--ci` or `--local` flag is given. -/
+    Returns `none` for context when no explicit `--auto` flag is given. -/
 private def extractFlags (args : List String) : Bool × Option RunContext × Bool × List String :=
   let jsonFlag := args.any (· == "--json")
   let pinFlag := args.any (· == "--pin")
-  let context := if args.any (· == "--ci") then some RunContext.ci
-    else if args.any (· == "--local") then some RunContext.local
+  let context := if args.any (· == "--auto") then some RunContext.auto
     else none
-  let remaining := args.filter fun a => a != "--json" && a != "--ci" && a != "--local" && a != "--pin"
+  let remaining := args.filter fun a => a != "--json" && a != "--auto" && a != "--pin"
   (jsonFlag, context, pinFlag, remaining)
 
 /-- Resolve the execution context: explicit flag > CI env var > full. -/
@@ -207,7 +201,7 @@ private def resolveContext (explicit : Option RunContext) : IO RunContext := do
   | some ctx => return ctx
   | none =>
     let ciEnv ← IO.getEnv "CI"
-    return if ciEnv == some "true" then RunContext.ci else RunContext.full
+    return if ciEnv == some "true" then .auto else .full
 
 def main (args : List String) : IO UInt32 := do
   let (jsonOutput, explicitContext, pinned, cleanArgs) := extractFlags args

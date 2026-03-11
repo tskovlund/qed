@@ -152,7 +152,6 @@ def generate (schemaString : String) : Except String String := do
     match value with
     | Json.str s => match s with
       | "always" => some ["`always`", "Every run — CI, pre-push, explicit", "`command`, `property`, `proof`"]
-      | "local" => some ["`local`", "Pre-push and explicit invocation — excluded from CI", "—"]
       | "manual" => some ["`manual`", "Only via explicit `qed run` or `qed verify` (no flags)", "`human`, `agent`"]
       | other => some [s!"`{other}`", "", ""]
     | _ => none

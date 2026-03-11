@@ -34,17 +34,13 @@ inductive VerifyType where
   | human (instruction : String)
   deriving Repr, BEq
 
-/-- When a criterion runs. Controls which execution contexts include it.
-    Forms a capability hierarchy: always > local > manual. -/
+/-- When a criterion runs. Controls which execution contexts include it. -/
 inductive Schedule where
   /-- Every run — CI, pre-push hooks, explicit invocation. Default for
       automatable types (command, property, proof). -/
   | always
-  /-- Only in local contexts — pre-push hooks and explicit invocation,
-      not headless CI. -/
-  | local
   /-- Only via explicit invocation (`qed verify` / `qed run` without flags).
-      For expensive or non-deterministic criteria (e.g. agent reviews). -/
+      For interactive or expensive criteria (human sign-offs, agent reviews). -/
   | manual
   deriving Repr, BEq
 
