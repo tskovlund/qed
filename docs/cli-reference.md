@@ -23,6 +23,18 @@ qed help                  Show this help
 | `--full`     | Run all criteria including manual (overrides CI auto-detection)                |
 | `--pin`      | Require spec files to match their git-committed version (position-independent) |
 
+## Schedule filtering
+
+Each criterion has a `schedule` value describing its nature. Flags control which schedules run:
+
+|                                | `always` | `heavy`  | `manual` |
+| ------------------------------ | -------- | -------- | -------- |
+| `--auto` / no flag (`CI=true`) | **runs** | skipped  | skipped  |
+| `--extended`                   | **runs** | **runs** | skipped  |
+| `--full` / no flag (local)     | **runs** | **runs** | **runs** |
+
+Schedule defaults: `always` for command/property/proof, `heavy` for agent, `manual` for human.
+
 ## Recommended usage
 
 | Context        | Command                       | What runs          |
