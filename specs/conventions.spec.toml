@@ -1,0 +1,73 @@
+#:schema ../docs/spec.schema.json
+
+# Convention adherence — automated checks where possible, agent review for the rest.
+
+name = "convention-adherence"
+
+[[criteria]]
+description = "Code follows naming conventions (full variable names, no abbreviations)"
+
+[criteria.verify]
+type = "agent"
+prompt = """
+Review all Lean source files (Qed/*.lean, Main.lean, DocGen/*.lean) for
+naming convention violations from CONVENTIONS.md:
+
+1. **Full variable names** — no abbreviations like `m` for `measure_index`,
+   `conn` for `connection`, `exc` for `exception`, `msg` for `message`,
+   `resp` for `response`. Single-letter variables are only acceptable as
+   loop counters or in very short lambdas
+2. **No shorthand** — check for abbreviated names in function signatures,
+   let bindings, and structure fields
+3. **Named constants** — no magic numbers or strings. Every literal value
+   should be self-documenting via a named constant or be obviously trivial
+   (0, 1, "", true/false)
+
+Only report clear violations. Lean-idiomatic names (h for hypotheses in
+proofs, s/c for state/context in match arms) are acceptable.
+
+List each violation with file, line reference, the offending name, and
+what it should be.
+"""
+
+[[criteria]]
+description = "No DRY violations or dead code"
+
+[criteria.verify]
+type = "agent"
+prompt = """
+Review the codebase for DRY violations and dead code:
+
+1. **Duplicated logic** — look for copy-pasted code blocks, similar
+   match arms that could be extracted, repeated string literals
+2. **Dead code** — unused functions, unreachable branches, imports that
+   aren't used
+3. **Single responsibility** — files that do too many things, functions
+   that are too long (>50 lines suggests extraction needed)
+
+Focus on Qed/*.lean, Main.lean, and DocGen/*.lean. Tests are allowed
+to have some repetition for clarity.
+
+List each issue with file, line reference, and a suggested fix.
+"""
+
+[[criteria]]
+description = "AGENTS.md and CONVENTIONS.md are consistent and accurate"
+
+[criteria.verify]
+type = "agent"
+prompt = """
+Check that AGENTS.md (which CLAUDE.md symlinks to) and CONVENTIONS.md
+are consistent with the actual codebase:
+
+1. Every file listed in the architecture table in AGENTS.md exists
+2. No source files are missing from the architecture table
+3. The spec format section matches the actual schema
+4. The dev environment section matches the actual setup (devbox.json,
+   lean-toolchain)
+5. CONVENTIONS.md language-specific sections (Lean) match the actual
+   patterns used in the code
+6. All commands documented in AGENTS.md work (lake build, lake test, etc.)
+
+Report any inaccuracies, missing files, or outdated information.
+"""

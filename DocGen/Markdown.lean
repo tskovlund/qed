@@ -52,23 +52,48 @@ structure TableConfig where
   /-- Override type names for specific fields (e.g., "worker" → "[Worker](#worker)"). -/
   typeOverrides : List (String × String) := []
 
+/-- Pad a string with trailing spaces to reach the given width. -/
+private def padRight (s : String) (width : Nat) : String :=
+  let padding := width - s.length
+  s ++ String.ofList (List.replicate padding ' ')
+
+/-- Render a padded markdown table from rows of cell values.
+    Prettier requires columns to be padded to equal width. -/
+private def renderPaddedTable (headers : List String) (rows : List (List String)) : String :=
+  let allRows := headers :: rows
+  let columnCount := headers.length
+  let columnWidths := List.range columnCount |>.map fun columnIndex =>
+    allRows.foldl (init := 0) fun maxWidth row =>
+      match row[columnIndex]? with
+      | some cell => Nat.max maxWidth cell.length
+      | none => maxWidth
+  let formatRow (cells : List String) : String :=
+    let paddedCells := (cells.zip (List.range cells.length)).map fun (cell, index) =>
+      match columnWidths[index]? with
+      | some width => padRight cell width
+      | none => cell
+    "| " ++ " | ".intercalate paddedCells ++ " |"
+  let separatorCells := columnWidths.map fun width =>
+    String.ofList (List.replicate width '-')
+  let separator := "| " ++ " | ".intercalate separatorCells ++ " |"
+  let headerLine := formatRow headers
+  let rowLines := rows.map formatRow
+  s!"{headerLine}\n{separator}\n{"\n".intercalate rowLines}"
+
 /-- Render a JSON Schema properties object as a markdown table.
 
 Extracts the shared pattern: iterate over key-value pairs in a properties
 object, format each as a table row with field name, type, required status,
-and default value. -/
+and default value. Columns are padded for prettier compatibility. -/
 private def renderPropertiesTable (schema : Json) (config : TableConfig) : String :=
   let requiredFields := getArray schema "required"
   let properties := getObject schema "properties"
-  let header := if config.includeDescription
-    then "| Field | Type | Required | Default | Description |"
-    else "| Field | Type | Required | Default |"
-  let separator := if config.includeDescription
-    then "|-------|------|----------|---------|-------------|"
-    else "|-------|------|----------|---------|"
-  let rows : Array String := match properties with
+  let headers := if config.includeDescription
+    then ["Field", "Type", "Required", "Default", "Description"]
+    else ["Field", "Type", "Required", "Default"]
+  let rows : List (List String) := match properties with
     | Json.obj keyValues =>
-      keyValues.toArray.map fun (fieldName, property) =>
+      keyValues.toArray.toList.map fun (fieldName, property) =>
         let fieldType := match config.typeOverrides.find? (fun pair => pair.1 == fieldName) with
           | some (_, override) => override
           | none => formatType property
@@ -76,11 +101,11 @@ private def renderPropertiesTable (schema : Json) (config : TableConfig) : Strin
         let defaultValue := formatDefault property
         if config.includeDescription then
           let description := getString property "description"
-          s!"| `{fieldName}` | {fieldType} | {required} | {defaultValue} | {description} |"
+          [s!"`{fieldName}`", fieldType, required, defaultValue, description]
         else
-          s!"| `{fieldName}` | {fieldType} | {required} | {defaultValue} |"
-    | _ => #[]
-  s!"{header}\n{separator}\n{"\n".intercalate rows.toList}"
+          [s!"`{fieldName}`", fieldType, required, defaultValue]
+    | _ => []
+  renderPaddedTable headers rows
 
 /-- Render a oneOf variant as a markdown subsection. -/
 private def renderVerifyVariant (variant : Json) : String :=
@@ -123,14 +148,15 @@ def generate (schemaString : String) : Except String String := do
 
   -- Schedule table
   let scheduleEnumValues := getArray scheduleProperty "enum"
-  let scheduleRows := scheduleEnumValues.map fun value =>
+  let scheduleData : List (List String) := scheduleEnumValues.toList.filterMap fun value =>
     match value with
     | Json.str s => match s with
-      | "always" => "| `always` | Every run — CI, pre-push, explicit | `command`, `property`, `proof` |"
-      | "local" => "| `local` | Pre-push and explicit invocation — excluded from CI | `human` |"
-      | "manual" => "| `manual` | Only via explicit `qed run` or `qed verify` (no flags) | `agent` |"
-      | other => s!"| `{other}` | | |"
-    | _ => ""
+      | "always" => some ["`always`", "Every run — CI, pre-push, explicit", "`command`, `property`, `proof`"]
+      | "local" => some ["`local`", "Pre-push and explicit invocation — excluded from CI", "—"]
+      | "manual" => some ["`manual`", "Only via explicit `qed run` or `qed verify` (no flags)", "`human`, `agent`"]
+      | other => some [s!"`{other}`", "", ""]
+    | _ => none
+  let scheduleTable := renderPaddedTable ["Value", "Description", "Default for"] scheduleData
 
   Except.ok s!"# Spec Format Reference
 
@@ -176,9 +202,7 @@ Five verification strategies, from lightweight to mathematical:
 
 Controls when a criterion runs. The runner filters by this field based on the execution context (`--ci`, `--local`, or no flag).
 
-| Value | Description | Default for |
-|-------|-------------|-------------|
-{"\n".intercalate scheduleRows.toList}
+{scheduleTable}
 
 See [architecture.md](architecture.md) for the full state machine diagram and transition rules."
 

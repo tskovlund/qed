@@ -10,17 +10,17 @@ Trust comes from evidence, and different claims need different kinds of evidence
 
 qed's verification spectrum maps directly to these:
 
-| Claim type | Evidence | Verification |
-|-----------|----------|-------------|
-| Mathematical property | Formal proof | `proof` |
-| Observable behavior | Deterministic test | `command` |
-| Design quality | Expert judgment | `agent` |
+| Claim type            | Evidence           | Verification |
+| --------------------- | ------------------ | ------------ |
+| Mathematical property | Formal proof       | `proof`      |
+| Observable behavior   | Deterministic test | `command`    |
+| Design quality        | Expert judgment    | `agent`      |
 
 The specs use the strongest verification type that fits each claim. Proofs where the property is provable, tests where behavior is observable, agent review where judgment is needed.
 
 ## No overlap between specs
 
-Each spec owns a distinct concern. The build spec is the foundation — it verifies that everything compiles, tests pass, and proofs are complete. Other specs add criteria *beyond* what build covers: formal proofs, structural assertions, and design reviews. No criterion appears in two specs.
+Each spec owns a distinct concern. The build spec is the foundation — it verifies that everything compiles, tests pass, and proofs are complete. Other specs add criteria _beyond_ what build covers: formal proofs, structural assertions, and design reviews. No criterion appears in two specs.
 
 ## Layers
 

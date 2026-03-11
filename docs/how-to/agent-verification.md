@@ -13,13 +13,13 @@ verify = { type = "agent", prompt = "Review src/ for consistent naming, error ha
 The agent receives the prompt via `$QED_VERIFIER_PROMPT` and must end its response with a JSON verdict:
 
 ```json
-{"pass": true}
+{ "pass": true }
 ```
 
 or
 
 ```json
-{"pass": false, "reason": "explanation"}
+{ "pass": false, "reason": "explanation" }
 ```
 
 ## Custom model
@@ -47,10 +47,11 @@ command = "my-agent --prompt"
 ```
 
 Your command receives two environment variables:
+
 - `$QED_VERIFIER_PROMPT` — the review prompt
 - `$QED_VERIFIER_SYSTEM_PROMPT` — instructions for the verdict format
 
-The command must write to stdout. qed parses the last `` ```json `` block for the verdict.
+The command must write to stdout. qed parses the last ` ```json ` block for the verdict.
 
 ## Agent availability
 

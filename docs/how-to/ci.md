@@ -39,11 +39,11 @@ verify = { type = "agent", prompt = "Review everything." }
 # schedule defaults to "manual" for agent criteria
 ```
 
-| Value | When it runs | Excluded by | Default for |
-|-------|-------------|-------------|-------------|
-| `always` | Every run (CI, local, explicit) | — | command, property, proof |
-| `local` | Pre-push and explicit invocation | `--ci` | — |
-| `manual` | Only via explicit invocation without flags | `--ci`, `--local` | human, agent |
+| Value    | When it runs                               | Excluded by       | Default for              |
+| -------- | ------------------------------------------ | ----------------- | ------------------------ |
+| `always` | Every run (CI, local, explicit)            | —                 | command, property, proof |
+| `local`  | Pre-push and explicit invocation           | `--ci`            | —                        |
+| `manual` | Only via explicit invocation without flags | `--ci`, `--local` | human, agent             |
 
 ## Criteria that require external tools
 

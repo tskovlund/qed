@@ -67,7 +67,7 @@ Proofs are also tests — `lake build` verifies all theorems. If a proof has `so
 
 ## Architecture decisions
 
-- **Deterministic orchestrator** — the core loop is a pure state machine. LLMs are tools used *by* the orchestrator, not the control plane
+- **Deterministic orchestrator** — the core loop is a pure state machine. LLMs are tools used _by_ the orchestrator, not the control plane
 - **Proofs alongside code** — theorems about a module live in the same file or a `Proofs/` subdirectory
 - **Typed verification dispatch** — each AC specifies its verification type at definition time, not at runtime
 - **Backend-agnostic agents** — worker and verifier agent commands are configurable shell commands, defaulting to Claude CLI
@@ -86,6 +86,7 @@ Proofs are also tests — `lake build` verifies all theorems. If a proof has `so
 For AI-driven implementation: create a PR with a clear task description in the body, including acceptance criteria. An agent picks it up, implements, and pushes. The PR goes through normal review.
 
 Requirements for prompt-request PRs:
+
 - Title prefixed with `[prompt]`
 - Body contains a clear task description
 - Acceptance criteria defined (ideally as a qed spec)

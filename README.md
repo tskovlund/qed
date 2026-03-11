@@ -4,11 +4,11 @@
 
 # qed
 
-*Typed acceptance criteria. Deterministic verification. Formally proven orchestration.*
+_Typed acceptance criteria. Deterministic verification. Formally proven orchestration._
 
 **AI agents are non-deterministic. Your verification shouldn't be.**
 
-When an AI writes your code *and* your tests, passing tests prove nothing — they inherit the same blind spots as the implementation. qed defines what "done" means with typed specs — verified independently of the agent that did the work.
+When an AI writes your code _and_ your tests, passing tests prove nothing — they inherit the same blind spots as the implementation. qed defines what "done" means with typed specs — verified independently of the agent that did the work.
 
 ```toml
 name = "state-machine"
@@ -61,13 +61,13 @@ All criteria passed after 2 iteration(s).
 
 Five verification types, from human judgment to mathematical proof:
 
-| Type | Strategy | Guarantee | Status |
-|------|----------|-----------|--------|
-| `human` | Interactive sign-off | Human judgment | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
-| `agent` | Independent LLM review | Probabilistic | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
-| `command` | Shell command, exit code | Deterministic | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
-| `property` | Hypothesis / QuickCheck | Statistical | ![planned](https://img.shields.io/badge/planned-yellow) |
-| `proof` | Lean 4 / Coq / Agda | Mathematical | ![planned](https://img.shields.io/badge/planned-yellow) |
+| Type       | Strategy                 | Guarantee      | Status                                                               |
+| ---------- | ------------------------ | -------------- | -------------------------------------------------------------------- |
+| `human`    | Interactive sign-off     | Human judgment | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
+| `agent`    | Independent LLM review   | Probabilistic  | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
+| `command`  | Shell command, exit code | Deterministic  | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
+| `property` | Hypothesis / QuickCheck  | Statistical    | ![planned](https://img.shields.io/badge/planned-yellow)              |
+| `proof`    | Lean 4 / Coq / Agda      | Mathematical   | ![planned](https://img.shields.io/badge/planned-yellow)              |
 
 Every criterion must pass, be explicitly skipped, or have its tool available — qed never silently skips verification. Use `skip` to intentionally disable criteria, and `schedule` to control when criteria run (`always`, `local`, or `manual`).
 

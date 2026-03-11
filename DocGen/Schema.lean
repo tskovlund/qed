@@ -186,7 +186,7 @@ s!"\{
           },
           \"schedule\": \{
             \"type\": \"string\",
-            \"description\": \"When this criterion runs. Defaults: 'always' for command/property/proof, 'local' for human, 'manual' for agent.\",
+            \"description\": \"When this criterion runs. Defaults: 'always' for command/property/proof, 'manual' for human and agent.\",
             \"enum\": [\"{schedules[0]!}\", \"{schedules[1]!}\", \"{schedules[2]!}\"],
             \"default\": \"always\"
           },

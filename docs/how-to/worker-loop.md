@@ -58,9 +58,9 @@ command = "./scripts/worker.sh"
 
 qed runs the command as-is. Environment variables are available for optional use:
 
-| Variable | Purpose |
-|----------|---------|
-| `$QED_WORKER_ITERATION` | Current iteration number (1-based) |
+| Variable                    | Purpose                                |
+| --------------------------- | -------------------------------------- |
+| `$QED_WORKER_ITERATION`     | Current iteration number (1-based)     |
 | `$QED_WORKER_FAILURES_FILE` | Path to JSON file with failure details |
 
 ## Controlling termination
@@ -76,6 +76,7 @@ timeout = 1800           # worker timeout in seconds (default: 3600)
 ```
 
 The loop terminates when:
+
 - All criteria pass
 - The same failures repeat for `stuckThreshold` consecutive iterations (stuck)
 - `maxIterations` is reached

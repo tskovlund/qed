@@ -14,7 +14,7 @@ When a spec has a `worker`, qed runs an iterative loop:
 2. **Verifies** each criterion using its typed strategy
 3. **Loops** until all criteria pass, or terminates (stuck, max iterations, escalation)
 
-The orchestrator is a **deterministic state machine**. LLMs are tools used *by* the orchestrator (as workers and reviewers), never the control plane.
+The orchestrator is a **deterministic state machine**. LLMs are tools used _by_ the orchestrator (as workers and reviewers), never the control plane.
 
 ### Verify (`SpecMode.verify`)
 
@@ -53,22 +53,22 @@ stateDiagram-v2
 
 ### Events
 
-| Event | Description |
-|-------|-------------|
-| `workerDone` | Worker has completed its run |
-| `allPassed` | All auto-verifiable criteria passed |
+| Event        | Description                                             |
+| ------------ | ------------------------------------------------------- |
+| `workerDone` | Worker has completed its run                            |
+| `allPassed`  | All auto-verifiable criteria passed                     |
 | `someFailed` | Some criteria failed (carries the failing descriptions) |
 
 ### Terminal states
 
 Terminal states are **absorbing** — once reached, all events are ignored. This is formally proven in `Qed/Proofs/FinalStates.lean`.
 
-| State | Meaning |
-|-------|---------|
-| `passed` | All criteria satisfied |
-| `stuck` | Same failures repeated for `stuckThreshold` consecutive iterations |
-| `maxIterationsReached` | Hit the iteration cap |
-| `escalated` | Reserved for future human-in-the-loop escalation |
+| State                  | Meaning                                                            |
+| ---------------------- | ------------------------------------------------------------------ |
+| `passed`               | All criteria satisfied                                             |
+| `stuck`                | Same failures repeated for `stuckThreshold` consecutive iterations |
+| `maxIterationsReached` | Hit the iteration cap                                              |
+| `escalated`            | Reserved for future human-in-the-loop escalation                   |
 
 ### Stuck detection
 
@@ -100,13 +100,13 @@ flowchart LR
 
 The verification type determines both **what runs** and **what guarantee you get**:
 
-| Type | Runs | Guarantee | CI default |
-|------|------|-----------|------------|
-| `human` | Nothing (waits) | Human judgment | `manual` |
-| `agent` | LLM agent (any backend) | Probabilistic | `always` |
-| `command` | Shell command | Deterministic | `always` |
-| `property` | Test framework | Statistical | `always` |
-| `proof` | Proof checker | Mathematical | `always` |
+| Type       | Runs                    | Guarantee      | CI default |
+| ---------- | ----------------------- | -------------- | ---------- |
+| `human`    | Nothing (waits)         | Human judgment | `manual`   |
+| `agent`    | LLM agent (any backend) | Probabilistic  | `always`   |
+| `command`  | Shell command           | Deterministic  | `always`   |
+| `property` | Test framework          | Statistical    | `always`   |
+| `proof`    | Proof checker           | Mathematical   | `always`   |
 
 ## Spec loading
 
@@ -124,10 +124,10 @@ def listAllSpecs (directory : System.FilePath) : IO (Except String (List System.
 
 The architecture follows a strict separation:
 
-| Layer | IO? | What lives here |
-|-------|-----|-----------------|
-| **Pure core** | No | Types, Agent, StateMachine, Parser, TomlParser, TomlConverter, Output, Serializer, Proofs |
-| **IO shell** | Yes | Shell, WorkerLoop, Verifier, SpecLoader, CLI |
+| Layer         | IO? | What lives here                                                                           |
+| ------------- | --- | ----------------------------------------------------------------------------------------- |
+| **Pure core** | No  | Types, Agent, StateMachine, Parser, TomlParser, TomlConverter, Output, Serializer, Proofs |
+| **IO shell**  | Yes | Shell, WorkerLoop, Verifier, SpecLoader, CLI                                              |
 
 The pure core is where all proofs live. It has no side effects, no process spawning, no file access. The IO shell wraps the pure core with real-world effects — parsing files, running commands, reporting results.
 
