@@ -214,10 +214,14 @@ private def verifyProof (prover : String) (target : String) : IO VerificationRes
     | .timedOut stdout stderr =>
       return .fail s!"proof build timed out after {defaultCommandTimeout}s\n{formatOutput stdout stderr}"
     | .completed exitCode stdout stderr =>
-      if exitCode == 0 then
-        return .pass s!"theorem {target} verified (module {module} builds, no sorry)"
-      else
+      if exitCode != 0 then
         return .fail s!"proof build failed\n{formatOutput stdout stderr}"
+      -- Lean emits "declaration uses 'sorry'" warnings for any sorry in the
+      -- dependency graph. Catch transitive sorry even when the build succeeds.
+      let stderrStr := stderr.trimAscii.toString
+      if (stderrStr.splitOn "uses 'sorry'").length > 1 then
+        return .fail s!"sorry detected in dependency graph\n{formatOutput stdout stderr}"
+      return .pass s!"theorem {target} verified (module {module} builds, no sorry)"
 
 /-- Verify a single acceptance criterion. Skipped criteria return immediately
     without dispatching to any verifier. -/
