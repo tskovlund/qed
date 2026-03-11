@@ -266,28 +266,28 @@ def testIsValidModuleNameRejectsDoubleDot : IO Bool := do
 
 def testContainsPlaceholderDetectsStandalone : IO Bool := do
   -- Arrange / Act / Assert
-  return containsPlaceholder "theorem foo : True := sorry"
+  return containsSorry "theorem foo : True := sorry"
 
 def testContainsPlaceholderIgnoresInsideIdentifier : IO Bool := do
   -- Arrange / Act / Assert
-  return !containsPlaceholder "def sorryHandler := 42"
+  return !containsSorry "def sorryHandler := 42"
 
 def testContainsPlaceholderDetectsInStringLiteral : IO Bool := do
   -- Arrange / Act / Assert
   -- Word boundary check flags this — acceptable false positive for proof files
-  return containsPlaceholder "let msg := \"no sorry here\""
+  return containsSorry "let msg := \"no sorry here\""
 
 def testContainsPlaceholderDetectsAtStartOfFile : IO Bool := do
   -- Arrange / Act / Assert
-  return containsPlaceholder "sorry\ntheorem foo : True := by trivial"
+  return containsSorry "sorry\ntheorem foo : True := by trivial"
 
 def testContainsPlaceholderDetectsAtEndOfFile : IO Bool := do
   -- Arrange / Act / Assert
-  return containsPlaceholder "theorem foo : True := sorry"
+  return containsSorry "theorem foo : True := sorry"
 
 def testContainsPlaceholderCleanFile : IO Bool := do
   -- Arrange / Act / Assert
-  return !containsPlaceholder "theorem foo : True := by trivial\ndef bar := 42"
+  return !containsSorry "theorem foo : True := by trivial\ndef bar := 42"
 
 def verifierTests : List (String × IO Bool) := [
   ("testVerifyCommandReturnsPassOnExitZero", testVerifyCommandReturnsPassOnExitZero),

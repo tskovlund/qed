@@ -166,17 +166,14 @@ def isValidModuleName (name : String) : Bool :=
       c.isAlpha || c.isDigit || c == '_' || c == '\''
 
 /-- Whether a character is a valid Lean identifier character (for word
-    boundary detection in the placeholder check). -/
+    boundary detection in the sorry check). -/
 private def isIdentChar (c : Char) : Bool :=
   c.isAlpha || c.isDigit || c == '_' || c == '\''
 
-/-- The placeholder axiom that marks incomplete proofs in Lean 4. -/
-private def sorryKeyword : String := "sorry"
-
-/-- Check whether a source file contains standalone occurrences of the
-    placeholder axiom (not inside identifiers or string literals). -/
-def containsPlaceholder (contents : String) : Bool :=
-  let parts := contents.splitOn sorryKeyword
+/-- Check whether a source file contains standalone `sorry` (not inside
+    identifiers like `sorryHandler`). Uses word-boundary detection. -/
+def containsSorry (contents : String) : Bool :=
+  let parts := contents.splitOn "sorry"
   if parts.length < 2 then false
   else
     -- Check each split point for word boundaries
@@ -195,7 +192,7 @@ def containsPlaceholder (contents : String) : Bool :=
       boundaryBefore && boundaryAfter
 
 /-- Verify a formal proof by checking that the target's module compiles
-    and contains no incomplete proof placeholders. Currently supports Lean 4 only. -/
+    and contains no sorry. Currently supports Lean 4 only. -/
 private def verifyProof (prover : String) (target : String) : IO VerificationResult := do
   if prover != "lean4" then
     return .fail s!"unsupported prover: '{prover}' (supported: lean4)"
@@ -207,10 +204,10 @@ private def verifyProof (prover : String) (target : String) : IO VerificationRes
     let sourcePath := moduleToPath module
     if !(← System.FilePath.pathExists sourcePath) then
       return .fail s!"source file not found: {sourcePath}"
-    -- Reject files containing incomplete proof placeholders
+    -- Reject files containing sorry
     let contents ← IO.FS.readFile sourcePath
-    if containsPlaceholder contents then
-      return .fail s!"source file contains {sorryKeyword}: {sourcePath}"
+    if containsSorry contents then
+      return .fail s!"source file contains sorry: {sourcePath}"
     -- Build the module to verify the proof typechecks
     let buildResult ← Shell.runShellCommandWithTimeout s!"lake build {module}" defaultCommandTimeout
     match buildResult with
@@ -218,7 +215,7 @@ private def verifyProof (prover : String) (target : String) : IO VerificationRes
       return .fail s!"proof build timed out after {defaultCommandTimeout}s\n{formatOutput stdout stderr}"
     | .completed exitCode stdout stderr =>
       if exitCode == 0 then
-        return .pass s!"theorem {target} verified (module {module} builds, complete)"
+        return .pass s!"theorem {target} verified (module {module} builds, no sorry)"
       else
         return .fail s!"proof build failed\n{formatOutput stdout stderr}"
 
