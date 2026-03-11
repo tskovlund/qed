@@ -109,7 +109,7 @@ The verification type determines both **what runs** and **what guarantee you get
 | Type       | Runs                    | Guarantee      | CI default |
 | ---------- | ----------------------- | -------------- | ---------- |
 | `human`    | Nothing (waits)         | Human judgment | `manual`   |
-| `agent`    | LLM agent (any backend) | Probabilistic  | `always`   |
+| `agent`    | LLM agent (any backend) | Probabilistic  | `heavy`    |
 | `command`  | Shell command           | Deterministic  | `always`   |
 | `property` | Test framework          | Statistical    | `always`   |
 | `proof`    | Proof checker           | Mathematical   | `always`   |
