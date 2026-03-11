@@ -12,6 +12,22 @@ def statusIndicator : VerificationResult → String
   | .needsHuman _ => "NEEDS-HUMAN"
   | .skipped _ => "SKIP"
 
+/-- ANSI escape codes for terminal colors. -/
+def ansiReset : String := "\x1b[0m"
+def ansiBold : String := "\x1b[1m"
+def ansiGreen : String := "\x1b[32m"
+def ansiRed : String := "\x1b[31m"
+def ansiYellow : String := "\x1b[33m"
+def ansiCyan : String := "\x1b[36m"
+def ansiDim : String := "\x1b[2m"
+
+/-- Status indicator with ANSI color for terminal display. -/
+def colorStatusIndicator : VerificationResult → String
+  | .pass _ => s!"{ansiGreen}PASS{ansiReset}"
+  | .fail _ => s!"{ansiRed}FAIL{ansiReset}"
+  | .needsHuman _ => s!"{ansiCyan}NEEDS-HUMAN{ansiReset}"
+  | .skipped _ => s!"{ansiYellow}SKIP{ansiReset}"
+
 /-- Serialize a VerificationResult to a JSON-friendly result string. -/
 def resultStatus : VerificationResult → String
   | .pass _ => "passed"

@@ -99,7 +99,7 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
   state := newState
   context := newContext
   if !jsonOutput then
-    IO.println s!"Worker loop: {spec.name}"
+    IO.println s!"{Output.ansiBold}Worker loop: {spec.name}{Output.ansiReset}"
     IO.println s!"  max iterations: {loopConfig.maxIterations}, stuck threshold: {loopConfig.stuckThreshold}"
     IO.println ""
   try
@@ -107,7 +107,7 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
       match state with
       | .workerRunning iteration =>
         if !jsonOutput then
-          IO.println s!"── Iteration {iteration} ──"
+          IO.println s!"{Output.ansiBold}── Iteration {iteration} ──{Output.ansiReset}"
           IO.println "  Running worker..."
         let (exitCode, stdout, stderr) ← spawnWorker worker lastFailures iteration
         if !jsonOutput then
@@ -131,9 +131,9 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
           for (description, result) in results do
             match result with
             | .skipped reason =>
-              IO.println s!"    [{Output.statusIndicator result}] {description} — {reason}"
+              IO.println s!"    [{Output.colorStatusIndicator result}] {description} {Output.ansiDim}— {reason}{Output.ansiReset}"
             | _ =>
-              IO.println s!"    [{Output.statusIndicator result}] {description}"
+              IO.println s!"    [{Output.colorStatusIndicator result}] {description}"
         if failed.isEmpty then
           let (s, c) := step loopConfig state context .allPassed
           state := s
@@ -173,15 +173,15 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
     IO.println ""
     match state with
     | .passed iterations =>
-      IO.println s!"All criteria passed after {iterations} iteration(s)."
+      IO.println s!"{Output.ansiGreen}All criteria passed after {iterations} iteration(s).{Output.ansiReset}"
     | .stuck iterations failures =>
-      IO.eprintln s!"Stuck after {iterations} iteration(s). Same failures for {loopConfig.stuckThreshold} consecutive iterations:"
+      IO.eprintln s!"{Output.ansiRed}Stuck after {iterations} iteration(s). Same failures for {loopConfig.stuckThreshold} consecutive iterations:{Output.ansiReset}"
       for f in failures do
         IO.eprintln s!"  - {f}"
     | .maxIterationsReached iterations =>
-      IO.eprintln s!"Reached maximum iterations ({iterations})."
+      IO.eprintln s!"{Output.ansiRed}Reached maximum iterations ({iterations}).{Output.ansiReset}"
     | .escalated reason =>
-      IO.eprintln s!"Escalated: {reason}"
+      IO.eprintln s!"{Output.ansiRed}Escalated: {reason}{Output.ansiReset}"
     | _ => pure ()
   return match state with
     | .passed _ => 0

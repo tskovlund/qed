@@ -1,6 +1,7 @@
 import Qed.Types
 import Qed.Shell
 import Qed.Agent
+import Qed.Output
 import Lean.Data.Json
 
 namespace Qed.Verifier
@@ -115,11 +116,16 @@ private partial def promptLoop (stdin : IO.FS.Stream) : IO VerificationResult :=
   | "n" | "no" => return .fail "rejected by human"
   | "" => return .fail "non-interactive context"
   | _ =>
-    IO.eprint "    Invalid input. Accept? [y/n]: "
+    IO.eprint s!"    Invalid input. {Output.ansiCyan}Accept? [y/n]:{Output.ansiReset} "
     promptLoop stdin
 
-private def verifyHuman (description : String) (instruction : String) : IO VerificationResult := do
-  IO.eprint s!"\n    → {description}\n      {instruction}\n    Accept? [y/n]: "
+private def verifyHuman (_description : String) (instruction : String) : IO VerificationResult := do
+  let lines := instruction.splitOn "\n"
+  for line in lines do
+    let trimmed := line.trimAscii.toString
+    if !trimmed.isEmpty then
+      IO.eprintln s!"    {Output.ansiDim}{trimmed}{Output.ansiReset}"
+  IO.eprint s!"    {Output.ansiCyan}Accept? [y/n]:{Output.ansiReset} "
   let stdin ← IO.getStdin
   promptLoop stdin
 

@@ -122,6 +122,11 @@ def VerificationResult.isFailed : VerificationResult → Bool
   | .fail _ => true
   | _ => false
 
+/-- Whether a VerificationResult was skipped. -/
+def VerificationResult.isSkipped : VerificationResult → Bool
+  | .skipped _ => true
+  | _ => false
+
 /-- The state of the orchestration loop. -/
 inductive LoopState where
   /-- Initial state, ready to start. -/

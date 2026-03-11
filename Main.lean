@@ -21,30 +21,50 @@ def filterBySchedule (criteria : List AcceptanceCriterion) (context : RunContext
   | .local => criteria.filter fun c => c.schedule != .manual
   | .ci => criteria.filter fun c => c.schedule == .always
 
-/-- Run single-pass verification on an already-loaded spec. -/
+/-- Run single-pass verification on an already-loaded spec.
+    In text mode, results are streamed (displayed as each criterion completes)
+    so human criteria prompts appear inline. -/
 def verifySpec (spec : Spec) (jsonOutput : Bool) (context : RunContext := .full) : IO UInt32 := do
   let criteria := filterBySchedule spec.criteria context
-  let results ← Verifier.verifyAll criteria
   if jsonOutput then
+    let results ← Verifier.verifyAll criteria
     let json := Output.resultsToJson spec.name results
     IO.println (json.pretty 2)
+    let anyFailed := results.any fun (_, result) => result.isFailed
+    return if anyFailed then 1 else 0
   else
-    IO.println s!"Verifying: {spec.name}"
+    IO.println s!"{Output.ansiBold}Verifying: {spec.name}{Output.ansiReset}"
     IO.println ""
-    for (description, result) in results do
+    if criteria.isEmpty then
+      IO.println s!"  {Output.ansiDim}No criteria to verify in this context.{Output.ansiReset}"
+      return 0
+    let mut anyFailed := false
+    let mut total : Nat := 0
+    let mut failedCount : Nat := 0
+    let mut skippedCount : Nat := 0
+    for criterion in criteria do
+      let result ← Verifier.verifyCriterion criterion
+      total := total + 1
+      if result.isFailed then
+        anyFailed := true
+        failedCount := failedCount + 1
+      if result.isSkipped then
+        skippedCount := skippedCount + 1
       match result with
       | .skipped reason =>
-        IO.println s!"  [{Output.statusIndicator result}] {description} — {reason}"
+        IO.println s!"  [{Output.colorStatusIndicator result}] {criterion.description} {Output.ansiDim}— {reason}{Output.ansiReset}"
       | _ =>
-        IO.println s!"  [{Output.statusIndicator result}] {description}"
+        IO.println s!"  [{Output.colorStatusIndicator result}] {criterion.description}"
     IO.println ""
-    let failed := results.filter fun (_, result) => result.isFailed
-    if failed.isEmpty then
-      IO.println s!"All {results.length} criteria passed."
+    if failedCount == 0 then
+      if skippedCount == total then
+        IO.println s!"{Output.ansiYellow}All {total} criteria skipped.{Output.ansiReset}"
+      else
+        let skippedNote := if skippedCount > 0 then s!" ({skippedCount} skipped)" else ""
+        IO.println s!"{Output.ansiGreen}All {total - skippedCount} criteria passed.{Output.ansiReset}{skippedNote}"
     else
-      IO.eprintln s!"{failed.length} of {results.length} criteria failed."
-  let anyFailed := results.any fun (_, result) => result.isFailed
-  return if anyFailed then 1 else 0
+      IO.eprintln s!"{Output.ansiRed}{failedCount} of {total} criteria failed.{Output.ansiReset}"
+    return if anyFailed then 1 else 0
 
 /-- Load a spec file, handling IO exceptions (e.g., missing files). -/
 def loadSpecSafe (path : String) : IO (Except String Spec) := do
