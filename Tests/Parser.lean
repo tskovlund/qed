@@ -197,7 +197,7 @@ def testParseJsonAppliesScheduleOverride : IO Bool := do
     | none => return false
   | .error _ => return false
 
-def testParseJsonDefaultsHumanScheduleToLocal : IO Bool := do
+def testParseJsonDefaultsHumanScheduleToManual : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"human\", \"instruction\": \"check\"}}]}"
   -- Act
@@ -206,7 +206,7 @@ def testParseJsonDefaultsHumanScheduleToLocal : IO Bool := do
   match result with
   | .ok spec =>
     match spec.criteria.head? with
-    | some criterion => return criterion.schedule == Schedule.local
+    | some criterion => return criterion.schedule == Schedule.manual
     | none => return false
   | .error _ => return false
 
@@ -468,7 +468,7 @@ def parserTests : List (String × IO Bool) := [
   ("testParseJsonExtractsPropertyFieldsWithDefault", testParseJsonExtractsPropertyFieldsWithDefault),
   ("testParseJsonExtractsHumanInstruction", testParseJsonExtractsHumanInstruction),
   ("testParseJsonAppliesScheduleOverride", testParseJsonAppliesScheduleOverride),
-  ("testParseJsonDefaultsHumanScheduleToLocal", testParseJsonDefaultsHumanScheduleToLocal),
+  ("testParseJsonDefaultsHumanScheduleToManual", testParseJsonDefaultsHumanScheduleToManual),
   ("testParseJsonPreservesMultipleCriteria", testParseJsonPreservesMultipleCriteria),
   ("testParseJsonAllowsEmptyCriteriaInWorkerLoop", testParseJsonAllowsEmptyCriteriaInWorkerLoop),
   ("testParseJsonWorkerWithPrompt", testParseJsonWorkerWithPrompt),

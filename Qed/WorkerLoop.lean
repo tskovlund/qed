@@ -63,7 +63,7 @@ def shellQuote := Shell.shellQuote
     emits bytes that aren't valid UTF-8). -/
 def spawnWorker (worker : WorkerConfig)
     (failures : List (String × VerificationResult))
-    (iteration : Nat) : IO (UInt32 × String × String) := do
+    (iteration : Nat) : IO Shell.TimeoutResult := do
   let failuresFile ← writeFailuresFile failures iteration
   let workerEnvVars := [
     (Agent.workerIterationVar, toString iteration),
@@ -81,7 +81,7 @@ def spawnWorker (worker : WorkerConfig)
        worker.command.getD "true")
   let shellCommand := Shell.buildShellCommand envVars command
   let workdir := if worker.workdir == "." then none else some worker.workdir
-  Shell.runShellCommand shellCommand workdir
+  Shell.runShellCommandWithTimeout shellCommand worker.timeout workdir
 
 /-- Run the worker loop: spawn worker, verify, feed failures back, repeat.
     Handles interruption (SIGINT) gracefully — Lean's runtime converts the
@@ -109,14 +109,20 @@ def run (spec : Spec) (worker : WorkerConfig) (loopConfig : LoopConfig)
         if !jsonOutput then
           IO.println s!"{Output.ansiBold}── Iteration {iteration} ──{Output.ansiReset}"
           IO.println "  Running worker..."
-        let (exitCode, stdout, stderr) ← spawnWorker worker lastFailures iteration
+        let workerResult ← spawnWorker worker lastFailures iteration
         if !jsonOutput then
-          if exitCode != 0 then
-            IO.println s!"  Worker exited with code {exitCode}"
-          else
-            IO.println s!"  Worker completed (stdout: {stdout.length} chars)"
-          if !stderr.isEmpty then
-            IO.println s!"  Worker stderr: {stderr.trimAscii.take stderrPreviewLength}"
+          match workerResult with
+          | .timedOut _ stderr =>
+            IO.println s!"  {Output.ansiRed}Worker timed out after {worker.timeout}s{Output.ansiReset}"
+            if !stderr.isEmpty then
+              IO.println s!"  Worker stderr: {stderr.trimAscii.take stderrPreviewLength}"
+          | .completed exitCode stdout stderr =>
+            if exitCode != 0 then
+              IO.println s!"  Worker exited with code {exitCode}"
+            else
+              IO.println s!"  Worker completed (stdout: {stdout.length} chars)"
+            if !stderr.isEmpty then
+              IO.println s!"  Worker stderr: {stderr.trimAscii.take stderrPreviewLength}"
         -- Worker done → transition to verifying
         let (s, c) := step loopConfig state context .workerDone
         state := s

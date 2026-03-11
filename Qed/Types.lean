@@ -41,7 +41,7 @@ inductive Schedule where
       automatable types (command, property, proof). -/
   | always
   /-- Only in local contexts — pre-push hooks and explicit invocation,
-      not headless CI. Default for human verification. -/
+      not headless CI. -/
   | local
   /-- Only via explicit invocation (`qed verify` / `qed run` without flags).
       For expensive or non-deterministic criteria (e.g. agent reviews). -/
@@ -52,9 +52,11 @@ inductive Schedule where
 structure AcceptanceCriterion where
   description : String
   verify : VerifyType
-  /-- When this criterion runs. Defaults based on verify type. -/
+  /-- When this criterion runs. Defaults based on verify type:
+      human and agent default to `manual` (interactive / expensive),
+      everything else defaults to `always`. -/
   schedule : Schedule := match verify with
-    | .human _ => .local
+    | .human _ => .manual
     | .agent _ _ _ => .manual
     | _ => .always
   /-- When set, the criterion is intentionally skipped with the given reason.

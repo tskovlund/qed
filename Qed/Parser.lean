@@ -73,9 +73,9 @@ def parseCriterion (json : Json) : Except String AcceptanceCriterion := do
   let schedule ← match json.getObjValAs? String "schedule" with
     | .ok value => parseSchedule value
     | .error _ =>
-      -- Default: local for human, manual for agent, always for everything else
+      -- Default: manual for human and agent, always for everything else
       .ok (match verify with
-        | .human _ => .local
+        | .human _ => .manual
         | .agent _ _ _ => .manual
         | _ => .always)
   let skip := match json.getObjValAs? String "skip" with

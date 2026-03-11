@@ -174,7 +174,7 @@ s!"\{
               },
               \{
                 \"type\": \"object\",
-                \"description\": \"Ask a human to verify. Requires interactive stdin (schedule defaults to 'local').\",
+                \"description\": \"Ask a human to verify. Requires interactive stdin (schedule defaults to 'manual').\",
                 \"required\": [\"type\", \"instruction\"],
                 \"additionalProperties\": false,
                 \"properties\": \{

@@ -20,20 +20,24 @@ private def truncate (s : String) (maxLength : Nat) : String :=
 
 /-- Run a shell command and return pass/fail based on exit code.
     Captures stdout and stderr, truncates to last `maxOutputLength` chars.
-    Catches non-UTF-8 output (Lean's IO.Process.output throws when the process
-    emits bytes that aren't valid UTF-8).
-    TODO: `timeout` is parsed and stored but not yet enforced. Process-level
-    timeout requires `IO.Process.spawn` + async kill, tracked for a future PR. -/
-private def verifyCommand (command : String) (_timeout : Nat) : IO VerificationResult := do
-  let (exitCode, stdout, stderr) ← Shell.runShellCommand command
+    Enforces the configured timeout — kills the process if it exceeds it. -/
+private def formatOutput (stdout stderr : String) : String :=
   let stdoutStr := stdout.trimAscii.toString
   let stderrStr := stderr.trimAscii.toString
   let combined := stdoutStr ++ (if stderrStr.isEmpty then "" else "\nSTDERR:\n" ++ stderrStr)
-  let details := truncate combined maxOutputLength
-  if exitCode == 0 then
-    return .pass details
-  else
-    return .fail s!"exit code {exitCode}\n{details}"
+  truncate combined maxOutputLength
+
+private def verifyCommand (command : String) (timeout : Nat) : IO VerificationResult := do
+  let result ← Shell.runShellCommandWithTimeout command timeout
+  match result with
+  | .timedOut stdout stderr =>
+    return .fail s!"timed out after {timeout}s\n{formatOutput stdout stderr}"
+  | .completed exitCode stdout stderr =>
+    let details := formatOutput stdout stderr
+    if exitCode == 0 then
+      return .pass details
+    else
+      return .fail s!"exit code {exitCode}\n{details}"
 
 /-- The system prompt instructs the agent to produce a structured JSON verdict. -/
 private def agentSystemPrompt : String :=

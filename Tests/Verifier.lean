@@ -183,6 +183,45 @@ def testParseAgentVerdictErrorOnMissingPassField : IO Bool := do
   | .error _ => return true
   | _ => return false
 
+def testVerifyCommandTimesOutSlowProcess : IO Bool := do
+  -- Arrange: command sleeps for 10s, timeout is 1s
+  let criterion : AcceptanceCriterion := {
+    description := "slow command"
+    verify := .command "sleep 10" (timeout := 1)
+  }
+  -- Act
+  let result ← verifyCriterion criterion
+  -- Assert: should fail with timeout message
+  match result with
+  | .fail details => return details.contains "timed out"
+  | _ => return false
+
+def testVerifyCommandCompletesBeforeTimeout : IO Bool := do
+  -- Arrange: command completes instantly, generous timeout
+  let criterion : AcceptanceCriterion := {
+    description := "fast command"
+    verify := .command "echo done" (timeout := 60)
+  }
+  -- Act
+  let result ← verifyCriterion criterion
+  -- Assert: should pass normally
+  match result with
+  | .pass details => return details.contains "done"
+  | _ => return false
+
+def testVerifyCommandTimeoutCapturesPartialOutput : IO Bool := do
+  -- Arrange: command produces output then sleeps
+  let criterion : AcceptanceCriterion := {
+    description := "partial output"
+    verify := .command "echo partial-output-before-timeout && sleep 10" (timeout := 1)
+  }
+  -- Act
+  let result ← verifyCriterion criterion
+  -- Assert: should fail with timeout but include partial stdout
+  match result with
+  | .fail details => return details.contains "timed out" && details.contains "partial-output-before-timeout"
+  | _ => return false
+
 def verifierTests : List (String × IO Bool) := [
   ("testVerifyCommandReturnsPassOnExitZero", testVerifyCommandReturnsPassOnExitZero),
   ("testVerifyCommandReturnsFailOnNonZeroExit", testVerifyCommandReturnsFailOnNonZeroExit),
@@ -199,5 +238,8 @@ def verifierTests : List (String × IO Bool) := [
   ("testParseAgentVerdictFallbackToRawJson", testParseAgentVerdictFallbackToRawJson),
   ("testParseAgentVerdictErrorOnNoVerdict", testParseAgentVerdictErrorOnNoVerdict),
   ("testParseAgentVerdictHandlesTrailingContent", testParseAgentVerdictHandlesTrailingContent),
-  ("testParseAgentVerdictErrorOnMissingPassField", testParseAgentVerdictErrorOnMissingPassField)
+  ("testParseAgentVerdictErrorOnMissingPassField", testParseAgentVerdictErrorOnMissingPassField),
+  ("testVerifyCommandTimesOutSlowProcess", testVerifyCommandTimesOutSlowProcess),
+  ("testVerifyCommandCompletesBeforeTimeout", testVerifyCommandCompletesBeforeTimeout),
+  ("testVerifyCommandTimeoutCapturesPartialOutput", testVerifyCommandTimeoutCapturesPartialOutput)
 ]
