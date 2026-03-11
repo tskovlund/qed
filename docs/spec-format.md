@@ -72,6 +72,7 @@ Spawn an independent LLM agent to review against a prompt.
 | `command` | string    | no       | —                   | Shell command to invoke the agent. Receives prompt via $QED_VERIFIER_PROMPT. Defaults to Claude CLI. |
 | `model`   | string    | no       | `"claude-opus-4-6"` | Model to use for the review.                                                                         |
 | `prompt`  | string    | yes      | —                   | Review prompt for the agent.                                                                         |
+| `timeout` | integer   | no       | 600                 | Timeout in seconds.                                                                                  |
 | `type`    | `"agent"` | yes      | —                   |                                                                                                      |
 
 ### `property`

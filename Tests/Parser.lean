@@ -83,7 +83,7 @@ def testParseJsonExtractsAgentReviewFields : IO Bool := do
     match spec.criteria.head? with
     | some criterion =>
       return match criterion.verify with
-        | .agent prompt model => prompt == "check it" && model == "claude-opus-4-6"
+        | .agent prompt model _ _ => prompt == "check it" && model == "claude-opus-4-6"
         | _ => false
     | none => return false
   | .error _ => return false
@@ -99,7 +99,7 @@ def testParseJsonExtractsAgentCustomCommand : IO Bool := do
     match spec.criteria.head? with
     | some criterion =>
       return match criterion.verify with
-        | .agent prompt _ command => prompt == "check it" && command == some "ollama run llama3"
+        | .agent prompt _ command _ => prompt == "check it" && command == some "ollama run llama3"
         | _ => false
     | none => return false
   | .error _ => return false
@@ -115,7 +115,7 @@ def testParseJsonDefaultsAgentCommandToNone : IO Bool := do
     match spec.criteria.head? with
     | some criterion =>
       return match criterion.verify with
-        | .agent _ _ command => command == none
+        | .agent _ _ command _ => command == none
         | _ => false
     | none => return false
   | .error _ => return false
@@ -131,7 +131,7 @@ def testParseJsonDefaultsAgentReviewModelToSonnet : IO Bool := do
     match spec.criteria.head? with
     | some criterion =>
       return match criterion.verify with
-        | .agent _ model => model == Qed.defaultAgentModel
+        | .agent _ model _ _ => model == Qed.defaultAgentModel
         | _ => false
     | none => return false
   | .error _ => return false
@@ -222,7 +222,7 @@ def testParseJsonPreservesMultipleCriteria : IO Bool := do
     let types := spec.criteria.map fun c => match c.verify with
       | .command _ _ => "command"
       | .proof _ _ => "proof"
-      | .agent _ _ => "agent"
+      | .agent _ _ _ _ => "agent"
       | _ => "other"
     return types == ["command", "proof", "agent"]
   | .error e =>

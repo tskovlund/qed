@@ -63,6 +63,7 @@ All meaningful parameters are configurable at the spec level — defaults are se
 | `stuckThreshold`     | 3                 | Spec file (worker loop)    |
 | `timeout` (worker)   | 3600s             | Spec file (`[worker]`)     |
 | `timeout` (command)  | 300s              | Spec file (`[[criteria]]`) |
+| `timeout` (agent)    | 600s              | Spec file (`[[criteria]]`) |
 | `timeout` (property) | 600s              | Spec file (`[[criteria]]`) |
 | `model` (agent)      | `claude-opus-4-6` | Spec file (`[[criteria]]`) |
 | `workdir`            | `.`               | Spec file (`[worker]`)     |

@@ -17,7 +17,7 @@ namespace DocGen.Schema
 def verifyTypeConstructors : List String :=
   let _ : VerifyType → Unit := fun
     | .command _ _ => ()
-    | .agent _ _ _ => ()
+    | .agent _ _ _ _ => ()
     | .property _ _ => ()
     | .proof _ _ => ()
     | .human _ => ()
@@ -239,6 +239,12 @@ def generate : String :=
                     ("command", obj [
                       ("type", str "string"),
                       ("description", str "Shell command to invoke the agent. Receives prompt via $QED_VERIFIER_PROMPT. Defaults to Claude CLI.")
+                    ]),
+                    ("timeout", obj [
+                      ("type", str "integer"),
+                      ("default", num defaultAgentTimeout),
+                      ("minimum", num 1),
+                      ("description", str "Timeout in seconds.")
                     ])
                   ])
                 ],

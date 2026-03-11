@@ -89,22 +89,27 @@ def parseAgentVerdict (response : String) : Except String Bool := do
     The agent command receives the prompt via `$QED_VERIFIER_PROMPT` env var
     and the verdict format instructions via `$QED_VERIFIER_SYSTEM_PROMPT`.
     If no command is specified, defaults to Claude CLI. -/
-private def verifyAgent (prompt : String) (model : String) (command : Option String) : IO VerificationResult := do
+private def verifyAgent (prompt : String) (model : String) (command : Option String)
+    (timeout : Nat) : IO VerificationResult := do
   let agentCmd := command.getD (Agent.defaultVerifierCommand model)
   let envVars := [(Agent.verifierPromptVar, prompt), (Agent.verifierSystemPromptVar, agentSystemPrompt)]
   let shellCommand := Shell.buildShellCommand envVars agentCmd
-  let (exitCode, stdout, stderr) ← Shell.runShellCommand shellCommand
-  if exitCode != 0 then
-    let stderrStr := stderr.trimAscii.toString
-    if Agent.isUnavailable exitCode stderrStr then
-      return .fail s!"agent unavailable: {truncate stderrStr maxOutputLength}"
-    else
-      return .fail s!"agent exited with code {exitCode}\n{truncate stderrStr maxOutputLength}"
-  let response := stdout.trimAscii.toString
-  match parseAgentVerdict response with
-  | .ok true => return .pass (truncate response maxOutputLength)
-  | .ok false => return .fail (truncate response maxOutputLength)
-  | .error e => return .fail s!"could not parse agent verdict: {e}\n{truncate response maxOutputLength}"
+  let result ← Shell.runShellCommandWithTimeout shellCommand timeout
+  match result with
+  | .timedOut stdout stderr =>
+    return .fail s!"agent timed out after {timeout}s\n{formatOutput stdout stderr}"
+  | .completed exitCode stdout stderr =>
+    if exitCode != 0 then
+      let stderrStr := stderr.trimAscii.toString
+      if Agent.isUnavailable exitCode stderrStr then
+        return .fail s!"agent unavailable: {truncate stderrStr maxOutputLength}"
+      else
+        return .fail s!"agent exited with code {exitCode}\n{truncate stderrStr maxOutputLength}"
+    let response := stdout.trimAscii.toString
+    match parseAgentVerdict response with
+    | .ok true => return .pass (truncate response maxOutputLength)
+    | .ok false => return .fail (truncate response maxOutputLength)
+    | .error e => return .fail s!"could not parse agent verdict: {e}\n{truncate response maxOutputLength}"
 
 /-- Prompt a human to verify a criterion interactively. Prints the instruction
     to stderr and reads a y/n response from stdin. Retries on invalid input.
@@ -146,7 +151,7 @@ def verifyCriterion (criterion : AcceptanceCriterion) : IO VerificationResult :=
   | none =>
     match criterion.verify with
     | .command run timeout => verifyCommand run timeout
-    | .agent prompt model command => verifyAgent prompt model command
+    | .agent prompt model command timeout => verifyAgent prompt model command timeout
     | .property run timeout =>
       return .fail s!"property testing not yet implemented (run: {run}, timeout: {timeout})"
     | .proof prover target =>
