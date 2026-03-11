@@ -98,14 +98,21 @@ qed verify specs/     # verify qed's own specs
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
 
-## Best practices
+## Recommended setup
 
-**Use `--pin` in CI and pre-push hooks.** It ensures specs match their git-committed version — results from locally modified specs are rejected. CI mode is auto-detected (no `--ci` flag needed when `CI=true` is set).
+Add `qed verify` to your CI pipeline and pre-push hook. Use `--pin` to ensure specs match their committed version — results from modified specs are rejected.
 
 ```yaml
-# GitHub Actions — CI mode auto-detected, --pin ensures committed specs
+# CI — auto-detects CI mode, no --ci flag needed
 - run: qed verify --pin
 ```
+
+```bash
+# Pre-push hook — excludes manual criteria, pins to committed version
+qed verify --local --pin
+```
+
+Run `qed verify` with no flags for the full suite, including agent and human criteria.
 
 ## Documentation
 
