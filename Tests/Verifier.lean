@@ -222,6 +222,73 @@ def testVerifyCommandTimeoutCapturesPartialOutput : IO Bool := do
   | .fail details => return details.contains "timed out" && details.contains "partial-output-before-timeout"
   | _ => return false
 
+-- Pure function tests
+
+def testTargetToModuleExtractsModule : IO Bool := do
+  -- Arrange / Act / Assert
+  return targetToModule "Qed.Proofs.Termination.loop_terminates" == some "Qed.Proofs.Termination"
+
+def testTargetToModuleSingleDot : IO Bool := do
+  -- Arrange / Act / Assert
+  return targetToModule "Module.theorem" == some "Module"
+
+def testTargetToModuleRejectsNoDot : IO Bool := do
+  -- Arrange / Act / Assert
+  return targetToModule "nodot" == none
+
+def testTargetToModuleRejectsEmpty : IO Bool := do
+  -- Arrange / Act / Assert
+  return targetToModule "" == none
+
+def testModuleToPathConverts : IO Bool := do
+  -- Arrange / Act / Assert
+  return moduleToPath "Qed.Proofs.Termination" == "Qed/Proofs/Termination.lean"
+
+def testModuleToPathSingleSegment : IO Bool := do
+  -- Arrange / Act / Assert
+  return moduleToPath "Main" == "Main.lean"
+
+def testIsValidModuleNameAcceptsValid : IO Bool := do
+  -- Arrange / Act / Assert
+  return isValidModuleName "Qed.Proofs.Termination"
+
+def testIsValidModuleNameRejectsShellInjection : IO Bool := do
+  -- Arrange / Act / Assert
+  return !isValidModuleName "Qed; rm -rf /"
+
+def testIsValidModuleNameRejectsEmpty : IO Bool := do
+  -- Arrange / Act / Assert
+  return !isValidModuleName ""
+
+def testIsValidModuleNameRejectsDoubleDot : IO Bool := do
+  -- Arrange / Act / Assert
+  return !isValidModuleName "Qed..Proofs"
+
+def testContainsPlaceholderDetectsStandalone : IO Bool := do
+  -- Arrange / Act / Assert
+  return containsPlaceholder "theorem foo : True := sorry"
+
+def testContainsPlaceholderIgnoresInsideIdentifier : IO Bool := do
+  -- Arrange / Act / Assert
+  return !containsPlaceholder "def sorryHandler := 42"
+
+def testContainsPlaceholderDetectsInStringLiteral : IO Bool := do
+  -- Arrange / Act / Assert
+  -- Word boundary check flags this — acceptable false positive for proof files
+  return containsPlaceholder "let msg := \"no sorry here\""
+
+def testContainsPlaceholderDetectsAtStartOfFile : IO Bool := do
+  -- Arrange / Act / Assert
+  return containsPlaceholder "sorry\ntheorem foo : True := by trivial"
+
+def testContainsPlaceholderDetectsAtEndOfFile : IO Bool := do
+  -- Arrange / Act / Assert
+  return containsPlaceholder "theorem foo : True := sorry"
+
+def testContainsPlaceholderCleanFile : IO Bool := do
+  -- Arrange / Act / Assert
+  return !containsPlaceholder "theorem foo : True := by trivial\ndef bar := 42"
+
 def verifierTests : List (String × IO Bool) := [
   ("testVerifyCommandReturnsPassOnExitZero", testVerifyCommandReturnsPassOnExitZero),
   ("testVerifyCommandReturnsFailOnNonZeroExit", testVerifyCommandReturnsFailOnNonZeroExit),
@@ -241,5 +308,21 @@ def verifierTests : List (String × IO Bool) := [
   ("testParseAgentVerdictErrorOnMissingPassField", testParseAgentVerdictErrorOnMissingPassField),
   ("testVerifyCommandTimesOutSlowProcess", testVerifyCommandTimesOutSlowProcess),
   ("testVerifyCommandCompletesBeforeTimeout", testVerifyCommandCompletesBeforeTimeout),
-  ("testVerifyCommandTimeoutCapturesPartialOutput", testVerifyCommandTimeoutCapturesPartialOutput)
+  ("testVerifyCommandTimeoutCapturesPartialOutput", testVerifyCommandTimeoutCapturesPartialOutput),
+  ("testTargetToModuleExtractsModule", testTargetToModuleExtractsModule),
+  ("testTargetToModuleSingleDot", testTargetToModuleSingleDot),
+  ("testTargetToModuleRejectsNoDot", testTargetToModuleRejectsNoDot),
+  ("testTargetToModuleRejectsEmpty", testTargetToModuleRejectsEmpty),
+  ("testModuleToPathConverts", testModuleToPathConverts),
+  ("testModuleToPathSingleSegment", testModuleToPathSingleSegment),
+  ("testIsValidModuleNameAcceptsValid", testIsValidModuleNameAcceptsValid),
+  ("testIsValidModuleNameRejectsShellInjection", testIsValidModuleNameRejectsShellInjection),
+  ("testIsValidModuleNameRejectsEmpty", testIsValidModuleNameRejectsEmpty),
+  ("testIsValidModuleNameRejectsDoubleDot", testIsValidModuleNameRejectsDoubleDot),
+  ("testContainsPlaceholderDetectsStandalone", testContainsPlaceholderDetectsStandalone),
+  ("testContainsPlaceholderIgnoresInsideIdentifier", testContainsPlaceholderIgnoresInsideIdentifier),
+  ("testContainsPlaceholderDetectsInStringLiteral", testContainsPlaceholderDetectsInStringLiteral),
+  ("testContainsPlaceholderDetectsAtStartOfFile", testContainsPlaceholderDetectsAtStartOfFile),
+  ("testContainsPlaceholderDetectsAtEndOfFile", testContainsPlaceholderDetectsAtEndOfFile),
+  ("testContainsPlaceholderCleanFile", testContainsPlaceholderCleanFile)
 ]

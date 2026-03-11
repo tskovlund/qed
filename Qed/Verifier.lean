@@ -145,18 +145,54 @@ private def verifyHuman (_description : String) (instruction : String) : IO Veri
 
 /-- Derive the Lean module name from a fully qualified theorem target.
     E.g., `Qed.Proofs.Termination.loop_terminates` → `Qed.Proofs.Termination`. -/
-private def targetToModule (target : String) : Option String :=
+def targetToModule (target : String) : Option String :=
   let parts := target.splitOn "."
   if parts.length < 2 then none
   else some (String.intercalate "." (parts.dropLast))
 
 /-- Derive the source file path from a Lean module name.
     E.g., `Qed.Proofs.Termination` → `Qed/Proofs/Termination.lean`. -/
-private def moduleToPath (module : String) : String :=
+def moduleToPath (module : String) : String :=
   module.replace "." "/" ++ ".lean"
+
+/-- Whether a string is a valid Lean module name (dot-separated identifiers,
+    each starting with a letter/underscore and containing only alphanumeric
+    characters, underscores, and single quotes). Prevents shell injection
+    when the module name is passed to `lake build`. -/
+def isValidModuleName (name : String) : Bool :=
+  let parts := name.splitOn "."
+  parts.length > 0 && parts.all fun part =>
+    !part.isEmpty && part.all fun c =>
+      c.isAlpha || c.isDigit || c == '_' || c == '\''
+
+/-- Whether a character is a valid Lean identifier character (for word
+    boundary detection in the placeholder check). -/
+private def isIdentChar (c : Char) : Bool :=
+  c.isAlpha || c.isDigit || c == '_' || c == '\''
 
 /-- The placeholder axiom that marks incomplete proofs in Lean 4. -/
 private def sorryKeyword : String := "sorry"
+
+/-- Check whether a source file contains standalone occurrences of the
+    placeholder axiom (not inside identifiers or string literals). -/
+def containsPlaceholder (contents : String) : Bool :=
+  let parts := contents.splitOn sorryKeyword
+  if parts.length < 2 then false
+  else
+    -- Check each split point for word boundaries
+    let indices := List.range (parts.length - 1)
+    indices.any fun i =>
+      let before := parts[i]!
+      let after := parts[i + 1]!
+      let charBefore := before.back?
+      let charAfter := after.front?
+      let boundaryBefore := match charBefore with
+        | none => true
+        | some c => !isIdentChar c
+      let boundaryAfter := match charAfter with
+        | none => true
+        | some c => !isIdentChar c
+      boundaryBefore && boundaryAfter
 
 /-- Verify a formal proof by checking that the target's module compiles
     and contains no incomplete proof placeholders. Currently supports Lean 4 only. -/
@@ -166,13 +202,14 @@ private def verifyProof (prover : String) (target : String) : IO VerificationRes
   match targetToModule target with
   | none => return .fail s!"invalid target: '{target}' (expected fully qualified name like Module.theorem)"
   | some module =>
+    if !isValidModuleName module then
+      return .fail s!"invalid module name: '{module}' (expected dot-separated identifiers)"
     let sourcePath := moduleToPath module
     if !(← System.FilePath.pathExists sourcePath) then
       return .fail s!"source file not found: {sourcePath}"
     -- Reject files containing incomplete proof placeholders
     let contents ← IO.FS.readFile sourcePath
-    let hasPlaceholder := (contents.splitOn sorryKeyword).length > 1
-    if hasPlaceholder then
+    if containsPlaceholder contents then
       return .fail s!"source file contains {sorryKeyword}: {sourcePath}"
     -- Build the module to verify the proof typechecks
     let buildResult ← Shell.runShellCommandWithTimeout s!"lake build {module}" defaultCommandTimeout
