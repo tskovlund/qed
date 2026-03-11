@@ -31,19 +31,19 @@ schedule = "always"        # every run (default for command/property/proof)
 [[criteria]]
 description = "Design review"
 verify = { type = "human", instruction = "Check the UI" }
-schedule = "local"         # pre-push and explicit invocation, not CI (default for human)
+# schedule defaults to "manual" for human criteria
 
 [[criteria]]
 description = "Full agent review"
 verify = { type = "agent", prompt = "Review everything." }
-schedule = "manual"        # only explicit invocation without flags (default for agent)
+# schedule defaults to "manual" for agent criteria
 ```
 
-| Value | When it runs | Excluded by |
-|-------|-------------|-------------|
-| `always` | Every run (CI, local, explicit) | — |
-| `local` | Pre-push and explicit invocation | `--ci` |
-| `manual` | Only via explicit invocation without flags | `--ci`, `--local` |
+| Value | When it runs | Excluded by | Default for |
+|-------|-------------|-------------|-------------|
+| `always` | Every run (CI, local, explicit) | — | command, property, proof |
+| `local` | Pre-push and explicit invocation | `--ci` | — |
+| `manual` | Only via explicit invocation without flags | `--ci`, `--local` | human, agent |
 
 ## Criteria that require external tools
 
@@ -84,3 +84,21 @@ Skipped criteria show `[SKIP]` in output and do not affect the overall pass/fail
 ```
 
 This limits verification to specs in the `specs/` directory and its subdirectories.
+
+## Ensuring manual criteria get validated
+
+Human and agent criteria default to `schedule = "manual"`, which means they are excluded from `--ci` and `--local` (pre-push hooks). This is intentional — human criteria require interactive input, and agent criteria are expensive — but it means they only run during explicit invocation.
+
+To run everything, including manual criteria:
+
+```sh
+qed verify specs/
+```
+
+No flags means no filtering — all criteria run regardless of schedule.
+
+**Recommended practices:**
+
+- **Before merging structural PRs**, run `qed verify` without flags to validate agent and human criteria. Add this as a PR checklist item.
+- **For agent criteria in CI**, consider a scheduled workflow (e.g. nightly or weekly) that runs `qed verify` without flags. This catches drift between scheduled runs. Ensure the agent binary and any API keys are available as CI secrets.
+- **Override the default** if a human or agent criterion should run more frequently. Set `schedule = "always"` or `schedule = "local"` explicitly to include it in CI or pre-push hooks.
