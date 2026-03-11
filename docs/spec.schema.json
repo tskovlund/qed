@@ -152,7 +152,7 @@
           },
           "schedule": {
             "type": "string",
-            "description": "When this criterion runs. Defaults: 'always' for command/property/proof, 'manual' for human and agent.",
+            "description": "When this criterion runs. Defaults: 'always' for command/property/proof, 'heavy' for agent, 'manual' for human.",
             "enum": ["always", "heavy", "manual"],
             "default": "always"
           },

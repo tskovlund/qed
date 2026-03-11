@@ -295,7 +295,7 @@ def generate : String :=
             ]),
             ("schedule", obj [
               ("type", str "string"),
-              ("description", str "When this criterion runs. Defaults: 'always' for command/property/proof, 'manual' for human and agent."),
+              ("description", str "When this criterion runs. Defaults: 'always' for command/property/proof, 'heavy' for agent, 'manual' for human."),
               ("enum", arr (schedules.map fun s => DocGen.Schema.str s)),
               ("default", str "always")
             ]),

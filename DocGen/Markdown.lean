@@ -200,7 +200,7 @@ Five verification strategies, from lightweight to mathematical:
 
 ## Schedule
 
-Controls when a criterion runs. The runner filters by this field based on the execution context (`--ci`, `--local`, or no flag).
+Controls when a criterion runs. The runner filters by this field based on the execution context (`--auto`, `--extended`, `--full`, or no flag).
 
 {scheduleTable}
 
