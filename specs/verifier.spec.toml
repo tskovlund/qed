@@ -1,9 +1,44 @@
 #:schema ../docs/spec.schema.json
 
-# Verifier — verification dispatch and shell execution safety.
-# Owns Qed/Verifier.lean.
+# Verifier — verification dispatch, shell execution safety, and
+# pure function correctness proofs.
+# Owns Qed/Verifier.lean and Qed/Proofs/VerifierProperties.lean.
 
 name = "verifier-correctness"
+
+# --- Proof criteria ---
+
+[[criteria]]
+description = "targetToModule correctly extracts the module prefix from a qualified name"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.VerifierProperties.targetToModule_soundness"
+
+[[criteria]]
+description = "isValidModuleName guarantees only safe characters for shell interpolation"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.VerifierProperties.isValidModuleName_safe_chars"
+
+[[criteria]]
+description = "containsSorry detects all standalone sorry occurrences (no false negatives)"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.VerifierProperties.containsSorry_soundness"
+
+[[criteria]]
+description = "containsSorry ignores sorry inside identifiers (no false positives)"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.VerifierProperties.containsSorry_no_false_positive_for_identifiers"
 
 # --- Agent review ---
 

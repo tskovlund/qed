@@ -167,7 +167,7 @@ def isValidModuleName (name : String) : Bool :=
 
 /-- Whether a character is a valid Lean identifier character (for word
     boundary detection in the sorry check). -/
-private def isIdentChar (c : Char) : Bool :=
+def isIdentChar (c : Char) : Bool :=
   c.isAlpha || c.isDigit || c == '_' || c == '\''
 
 /-- Check whether a source file contains standalone `sorry` (not inside
@@ -204,11 +204,11 @@ private def verifyProof (prover : String) (target : String) : IO VerificationRes
     let sourcePath := moduleToPath module
     if !(← System.FilePath.pathExists sourcePath) then
       return .fail s!"source file not found: {sourcePath}"
-    -- Reject files containing sorry
-    let contents ← IO.FS.readFile sourcePath
-    if containsSorry contents then
-      return .fail s!"source file contains sorry: {sourcePath}"
     -- Build the module to verify the proof typechecks
+    -- Sorry detection relies on Lean's compiler warnings ("uses 'sorry'")
+    -- checked after the build — this catches sorry in the target file AND
+    -- all transitive dependencies, without false positives on string
+    -- literals or comments that mention sorry.
     let buildResult ← Shell.runShellCommandWithTimeout s!"lake build {module}" defaultCommandTimeout
     match buildResult with
     | .timedOut stdout stderr =>
