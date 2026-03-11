@@ -22,17 +22,23 @@ private def truncate (s : String) (maxLength : Nat) : String :=
     Captures stdout and stderr, truncates to last `maxOutputLength` chars.
     Enforces the configured timeout — kills the process if it exceeds it. -/
 private def verifyCommand (command : String) (timeout : Nat) : IO VerificationResult := do
-  let (exitCode, stdout, stderr) ← Shell.runShellCommandWithTimeout command timeout
-  let stdoutStr := stdout.trimAscii.toString
-  let stderrStr := stderr.trimAscii.toString
-  let combined := stdoutStr ++ (if stderrStr.isEmpty then "" else "\nSTDERR:\n" ++ stderrStr)
-  let details := truncate combined maxOutputLength
-  if exitCode == 0 then
-    return .pass details
-  else if exitCode == 124 then
+  let result ← Shell.runShellCommandWithTimeout command timeout
+  match result with
+  | .timedOut stdout stderr =>
+    let stdoutStr := stdout.trimAscii.toString
+    let stderrStr := stderr.trimAscii.toString
+    let combined := stdoutStr ++ (if stderrStr.isEmpty then "" else "\nSTDERR:\n" ++ stderrStr)
+    let details := truncate combined maxOutputLength
     return .fail s!"timed out after {timeout}s\n{details}"
-  else
-    return .fail s!"exit code {exitCode}\n{details}"
+  | .completed exitCode stdout stderr =>
+    let stdoutStr := stdout.trimAscii.toString
+    let stderrStr := stderr.trimAscii.toString
+    let combined := stdoutStr ++ (if stderrStr.isEmpty then "" else "\nSTDERR:\n" ++ stderrStr)
+    let details := truncate combined maxOutputLength
+    if exitCode == 0 then
+      return .pass details
+    else
+      return .fail s!"exit code {exitCode}\n{details}"
 
 /-- The system prompt instructs the agent to produce a structured JSON verdict. -/
 private def agentSystemPrompt : String :=
