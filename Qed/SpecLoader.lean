@@ -11,7 +11,7 @@ open Qed
     Returns a `Spec.Pinned` with the SHA-256 hash of the raw file bytes. -/
 def loadSpec (path : System.FilePath) : IO (Except String Spec.Pinned) := do
   let contents ← IO.FS.readFile path
-  let contentHash ← Integrity.hashFile path
+  let contentHash ← Integrity.hashContents contents
   let pathStr := path.toString
   let specResult := if pathStr.endsWith ".toml" then
     match TomlConverter.tomlToJson contents with

@@ -4,28 +4,43 @@ namespace Qed.Integrity
 
 open Qed
 
+/-- Try running a hash command on a file, returning the hex digest or none. -/
+private def tryHashCmd (cmd : String) (args : Array String) : IO (Option String) := do
+  try
+    let result ← IO.Process.output { cmd := cmd, args := args }
+    if result.exitCode == 0 then
+      -- Output format: "<hash>  <filename>" or "<hash> <filename>"
+      return some (result.stdout.trimAscii.takeWhile (· != ' ')).toString
+    else
+      return none
+  catch _ =>
+    return none
+
 /-- Compute SHA-256 hash of a file's raw bytes.
     Tries `shasum -a 256` (macOS/BSD), falls back to `sha256sum` (GNU coreutils). -/
 def hashFile (path : System.FilePath) : IO String := do
   let pathStr := path.toString
-  let tryCmd (cmd : String) (args : Array String) : IO (Option String) := do
-    try
-      let result ← IO.Process.output { cmd := cmd, args := args }
-      if result.exitCode == 0 then
-        -- Output format: "<hash>  <filename>" or "<hash> <filename>"
-        let hash := (result.stdout.trimAscii.takeWhile (· != ' ')).toString
-        return some hash
-      else
-        return none
-    catch _ =>
-      return none
-  -- Try shasum first (macOS), then sha256sum (Linux)
-  match ← tryCmd "shasum" #["-a", "256", pathStr] with
+  match ← tryHashCmd "shasum" #["-a", "256", pathStr] with
   | some hash => return hash
   | none =>
-    match ← tryCmd "sha256sum" #[pathStr] with
+    match ← tryHashCmd "sha256sum" #[pathStr] with
     | some hash => return hash
     | none => throw (IO.userError s!"cannot compute SHA-256 hash: neither shasum nor sha256sum available")
+
+/-- Compute SHA-256 hash of in-memory contents.
+    Writes to a temp file to avoid TOCTOU races (hash the bytes we actually parsed). -/
+def hashContents (contents : String) : IO String := do
+  let timestamp ← IO.monoMsNow
+  let tmpDir := (← IO.getEnv "TMPDIR").getD "/tmp"
+  let tmpPath : System.FilePath := s!"{tmpDir}/qed-hash-{timestamp}"
+  IO.FS.writeFile tmpPath contents
+  try
+    let hash ← hashFile tmpPath
+    IO.FS.removeFile tmpPath
+    return hash
+  catch error =>
+    try IO.FS.removeFile tmpPath catch _ => pure ()
+    throw error
 
 /-- Check if a file's current hash matches the expected hash. -/
 def checkIntegrity (path : System.FilePath) (expectedHash : String) : IO (Except String Unit) := do
@@ -46,7 +61,7 @@ def checkGitClean (path : System.FilePath) : IO (Except String Unit) := do
   try
     let result ← IO.Process.output {
       cmd := "git"
-      args := #["diff", "--exit-code", pathStr]
+      args := #["diff", "HEAD", "--exit-code", pathStr]
     }
     if result.exitCode == 0 then
       -- Also check if the file is tracked

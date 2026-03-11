@@ -36,15 +36,8 @@ private def reportError (message : String) (jsonOutput : Bool) : IO Unit := do
 def verifySpec (pinnedSpec : Spec.Pinned) (jsonOutput : Bool) (context : RunContext := .full)
     (pinned : Bool := false) : IO UInt32 := do
   let spec := pinnedSpec.spec
-  -- Pin check at load time
-  if pinned then
-    match ← Integrity.checkGitClean pinnedSpec.path with
-    | .error reason =>
-      reportError s!"pin violation: {reason}" jsonOutput
-      return 2
-    | .ok () => pure ()
-  -- Integrity check: before verification
-  match ← Integrity.checkIntegrity pinnedSpec.path pinnedSpec.contentHash with
+  -- Integrity check: before verification (hash + optional git pin)
+  match ← Integrity.verify pinnedSpec pinned with
   | .error reason =>
     reportError s!"integrity violation: {reason}" jsonOutput
     return 2
@@ -53,7 +46,7 @@ def verifySpec (pinnedSpec : Spec.Pinned) (jsonOutput : Bool) (context : RunCont
   if jsonOutput then
     let results ← Verifier.verifyAll criteria
     -- Integrity check: after verification (catches verifier tampering)
-    match ← Integrity.checkIntegrity pinnedSpec.path pinnedSpec.contentHash with
+    match ← Integrity.verify pinnedSpec pinned with
     | .error reason =>
       reportError s!"integrity violation: {reason}" jsonOutput
       return 2
@@ -89,7 +82,7 @@ def verifySpec (pinnedSpec : Spec.Pinned) (jsonOutput : Bool) (context : RunCont
         | _ => criterion.description
       Output.printWrapped linePrefix continuationIndent text termWidth
     -- Integrity check: after verification (catches verifier tampering)
-    match ← Integrity.checkIntegrity pinnedSpec.path pinnedSpec.contentHash with
+    match ← Integrity.verify pinnedSpec pinned with
     | .error reason =>
       IO.eprintln ""
       reportError s!"integrity violation: {reason}" jsonOutput
