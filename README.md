@@ -98,6 +98,15 @@ qed verify specs/     # verify qed's own specs
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
 
+## Best practices
+
+**Use `--pin` in CI and pre-push hooks.** It ensures specs match their git-committed version — results from locally modified specs are rejected. CI mode is auto-detected (no `--ci` flag needed when `CI=true` is set).
+
+```yaml
+# GitHub Actions — CI mode auto-detected, --pin ensures committed specs
+- run: qed verify --pin
+```
+
 ## Documentation
 
 **Start here:** [Tutorial](docs/tutorial.md) — write your first spec in 5 minutes.
