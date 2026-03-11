@@ -15,10 +15,7 @@
       "type": "object",
       "description": "Configuration for the worker. If present, qed runs in worker loop mode (iterate until criteria pass). If absent, qed runs in verify mode (single-pass verification). At least one of 'command' or 'prompt' is required.",
       "additionalProperties": false,
-      "anyOf": [
-        {"required": ["command"]},
-        {"required": ["prompt"]}
-      ],
+      "anyOf": [{ "required": ["command"] }, { "required": ["prompt"] }],
       "properties": {
         "command": {
           "type": "string",
@@ -68,8 +65,16 @@
                 "additionalProperties": false,
                 "properties": {
                   "type": { "const": "command" },
-                  "run": { "type": "string", "description": "Shell command to execute." },
-                  "timeout": { "type": "integer", "default": 300, "minimum": 1, "description": "Timeout in seconds." }
+                  "run": {
+                    "type": "string",
+                    "description": "Shell command to execute."
+                  },
+                  "timeout": {
+                    "type": "integer",
+                    "default": 300,
+                    "minimum": 1,
+                    "description": "Timeout in seconds."
+                  }
                 }
               },
               {
@@ -79,9 +84,19 @@
                 "additionalProperties": false,
                 "properties": {
                   "type": { "const": "agent" },
-                  "prompt": { "type": "string", "description": "Review prompt for the agent." },
-                  "model": { "type": "string", "default": "claude-opus-4-6", "description": "Model to use for the review." },
-                  "command": { "type": "string", "description": "Shell command to invoke the agent. Receives prompt via $QED_VERIFIER_PROMPT. Defaults to Claude CLI." }
+                  "prompt": {
+                    "type": "string",
+                    "description": "Review prompt for the agent."
+                  },
+                  "model": {
+                    "type": "string",
+                    "default": "claude-opus-4-6",
+                    "description": "Model to use for the review."
+                  },
+                  "command": {
+                    "type": "string",
+                    "description": "Shell command to invoke the agent. Receives prompt via $QED_VERIFIER_PROMPT. Defaults to Claude CLI."
+                  }
                 }
               },
               {
@@ -91,8 +106,16 @@
                 "additionalProperties": false,
                 "properties": {
                   "type": { "const": "property" },
-                  "run": { "type": "string", "description": "Shell command to run property tests." },
-                  "timeout": { "type": "integer", "default": 600, "minimum": 1, "description": "Timeout in seconds." }
+                  "run": {
+                    "type": "string",
+                    "description": "Shell command to run property tests."
+                  },
+                  "timeout": {
+                    "type": "integer",
+                    "default": 600,
+                    "minimum": 1,
+                    "description": "Timeout in seconds."
+                  }
                 }
               },
               {
@@ -102,8 +125,14 @@
                 "additionalProperties": false,
                 "properties": {
                   "type": { "const": "proof" },
-                  "prover": { "type": "string", "description": "Proof system (e.g. lean4, coq, agda)." },
-                  "target": { "type": "string", "description": "Fully qualified name of the theorem to verify." }
+                  "prover": {
+                    "type": "string",
+                    "description": "Proof system (e.g. lean4, coq, agda)."
+                  },
+                  "target": {
+                    "type": "string",
+                    "description": "Fully qualified name of the theorem to verify."
+                  }
                 }
               },
               {
@@ -113,7 +142,10 @@
                 "additionalProperties": false,
                 "properties": {
                   "type": { "const": "human" },
-                  "instruction": { "type": "string", "description": "What the human should verify." }
+                  "instruction": {
+                    "type": "string",
+                    "description": "What the human should verify."
+                  }
                 }
               }
             ]

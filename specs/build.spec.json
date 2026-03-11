@@ -27,7 +27,7 @@
       "description": "Markdown formatting is consistent (prettier)",
       "verify": {
         "type": "command",
-        "run": "npx prettier@3 --check \"**/*.md\""
+        "run": "npx prettier@3 --check ."
       }
     }
   ]

@@ -101,63 +101,6 @@
           "store_path": "/nix/store/b87dfjnjvg932xsw4mszjg4qmvrqzlqk-nodejs-22.22.0"
         }
       }
-    },
-    "python@3.14.3": {
-      "last_modified": "2026-02-23T15:40:43Z",
-      "plugin_version": "0.0.4",
-      "resolved": "github:NixOS/nixpkgs/80d901ec0377e19ac3f7bb8c035201e2e098cc97#python314",
-      "source": "devbox-search",
-      "version": "3.14.3",
-      "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/gzycj9hwfmvm8qvh41lf8afmcdxnriig-python3-3.14.3",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/gzycj9hwfmvm8qvh41lf8afmcdxnriig-python3-3.14.3"
-        },
-        "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/qq0qwcldmiylcy4c0a0xilqwmbkmjd3y-python3-3.14.3",
-              "default": true
-            },
-            {
-              "name": "debug",
-              "path": "/nix/store/vy7zp00nd9n4pw51ldljbal75hznf5ns-python3-3.14.3-debug"
-            }
-          ],
-          "store_path": "/nix/store/qq0qwcldmiylcy4c0a0xilqwmbkmjd3y-python3-3.14.3"
-        },
-        "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/axbfzmxga1ka88m9fvn960nybc48i9h5-python3-3.14.3",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/axbfzmxga1ka88m9fvn960nybc48i9h5-python3-3.14.3"
-        },
-        "x86_64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/8gnchv834z56s561v3sx2h0ra1a2xn46-python3-3.14.3",
-              "default": true
-            },
-            {
-              "name": "debug",
-              "path": "/nix/store/lqaaivl5ppkgprnawizmzixcjx2bw4hi-python3-3.14.3-debug"
-            }
-          ],
-          "store_path": "/nix/store/8gnchv834z56s561v3sx2h0ra1a2xn46-python3-3.14.3"
-        }
-      }
     }
   }
 }

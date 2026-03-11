@@ -1,17 +1,12 @@
 {
-  "packages": [
-    "elan@latest",
-    "nodejs@22"
-  ],
+  "packages": ["elan@latest", "nodejs@22"],
   "shell": {
-    "init_hook": [
-      "git config core.hooksPath .githooks"
-    ],
+    "init_hook": ["git config core.hooksPath .githooks"],
     "scripts": {
       "build": "lake build",
       "test": "lake test",
-      "check": "lake build && lake test && .lake/build/bin/docgen schema | diff docs/spec.schema.json - && .lake/build/bin/docgen markdown | diff docs/spec-format.md -",
-      "docs": ".lake/build/bin/docgen schema > docs/spec.schema.json && .lake/build/bin/docgen markdown > docs/spec-format.md"
+      "check": "lake build && lake test && .lake/build/bin/docgen schema | npx prettier@3 --stdin-filepath schema.json | diff docs/spec.schema.json - && .lake/build/bin/docgen markdown | npx prettier@3 --stdin-filepath spec-format.md | diff docs/spec-format.md -",
+      "docs": ".lake/build/bin/docgen schema | npx prettier@3 --stdin-filepath schema.json > docs/spec.schema.json && .lake/build/bin/docgen markdown | npx prettier@3 --stdin-filepath spec-format.md > docs/spec-format.md"
     }
   }
 }
