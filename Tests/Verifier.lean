@@ -222,10 +222,6 @@ def testVerifyCommandTimeoutCapturesPartialOutput : IO Bool := do
   | .fail details => return details.contains "timed out" && details.contains "partial-output-before-timeout"
   | _ => return false
 
--- Pure function tests for targetToModule, moduleToPath, isValidModuleName,
--- and containsSorry have been replaced by universal proofs in
--- Qed/Proofs/VerifierProperties.lean (strictly stronger: ∀ inputs, not examples).
-
 def verifierTests : List (String × IO Bool) := [
   ("testVerifyCommandReturnsPassOnExitZero", testVerifyCommandReturnsPassOnExitZero),
   ("testVerifyCommandReturnsFailOnNonZeroExit", testVerifyCommandReturnsFailOnNonZeroExit),
