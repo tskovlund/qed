@@ -120,12 +120,17 @@ private partial def promptLoop (stdin : IO.FS.Stream) : IO VerificationResult :=
     promptLoop stdin
 
 private def verifyHuman (_description : String) (instruction : String) : IO VerificationResult := do
+  let indent := "    "
+  let termWidth ← Output.getTerminalWidth
+  let wrapWidth := if termWidth > indent.length + 20 then termWidth - indent.length else 60
   let lines := instruction.splitOn "\n"
   for line in lines do
     let trimmed := line.trimAscii.toString
     if !trimmed.isEmpty then
-      IO.eprintln s!"    {Output.ansiDim}{trimmed}{Output.ansiReset}"
-  IO.eprint s!"    {Output.ansiCyan}Accept? [y/n]:{Output.ansiReset} "
+      let wrapped := Output.wordWrap trimmed wrapWidth
+      for wrappedLine in wrapped do
+        IO.eprintln s!"{indent}{Output.ansiDim}{wrappedLine}{Output.ansiReset}"
+  IO.eprint s!"{indent}{Output.ansiCyan}Accept? [y/n]:{Output.ansiReset} "
   let stdin ← IO.getStdin
   promptLoop stdin
 

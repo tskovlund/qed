@@ -28,6 +28,30 @@ def colorStatusIndicator : VerificationResult → String
   | .needsHuman _ => s!"{ansiCyan}NEEDS-HUMAN{ansiReset}"
   | .skipped _ => s!"{ansiYellow}SKIP{ansiReset}"
 
+/-- Word-wrap text to fit within `width` characters. Splits on word boundaries only. -/
+def wordWrap (text : String) (width : Nat) : List String :=
+  if width < 20 then [text]
+  else
+    let words := text.splitOn " " |>.filter fun w => !w.isEmpty
+    match words with
+    | [] => []
+    | first :: rest =>
+      let (revLines, lastLine) := rest.foldl (init := ([], first)) fun (revLines, current) word =>
+        if current.length + 1 + word.length > width then
+          (current :: revLines, word)
+        else
+          (revLines, current ++ " " ++ word)
+      (lastLine :: revLines).reverse
+
+/-- Get the terminal width, defaulting to 80 if detection fails. -/
+def getTerminalWidth : IO Nat := do
+  try
+    let result ← IO.Process.output { cmd := "tput", args := #["cols"] }
+    match result.stdout.trimAscii.toString.toNat? with
+    | some w => return w
+    | none => return 80
+  catch _ => return 80
+
 /-- Serialize a VerificationResult to a JSON-friendly result string. -/
 def resultStatus : VerificationResult → String
   | .pass _ => "passed"
