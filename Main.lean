@@ -192,17 +192,27 @@ def printHelp : IO Unit := do
   IO.println "  2  Configuration or usage error (bad spec, missing file, unknown command)"
 
 /-- Extract flags and remaining args from the argument list.
-    Returns `none` for context when no explicit flag is given. -/
-private def extractFlags (args : List String) : Bool × Option RunContext × Bool × List String :=
+    Returns `none` for context when no explicit flag is given.
+    Returns an error if conflicting mode flags are provided. -/
+private def extractFlags (args : List String)
+    : Except String (Bool × Option RunContext × Bool × List String) :=
   let jsonFlag := args.any (· == "--json")
   let pinFlag := args.any (· == "--pin")
-  let context := if args.any (· == "--auto") then some RunContext.auto
-    else if args.any (· == "--extended") then some RunContext.extended
-    else if args.any (· == "--full") then some RunContext.full
-    else none
-  let remaining := args.filter fun a =>
-    a != "--json" && a != "--auto" && a != "--extended" && a != "--full" && a != "--pin"
-  (jsonFlag, context, pinFlag, remaining)
+  let hasAuto := args.any (· == "--auto")
+  let hasExtended := args.any (· == "--extended")
+  let hasFull := args.any (· == "--full")
+  let modeCount := (if hasAuto then 1 else 0) + (if hasExtended then 1 else 0) +
+    (if hasFull then 1 else 0)
+  if modeCount > 1 then
+    .error "conflicting flags: use only one of --auto, --extended, or --full"
+  else
+    let context := if hasAuto then some RunContext.auto
+      else if hasExtended then some RunContext.extended
+      else if hasFull then some RunContext.full
+      else none
+    let remaining := args.filter fun a =>
+      a != "--json" && a != "--auto" && a != "--extended" && a != "--full" && a != "--pin"
+    .ok (jsonFlag, context, pinFlag, remaining)
 
 /-- Resolve the execution context: explicit flag > CI env var > full. -/
 private def resolveContext (explicit : Option RunContext) : IO RunContext := do
@@ -213,7 +223,11 @@ private def resolveContext (explicit : Option RunContext) : IO RunContext := do
     return if ciEnv == some "true" then .auto else .full
 
 def main (args : List String) : IO UInt32 := do
-  let (jsonOutput, explicitContext, pinned, cleanArgs) := extractFlags args
+  let (jsonOutput, explicitContext, pinned, cleanArgs) ← match extractFlags args with
+    | .ok result => pure result
+    | .error message =>
+      IO.eprintln s!"error: {message}"
+      return 2
   let context ← resolveContext explicitContext
   match cleanArgs with
   | ["version"] =>
