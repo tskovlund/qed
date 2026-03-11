@@ -103,13 +103,21 @@ def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext 
     if specs.isEmpty then
       reportError s!"no spec files found in '{directory}'" jsonOutput
       return 2
-    let mut anyFailed := false
+    let mut passedSpecs : Nat := 0
+    let mut failedSpecs : Nat := 0
     for specPath in specs do
       let result ← runVerify specPath.toString jsonOutput context
-      if result == 1 then anyFailed := true
+      if result == 1 then failedSpecs := failedSpecs + 1
+      else if result == 0 then passedSpecs := passedSpecs + 1
       if result == 2 then return 2
       if !jsonOutput then IO.println ""
-    return if anyFailed then 1 else 0
+    if !jsonOutput && specs.length > 1 then
+      let total := passedSpecs + failedSpecs
+      if failedSpecs == 0 then
+        IO.println s!"{Output.ansiBold}{Output.ansiGreen}All {total} specs passed.{Output.ansiReset}"
+      else
+        IO.eprintln s!"{Output.ansiBold}{Output.ansiRed}{failedSpecs} of {total} specs failed.{Output.ansiReset}"
+    return if failedSpecs > 0 then 1 else 0
 
 /-- Parse and validate a spec file, printing the parsed result. -/
 def runParse (path : String) (jsonOutput : Bool) : IO UInt32 := do
