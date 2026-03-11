@@ -176,19 +176,13 @@
       "minimum": 1
     }
   },
-  "if": {
-    "required": ["worker"]
-  },
+  "if": { "required": ["worker"] },
   "then": {
     "description": "Worker loop mode: worker iterates against criteria."
   },
   "else": {
     "description": "Verify mode: single-pass verification, criteria required.",
-    "properties": {
-      "criteria": { "minItems": 1 }
-    },
-    "not": {
-      "required": ["maxIterations"]
-    }
+    "properties": { "criteria": { "minItems": 1 } },
+    "not": { "required": ["maxIterations"] }
   }
 }
