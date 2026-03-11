@@ -15,12 +15,12 @@ qed help                  Show this help
 
 ## CLI flags
 
-| Flag      | Purpose                                                                        |
-| --------- | ------------------------------------------------------------------------------ |
-| `--json`  | Machine-readable JSON output (position-independent)                            |
-| `--local` | Local mode — excludes `manual` criteria only (position-independent)            |
-| `--ci`    | CI mode — excludes `manual` and `local` criteria (position-independent)        |
-| `--pin`   | Require spec files to match their git-committed version (position-independent) |
+| Flag      | Purpose                                                                         |
+| --------- | ------------------------------------------------------------------------------- |
+| `--json`  | Machine-readable JSON output (position-independent)                             |
+| `--local` | Local mode — excludes `manual` criteria only (position-independent)             |
+| `--ci`    | CI mode — excludes `manual` and `local` criteria (auto-detected when `CI=true`) |
+| `--pin`   | Require spec files to match their git-committed version (position-independent)  |
 
 ## Exit codes
 
@@ -48,9 +48,10 @@ All meaningful parameters are configurable at the spec level — defaults are se
 
 ### Consumed by qed
 
-| Variable | Purpose                                                 |
-| -------- | ------------------------------------------------------- |
-| `TMPDIR` | Temp directory for failure files (falls back to `/tmp`) |
+| Variable | Purpose                                                             |
+| -------- | ------------------------------------------------------------------- |
+| `CI`     | When `true`, auto-enables CI mode (same as `--ci`) if no flag given |
+| `TMPDIR` | Temp directory for failure files (falls back to `/tmp`)             |
 
 ### Set by qed for workers
 

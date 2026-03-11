@@ -182,6 +182,7 @@ def printHelp : IO Unit := do
   IO.println "  --json                    Output results as JSON"
   IO.println "  --local                   Local mode — exclude schedule = \"manual\" criteria"
   IO.println "  --ci                      CI mode — exclude schedule = \"manual\" and \"local\" criteria"
+  IO.println "                            (auto-detected when CI=true is set)"
   IO.println "  --pin                     Require spec files to match their git-committed version"
   IO.println ""
   IO.println "Exit codes:"
@@ -189,18 +190,28 @@ def printHelp : IO Unit := do
   IO.println "  1  Verification failure (one or more criteria failed)"
   IO.println "  2  Configuration or usage error (bad spec, missing file, unknown command)"
 
-/-- Extract flags and remaining args from the argument list. -/
-private def extractFlags (args : List String) : Bool × RunContext × Bool × List String :=
+/-- Extract flags and remaining args from the argument list.
+    Returns `none` for context when no explicit flag is given. -/
+private def extractFlags (args : List String) : Bool × Option RunContext × Bool × List String :=
   let jsonFlag := args.any (· == "--json")
   let pinFlag := args.any (· == "--pin")
-  let context := if args.any (· == "--ci") then RunContext.ci
-    else if args.any (· == "--local") then RunContext.local
-    else RunContext.full
+  let context := if args.any (· == "--ci") then some RunContext.ci
+    else if args.any (· == "--local") then some RunContext.local
+    else none
   let remaining := args.filter fun a => a != "--json" && a != "--ci" && a != "--local" && a != "--pin"
   (jsonFlag, context, pinFlag, remaining)
 
+/-- Resolve the execution context: explicit flag > CI env var > full. -/
+private def resolveContext (explicit : Option RunContext) : IO RunContext := do
+  match explicit with
+  | some ctx => return ctx
+  | none =>
+    let ciEnv ← IO.getEnv "CI"
+    return if ciEnv == some "true" then RunContext.ci else RunContext.full
+
 def main (args : List String) : IO UInt32 := do
-  let (jsonOutput, context, pinned, cleanArgs) := extractFlags args
+  let (jsonOutput, explicitContext, pinned, cleanArgs) := extractFlags args
+  let context ← resolveContext explicitContext
   match cleanArgs with
   | ["version"] =>
     IO.println s!"qed {version}"
