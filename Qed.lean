@@ -25,3 +25,4 @@ import Qed.Proofs.OutputCorrectness
 import Qed.Proofs.ParserProperties
 import Qed.Proofs.IntegrityProperties
 import Qed.Proofs.TomlProperties
+import Qed.Proofs.VerifierProperties

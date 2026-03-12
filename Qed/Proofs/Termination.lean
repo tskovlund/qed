@@ -2,6 +2,7 @@ import Qed.Types
 import Qed.StateMachine
 import Qed.Proofs.FinalStates
 import Qed.Proofs.Monotonic
+import Qed.Proofs.Invariants
 
 set_option autoImplicit false
 
@@ -148,5 +149,42 @@ theorem loop_terminates (config : LoopConfig) (iteration : Nat)
         (by simp [LoopState.isTerminal])
       simp [Monotonic.iterationOf] at this
       exact this⟩
+
+/-- Progress measure for termination: assigns a natural number to each state
+such that ready < workerRunning(n) < verifying(n) < workerRunning(n+1) < ...
+Terminal states are assigned 0 (irrelevant — they're absorbing). -/
+def progressMeasure (state : LoopState) : Nat :=
+  match state with
+  | .ready => 0
+  | .workerRunning n => 2 * n + 1
+  | .verifying n => 2 * n + 2
+  | _ => 0
+
+/-- Every non-terminal, state-changing transition either reaches a terminal
+state or strictly increases the progress measure. Since the measure is
+bounded by `2 * maxIterations + 2` for reachable states, the loop terminates
+after at most that many non-trivial transitions.
+
+This is the end-to-end termination guarantee, proved by composing
+`lifecycle_ordering` (which characterizes all possible transitions) with
+the progress measure. -/
+theorem progress_or_terminal (config : LoopConfig) (state : LoopState)
+    (context : LoopContext) (event : LoopEvent)
+    (hnonterm : state.isTerminal = false)
+    (hchanges : (transition config state context event).1 ≠ state) :
+    (transition config state context event).1.isTerminal = true ∨
+    progressMeasure (transition config state context event).1 > progressMeasure state := by
+  have h := Invariants.lifecycle_ordering config state context event hnonterm
+  rcases h with hterminal | hself | ⟨hready, hworker⟩ | ⟨n, hstate, hverify⟩ | ⟨n, hstate, hworker_next⟩
+  -- Terminal
+  · left; exact hterminal
+  -- Self-loop: contradicts hchanges
+  · exact absurd hself hchanges
+  -- ready → workerRunning 1: measure 0 → 3
+  · right; subst hready; rw [hworker]; simp [progressMeasure]
+  -- workerRunning n → verifying n: measure (2n+1) → (2n+2)
+  · right; subst hstate; rw [hverify]; simp [progressMeasure]
+  -- verifying n → workerRunning (n+1): measure (2n+2) → (2n+3)
+  · right; subst hstate; rw [hworker_next]; simp [progressMeasure]; omega
 
 end Qed.Proofs.Termination

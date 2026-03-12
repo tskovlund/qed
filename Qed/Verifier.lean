@@ -143,6 +143,86 @@ private def verifyHuman (_description : String) (instruction : String) : IO Veri
   let stdin ← IO.getStdin
   promptLoop stdin
 
+/-- Derive the Lean module name from a fully qualified theorem target.
+    E.g., `Qed.Proofs.Termination.loop_terminates` → `Qed.Proofs.Termination`. -/
+def targetToModule (target : String) : Option String :=
+  let parts := target.splitOn "."
+  if parts.length < 2 then none
+  else some (String.intercalate "." (parts.dropLast))
+
+/-- Derive the source file path from a Lean module name.
+    E.g., `Qed.Proofs.Termination` → `Qed/Proofs/Termination.lean`. -/
+def moduleToPath (module : String) : String :=
+  module.replace "." "/" ++ ".lean"
+
+/-- Whether a string is a valid Lean module name (dot-separated non-empty
+    segments containing only alphanumeric characters, underscores, and single
+    quotes). Prevents shell injection when the module name is passed to
+    `lake build`. -/
+def isValidModuleName (name : String) : Bool :=
+  let parts := name.splitOn "."
+  parts.length > 0 && parts.all fun part =>
+    !part.isEmpty && part.all fun c =>
+      c.isAlpha || c.isDigit || c == '_' || c == '\''
+
+/-- Whether a character is a valid Lean identifier character (for word
+    boundary detection in the sorry check). -/
+def isIdentChar (c : Char) : Bool :=
+  c.isAlpha || c.isDigit || c == '_' || c == '\''
+
+/-- Check whether a source file contains standalone `sorry` (not inside
+    identifiers like `sorryHandler`). Uses word-boundary detection. -/
+def containsSorry (contents : String) : Bool :=
+  let parts := contents.splitOn "sorry"
+  if parts.length < 2 then false
+  else
+    -- Check each split point for word boundaries
+    let indices := List.range (parts.length - 1)
+    indices.any fun i =>
+      let before := parts[i]!
+      let after := parts[i + 1]!
+      let charBefore := before.back?
+      let charAfter := after.front?
+      let boundaryBefore := match charBefore with
+        | none => true
+        | some c => !isIdentChar c
+      let boundaryAfter := match charAfter with
+        | none => true
+        | some c => !isIdentChar c
+      boundaryBefore && boundaryAfter
+
+/-- Verify a formal proof by checking that the target's module compiles
+    and contains no sorry. Currently supports Lean 4 only. -/
+private def verifyProof (prover : String) (target : String) : IO VerificationResult := do
+  if prover ∉ supportedProvers then
+    return .fail s!"unsupported prover: '{prover}' (supported: {", ".intercalate supportedProvers})"
+  match targetToModule target with
+  | none => return .fail s!"invalid target: '{target}' (expected fully qualified name like Module.theorem)"
+  | some module =>
+    if !isValidModuleName module then
+      return .fail s!"invalid module name: '{module}' (expected dot-separated identifiers)"
+    let sourcePath := moduleToPath module
+    if !(← System.FilePath.pathExists sourcePath) then
+      return .fail s!"source file not found: {sourcePath}"
+    -- Build the module to verify the proof typechecks
+    -- Sorry detection relies on Lean's compiler warnings ("uses 'sorry'")
+    -- checked after the build — this catches sorry in the target file AND
+    -- all transitive dependencies, without false positives on string
+    -- literals or comments that mention sorry.
+    let buildResult ← Shell.runShellCommandWithTimeout s!"lake build {module}" defaultCommandTimeout
+    match buildResult with
+    | .timedOut stdout stderr =>
+      return .fail s!"proof build timed out after {defaultCommandTimeout}s\n{formatOutput stdout stderr}"
+    | .completed exitCode stdout stderr =>
+      if exitCode != 0 then
+        return .fail s!"proof build failed\n{formatOutput stdout stderr}"
+      -- Lean emits "declaration uses 'sorry'" warnings for any sorry in the
+      -- dependency graph. Catch transitive sorry even when the build succeeds.
+      let stderrStr := stderr.trimAscii.toString
+      if (stderrStr.splitOn "uses 'sorry'").length > 1 then
+        return .fail s!"sorry detected in dependency graph\n{formatOutput stdout stderr}"
+      return .pass s!"theorem {target} verified (module {module} builds, no sorry)"
+
 /-- Verify a single acceptance criterion. Skipped criteria return immediately
     without dispatching to any verifier. -/
 def verifyCriterion (criterion : AcceptanceCriterion) : IO VerificationResult := do
@@ -152,10 +232,8 @@ def verifyCriterion (criterion : AcceptanceCriterion) : IO VerificationResult :=
     match criterion.verify with
     | .command run timeout => verifyCommand run timeout
     | .agent prompt model command timeout => verifyAgent prompt model command timeout
-    | .property run timeout =>
-      return .fail s!"property testing not yet implemented (run: {run}, timeout: {timeout})"
-    | .proof prover target =>
-      return .fail s!"proof verification not yet implemented (prover: {prover}, target: {target})"
+    | .property run timeout => verifyCommand run timeout
+    | .proof prover target => verifyProof prover target
     | .human instruction =>
       verifyHuman criterion.description instruction
 

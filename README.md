@@ -66,10 +66,12 @@ Five verification types, from human judgment to mathematical proof:
 | `human`    | Interactive sign-off     | Human judgment | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
 | `agent`    | Independent LLM review   | Probabilistic  | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
 | `command`  | Shell command, exit code | Deterministic  | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
-| `property` | Hypothesis / QuickCheck  | Statistical    | ![planned](https://img.shields.io/badge/planned-yellow)              |
-| `proof`    | Lean 4 / Coq / Agda      | Mathematical   | ![planned](https://img.shields.io/badge/planned-yellow)              |
+| `property` | Property-based testing   | Statistical    | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
+| `proof`    | Lean 4                   | Mathematical   | ![implemented](https://img.shields.io/badge/implemented-brightgreen) |
 
 Every criterion must pass, be explicitly skipped, or have its tool available — qed never silently skips verification. Use `skip` to intentionally disable criteria, and `schedule` to control when criteria run (`always`, `heavy`, or `manual`).
+
+`property` currently runs via shell command (like `command`). First-class framework integration (e.g. Hypothesis, QuickCheck, fast-check) with structured output parsing and configuration is on the roadmap.
 
 ## Formally proven
 
@@ -81,7 +83,7 @@ The core is written in Lean 4 with complete formal proofs — no `sorry`, no gap
 - **Absorbing terminal states** — once done, done — no event can change a terminal state
 - **Serializer↔parser roundtrip** — parsing serialized JSON recovers the original spec exactly
 
-40+ theorems total across state machine, worker loop, types, output, parsing, and TOML. See [proven properties](docs/proven-properties.md) for the full list.
+70+ theorems total across state machine, worker loop, types, output, parsing, and TOML. See [proven properties](docs/proven-properties.md) for the full list.
 
 ## Status
 

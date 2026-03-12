@@ -1,9 +1,36 @@
 #:schema ../docs/spec.schema.json
 
-# Verifier — verification dispatch and shell execution safety.
-# Owns Qed/Verifier.lean.
+# Verifier — verification dispatch, shell execution safety, and
+# pure function correctness proofs.
+# Owns Qed/Verifier.lean and Qed/Proofs/VerifierProperties.lean.
 
 name = "verifier-correctness"
+
+# --- Proof criteria ---
+
+[[criteria]]
+description = "targetToModule returns the module prefix iff the target has at least two dot-separated parts"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.VerifierProperties.targetToModule_iff"
+
+[[criteria]]
+description = "isValidModuleName accepts only names with non-empty, identifier-char-only segments (shell-safe)"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.VerifierProperties.isValidModuleName_iff"
+
+[[criteria]]
+description = "containsSorry detects exactly standalone sorry occurrences — no false positives or negatives"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.VerifierProperties.containsSorry_iff"
 
 # --- Agent review ---
 
@@ -21,8 +48,8 @@ Review Qed/Verifier.lean. Verify:
 3. Output truncation uses the named constant `maxOutputLength` and preserves
    the LAST N chars (most recent output is most useful for debugging)
 4. Exit code 0 maps to pass, non-zero maps to fail — no edge cases missed
-5. Unimplemented verification types return .skipped, not .fail or .pass
-6. Human verification returns .needsHuman, not .skipped
+5. Property verification dispatches through verifyCommand (same path as command)
+6. Human verification prompts interactively and returns .pass or .fail (never .needsHuman)
 
 Report any safety concerns, missing edge cases, or incorrect result mappings.
 """

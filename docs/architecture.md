@@ -100,8 +100,8 @@ flowchart LR
     verify -->|human| human[Human judgment\nmanual sign-off]
     verify -->|agent| agent[LLM agent\nprompt-based review]
     verify -->|command| shell[Shell command\nexit code check]
-    verify -->|property| prop[Property tests\nHypothesis / QuickCheck]
-    verify -->|proof| prover[Formal proof\nLean 4 / Coq / Agda]
+    verify -->|property| prop[Property-based testing]
+    verify -->|proof| prover[Formal proof\nLean 4]
 ```
 
 The verification type determines both **what runs** and **what guarantee you get**:
@@ -157,4 +157,4 @@ The `--pin` flag adds a `git diff --exit-code` check — the spec must match its
 
 - [CLI reference](cli-reference.md) — commands, flags, exit codes, environment variables, configuration
 - [Spec format](spec-format.md) — complete field-by-field reference for spec files
-- [Proven properties](proven-properties.md) — all 40+ formally verified theorems
+- [Proven properties](proven-properties.md) — all 70+ formally verified theorems

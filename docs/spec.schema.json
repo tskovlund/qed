@@ -133,7 +133,7 @@
                   "type": { "const": "proof" },
                   "prover": {
                     "type": "string",
-                    "description": "Proof system (e.g. lean4, coq, agda)."
+                    "description": "Proof system. Currently supported: lean4."
                   },
                   "target": {
                     "type": "string",

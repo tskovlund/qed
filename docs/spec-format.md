@@ -91,7 +91,7 @@ Verify a formal proof target.
 
 | Field    | Type      | Required | Default | Description                                    |
 | -------- | --------- | -------- | ------- | ---------------------------------------------- |
-| `prover` | string    | yes      | —       | Proof system (e.g. lean4, coq, agda).          |
+| `prover` | string    | yes      | —       | Proof system. Currently supported: lean4.      |
 | `target` | string    | yes      | —       | Fully qualified name of the theorem to verify. |
 | `type`   | `"proof"` | yes      | —       |                                                |
 

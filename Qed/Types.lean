@@ -15,6 +15,9 @@ def defaultWorkerTimeout : Nat := 3600
 /-- Default model for agent verification. -/
 def defaultAgentModel : String := "claude-opus-4-6"
 
+/-- Supported proof systems for proof verification. -/
+def supportedProvers : List String := ["lean4"]
+
 /-- Default maximum iterations for the worker loop. -/
 def defaultMaxIterations : Nat := 10
 

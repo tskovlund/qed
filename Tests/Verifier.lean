@@ -241,5 +241,5 @@ def verifierTests : List (String × IO Bool) := [
   ("testParseAgentVerdictErrorOnMissingPassField", testParseAgentVerdictErrorOnMissingPassField),
   ("testVerifyCommandTimesOutSlowProcess", testVerifyCommandTimesOutSlowProcess),
   ("testVerifyCommandCompletesBeforeTimeout", testVerifyCommandCompletesBeforeTimeout),
-  ("testVerifyCommandTimeoutCapturesPartialOutput", testVerifyCommandTimeoutCapturesPartialOutput)
+  ("testVerifyCommandTimeoutCapturesPartialOutput", testVerifyCommandTimeoutCapturesPartialOutput),
 ]
