@@ -141,4 +141,80 @@ theorem iteration_bounded (config : LoopConfig) (state : LoopState)
     simp only [↓reduceIte]
     exact hbound
 
+-- 5. Ready state always advances
+
+/-- The initial state `ready` always advances: it transitions to
+`workerRunning 1` on any non-integrity event, or to `integrityViolation`
+on an integrity violation. This fully characterizes ready transitions. -/
+theorem ready_always_advances (config : LoopConfig) (context : LoopContext)
+    (event : LoopEvent) :
+    (transition config .ready context event).1 = .workerRunning 1 ∨
+    (∃ reason, (transition config .ready context event).1 = .integrityViolation reason) := by
+  unfold transition
+  simp [LoopState.isTerminal]
+  cases event with
+  | workerDone => left; rfl
+  | allPassed => left; rfl
+  | someFailed _ => left; rfl
+  | integrityViolation reason => right; exact ⟨reason, rfl⟩
+
+-- 6. Complete lifecycle ordering
+
+/-- Every non-terminal transition either terminates, self-loops, or follows one
+of exactly three advance patterns. This is a complete characterization of
+the lifecycle: ready → workerRunning → verifying → (terminal ∨ next iteration).
+
+Composes and subsumes no_skip_verification, worker_before_verification,
+ready_unreachable, and phase_monotonic into a single theorem. -/
+theorem lifecycle_ordering (config : LoopConfig) (state : LoopState)
+    (context : LoopContext) (event : LoopEvent)
+    (hnonterm : state.isTerminal = false) :
+    let result := (transition config state context event).1
+    -- Either terminal
+    result.isTerminal = true ∨
+    -- Or stays in same state (self-loop)
+    result = state ∨
+    -- Or advances: ready → workerRunning(1)
+    (state = .ready ∧ result = .workerRunning 1) ∨
+    -- Or advances: workerRunning → verifying (same iteration)
+    (∃ n, state = .workerRunning n ∧ result = .verifying n) ∨
+    -- Or advances: verifying → workerRunning (next iteration)
+    (∃ n, state = .verifying n ∧ result = .workerRunning (n + 1)) := by
+  unfold transition newFailureCount
+  simp only [hnonterm, Bool.false_eq_true, ↓reduceIte]
+  cases state with
+  | ready =>
+    cases event with
+    | workerDone => right; right; left; exact ⟨rfl, rfl⟩
+    | allPassed => right; right; left; exact ⟨rfl, rfl⟩
+    | someFailed _ => right; right; left; exact ⟨rfl, rfl⟩
+    | integrityViolation _ => left; simp [LoopState.isTerminal]
+  | workerRunning n =>
+    cases event with
+    | workerDone => right; right; right; left; exact ⟨n, rfl, rfl⟩
+    | allPassed => right; left; rfl
+    | someFailed _ => right; left; rfl
+    | integrityViolation _ => left; simp [LoopState.isTerminal]
+  | verifying n =>
+    cases event with
+    | allPassed => left; simp [LoopState.isTerminal]
+    | workerDone => right; left; rfl
+    | someFailed failures =>
+      simp only []
+      split
+      · left; simp [LoopState.isTerminal]
+      · split
+        · split
+          · left; simp [LoopState.isTerminal]
+          · right; right; right; right; exact ⟨n, rfl, rfl⟩
+        · split
+          · left; simp [LoopState.isTerminal]
+          · right; right; right; right; exact ⟨n, rfl, rfl⟩
+    | integrityViolation _ => left; simp [LoopState.isTerminal]
+  | passed _ => simp [LoopState.isTerminal] at hnonterm
+  | stuck _ _ => simp [LoopState.isTerminal] at hnonterm
+  | maxIterationsReached _ => simp [LoopState.isTerminal] at hnonterm
+  | escalated _ => simp [LoopState.isTerminal] at hnonterm
+  | integrityViolation _ => simp [LoopState.isTerminal] at hnonterm
+
 end Qed.Proofs.Invariants

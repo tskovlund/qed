@@ -11,6 +11,14 @@ name = "state-machine-correctness"
 # Safety: bad things don't happen
 
 [[criteria]]
+description = "The ready state always advances — transitions to workerRunning(1) or integrityViolation"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.Invariants.ready_always_advances"
+
+[[criteria]]
 description = "Terminal states are absorbing — transitioning from a terminal state always returns the same state unchanged"
 
 [criteria.verify]
@@ -35,6 +43,14 @@ prover = "lean4"
 target = "Qed.Proofs.Invariants.iteration_bounded"
 
 # Invariants: structural properties preserved across all transitions
+
+[[criteria]]
+description = "Every non-terminal transition either terminates, self-loops, or follows one of three advance patterns (ready→working, working→verifying, verifying→next iteration)"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.Invariants.lifecycle_ordering"
 
 [[criteria]]
 description = "The transition function is deterministic — equal inputs always produce equal outputs"
@@ -70,6 +86,14 @@ type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.Termination.loop_terminates"
 
+[[criteria]]
+description = "Every state-changing non-terminal transition either terminates or strictly increases the progress measure"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.Termination.progress_or_terminal"
+
 # Correctness: the right things happen
 
 [[criteria]]
@@ -87,6 +111,24 @@ description = "The initial state (ready) is never revisited after leaving it"
 type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.Invariants.ready_unreachable"
+
+# Integrity: spec integrity guarantees
+
+[[criteria]]
+description = "Integrity violation from any non-terminal state always produces terminal integrityViolation"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.IntegrityProperties.integrity_violation_terminal"
+
+[[criteria]]
+description = "Integrity violation from a non-terminal state can never produce passed — violated results are never accepted"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.IntegrityProperties.integrity_violation_not_passed"
 
 # --- Agent review ---
 

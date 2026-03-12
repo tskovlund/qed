@@ -32,22 +32,22 @@ The foundation. Everything compiles, tests pass, no incomplete proofs. If this f
 
 ### 2. State machine correctness (`state-machine.spec.toml`)
 
-Nine formal proofs verify the state machine's mathematical properties, organized by what they guarantee:
+Fourteen formal proofs verify the state machine's mathematical properties, organized by what they guarantee:
 
-- **Safety:** terminal states are absorbing, no skipped verification, iteration count bounded by maxIterations
-- **Invariants:** transition function is deterministic, iteration count is monotonically non-decreasing, state lifecycle phase never decreases
-- **Liveness:** the loop terminates within maxIterations
+- **Safety:** ready always advances, terminal states are absorbing, no skipped verification, iteration count bounded by maxIterations, integrity violations always produce terminal states and never produce passed
+- **Invariants:** complete lifecycle ordering (5-way transition characterization), transition function is deterministic, iteration count is monotonically non-decreasing, state lifecycle phase never decreases
+- **Liveness:** the loop terminates within maxIterations, every state-changing transition either terminates or strictly increases the progress measure
 - **Correctness:** stuck detection fires iff repeated failures reach the threshold, ready state is never revisited
 
 Building-block lemmas (fuel measures, stuck detection directions, specific transition paths) live in the proof files but are not spec criteria — they exist to support these results, not as independent guarantees. An agent review checks design quality (exhaustive matches, purity, edge cases).
 
 ### 3. Verify mode correctness (`verify-mode.spec.toml`)
 
-Two formal proofs verify the type-level separation between modes: verify mode cannot carry a WorkerConfig or LoopConfig, and is independent of the state machine. Building-block proofs (isTerminal decidability) live in the proof files but are not spec criteria. Structural assertions check the schema and documentation.
+Two formal proofs verify the type-level separation between modes: verify mode cannot carry a WorkerConfig or LoopConfig, and is independent of the state machine. Structural assertions check the schema and documentation.
 
 ### 4. Parser correctness (`parser.spec.toml`)
 
-Three formal proofs verify parser correctness: CI schedule completeness (accepts exactly the three valid strings), CI schedule rejection (all other strings produce errors), and the serializer↔parser roundtrip (parsing serialized JSON recovers the original spec exactly). Building-block proofs (TOML duplicate key rejection, array creation, per-type roundtrips) live in the proof files. Agent reviews check the JSON and TOML parsers for data loss, correct defaults, and spec compliance.
+Six formal proofs verify parser correctness: schedule parsing accepts exactly the three valid strings and rejects everything else (`parseSchedule_iff`), the serializer↔parser roundtrip recovers the original spec exactly, TOML duplicate key rejection, and three TOML→JSON pipeline properties (totality, success implies valid parse, error propagation — currently skipped pending TSK-173). Building-block proofs (per-type roundtrips, array creation) live in the proof files. Agent reviews check the JSON and TOML parsers for data loss, correct defaults, and spec compliance.
 
 ### 5. Worker loop correctness (`worker-loop.spec.toml`)
 
@@ -59,9 +59,13 @@ Four formal proofs verify output correctness: the result complete partition (eve
 
 ### 7. Verifier correctness (`verifier.spec.toml`)
 
-An agent review verifies the verification dispatch: exhaustive match on all VerifyType constructors, platform-aware shell execution, output truncation preserving the most recent output, and correct result mappings (exit code 0 → pass, non-zero → fail, unimplemented → skipped, human → needsHuman).
+Three formal proofs verify pure functions used in verification dispatch: `targetToModule` returns the module prefix iff the target has at least two dot-separated parts, `isValidModuleName` accepts only shell-safe identifier segments, and `containsSorry` detects exactly standalone sorry occurrences. An agent review verifies the dispatch logic: exhaustive match on all VerifyType constructors, platform-aware shell execution, output truncation preserving the most recent output, and correct result mappings.
 
-### 8. Documentation accuracy (`docs.spec.toml`)
+### 8. Convention adherence (`conventions.spec.toml`)
+
+Agent reviews check naming conventions (full variable names, no abbreviations), DRY compliance (no duplicated logic, no dead code), and documentation accuracy (AGENTS.md and CONVENTIONS.md consistent with the actual codebase).
+
+### 9. Documentation accuracy (`docs.spec.toml`)
 
 Generated docs (schema, format reference) must be fresh. Hand-written docs (architecture, README) must be consistent with the actual codebase. Agent reviews cross-reference docs against source.
 

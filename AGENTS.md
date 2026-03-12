@@ -54,6 +54,7 @@ specs/                 qed's own specs (dogfooding)
   state-machine.spec.toml  State machine correctness — 5 proofs + agent
   parser.spec.toml         Parser correctness — 3 proofs + agent
   verify-mode.spec.toml    Verify mode correctness — 2 proofs + command + agent
+  conventions.spec.toml    Convention adherence — naming, DRY, doc accuracy
   docs.spec.toml           Documentation accuracy — freshness + agent
 DocGen/
   Schema.lean          JSON Schema generation (exhaustive matches on Types)
@@ -144,7 +145,7 @@ qed                   # run the binary (.lake/build/bin on PATH via .envrc)
 
 ## Proven properties
 
-The `Qed/Proofs/` directory contains 40+ formal proofs verified by Lean 4's kernel. All proofs are complete (no `sorry`). See [docs/proven-properties.md](docs/proven-properties.md) for the full reference.
+The `Qed/Proofs/` directory contains 70+ formal proofs verified by Lean 4's kernel. All proofs are complete (no `sorry`). See [docs/proven-properties.md](docs/proven-properties.md) for the full reference.
 
 ## Repo-specific conventions
 

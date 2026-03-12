@@ -7,38 +7,21 @@ namespace Qed.Proofs.ParserProperties
 
 open Qed Qed.Parser
 
--- 1. parseSchedule is complete over valid inputs
-
-/-- `parseSchedule` accepts exactly the three valid schedule strings.
-If it succeeds, the input was one of "always", "heavy", or "manual". -/
-theorem parseSchedule_complete (s : String) (cs : Schedule)
-    (h : parseSchedule s = .ok cs) :
-    s = "always" ∨ s = "heavy" ∨ s = "manual" := by
-  simp [parseSchedule] at h
-  split at h <;> simp_all
-
--- 2. parseSchedule maps each string to the correct constructor
-
-theorem parseSchedule_always : parseSchedule "always" = .ok Schedule.always := by
-  rfl
-
-theorem parseSchedule_heavy : parseSchedule "heavy" = .ok Schedule.heavy := by
-  rfl
-
-theorem parseSchedule_manual : parseSchedule "manual" = .ok Schedule.manual := by
-  rfl
-
--- 3. parseSchedule rejects invalid inputs
-
-/-- Any string that isn't "always", "heavy", or "manual" produces an error. -/
-theorem parseSchedule_rejects_invalid (s : String)
-    (h1 : s ≠ "always") (h2 : s ≠ "heavy") (h3 : s ≠ "manual") :
-    ∃ e, parseSchedule s = .error e := by
-  unfold parseSchedule
-  split
-  · simp_all
-  · simp_all
-  · simp_all
-  · exact ⟨_, rfl⟩
+/-- Complete characterization of parseSchedule: returns `.ok cs` if and only if
+    the input string and result constructor match one of the three valid pairs.
+    This guarantees both acceptance (every valid string maps to the right
+    constructor) and rejection (invalid strings always produce errors). -/
+theorem parseSchedule_iff (s : String) (cs : Schedule) :
+    parseSchedule s = .ok cs ↔
+    (s = "always" ∧ cs = .always) ∨
+    (s = "heavy" ∧ cs = .heavy) ∨
+    (s = "manual" ∧ cs = .manual) := by
+  constructor
+  · intro h
+    simp [parseSchedule] at h
+    split at h <;> simp_all
+  · intro h
+    rcases h with ⟨hs, hcs⟩ | ⟨hs, hcs⟩ | ⟨hs, hcs⟩ <;>
+      (subst hs; subst hcs; rfl)
 
 end Qed.Proofs.ParserProperties

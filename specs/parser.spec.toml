@@ -11,20 +11,12 @@ name = "parser-correctness"
 # --- Proof criteria ---
 
 [[criteria]]
-description = "Schedule parser accepts exactly the three valid strings"
+description = "Schedule parser accepts exactly the three valid strings and rejects everything else"
 
 [criteria.verify]
 type = "proof"
 prover = "lean4"
-target = "Qed.Proofs.ParserProperties.parseSchedule_complete"
-
-[[criteria]]
-description = "Schedule parser rejects all invalid strings"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.ParserProperties.parseSchedule_rejects_invalid"
+target = "Qed.Proofs.ParserProperties.parseSchedule_iff"
 
 [[criteria]]
 description = "Serializer→parser roundtrip: parsing serialized JSON recovers the original spec exactly"

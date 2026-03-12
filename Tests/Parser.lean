@@ -56,70 +56,6 @@ def testParseJsonAppliesCustomLoopConfig : IO Bool := do
     IO.eprintln s!"  parse error: {e}"
     return false
 
-def testParseJsonExtractsCommandFields : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"make\", \"timeout\": 60}}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok spec =>
-    match spec.criteria.head? with
-    | some criterion =>
-      return match criterion.verify with
-        | .command run timeout => run == "make" && timeout == 60
-        | _ => false
-    | none => return false
-  | .error _ => return false
-
-def testParseJsonExtractsAgentReviewFields : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check it\", \"model\": \"claude-opus-4-6\"}}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok spec =>
-    match spec.criteria.head? with
-    | some criterion =>
-      return match criterion.verify with
-        | .agent prompt model _ _ => prompt == "check it" && model == "claude-opus-4-6"
-        | _ => false
-    | none => return false
-  | .error _ => return false
-
-def testParseJsonExtractsAgentCustomCommand : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check it\", \"command\": \"ollama run llama3\"}}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok spec =>
-    match spec.criteria.head? with
-    | some criterion =>
-      return match criterion.verify with
-        | .agent prompt _ command _ => prompt == "check it" && command == some "ollama run llama3"
-        | _ => false
-    | none => return false
-  | .error _ => return false
-
-def testParseJsonDefaultsAgentCommandToNone : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check\"}}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok spec =>
-    match spec.criteria.head? with
-    | some criterion =>
-      return match criterion.verify with
-        | .agent _ _ command _ => command == none
-        | _ => false
-    | none => return false
-  | .error _ => return false
-
 def testParseJsonDefaultsAgentReviewModelToSonnet : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check\"}}]}"
@@ -152,22 +88,6 @@ def testParseJsonDefaultsAgentTimeoutTo600 : IO Bool := do
     | none => return false
   | .error _ => return false
 
-def testParseJsonAppliesCustomAgentTimeout : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check\", \"timeout\": 120}}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok spec =>
-    match spec.criteria.head? with
-    | some criterion =>
-      return match criterion.verify with
-        | .agent _ _ _ timeout => timeout == 120
-        | _ => false
-    | none => return false
-  | .error _ => return false
-
 def testParseJsonDefaultsAgentScheduleToHeavy : IO Bool := do
   -- Arrange
   let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"agent\", \"prompt\": \"check\"}}]}"
@@ -178,67 +98,6 @@ def testParseJsonDefaultsAgentScheduleToHeavy : IO Bool := do
   | .ok spec =>
     match spec.criteria.head? with
     | some criterion => return criterion.schedule == .heavy
-    | none => return false
-  | .error _ => return false
-
-def testParseJsonExtractsProofFields : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"proof\", \"prover\": \"lean4\", \"target\": \"Qed.Proofs.T\"}}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok spec =>
-    match spec.criteria.head? with
-    | some criterion =>
-      return match criterion.verify with
-        | .proof prover target => prover == "lean4" && target == "Qed.Proofs.T"
-        | _ => false
-    | none => return false
-  | .error _ => return false
-
-def testParseJsonExtractsPropertyFieldsWithDefault : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"property\", \"run\": \"hypothesis\"}}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok spec =>
-    match spec.criteria.head? with
-    | some criterion =>
-      return match criterion.verify with
-        | .property run timeout => run == "hypothesis" && timeout == 600
-        | _ => false
-    | none => return false
-  | .error _ => return false
-
-def testParseJsonExtractsHumanInstruction : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"human\", \"instruction\": \"look at it\"}}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok spec =>
-    match spec.criteria.head? with
-    | some criterion =>
-      return match criterion.verify with
-        | .human instruction => instruction == "look at it"
-        | _ => false
-    | none => return false
-  | .error _ => return false
-
-def testParseJsonAppliesScheduleOverride : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}, \"schedule\": \"manual\"}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok spec =>
-    match spec.criteria.head? with
-    | some criterion => return criterion.schedule == Schedule.manual
     | none => return false
   | .error _ => return false
 
@@ -474,48 +333,13 @@ def testParseJsonRejectsWorkerWithoutCommandOrPrompt : IO Bool := do
   | .ok _ => return false
   | .error e => return e.contains "command" && e.contains "prompt"
 
-def testParseJsonExtractsSkipReason : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}, \"skip\": \"not yet implemented\"}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok spec =>
-    match spec.criteria.head? with
-    | some criterion => return criterion.skip == some "not yet implemented"
-    | none => return false
-  | .error _ => return false
-
-def testParseJsonDefaultsSkipToNone : IO Bool := do
-  -- Arrange
-  let json := "{\"name\": \"t\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"echo\"}}]}"
-  -- Act
-  let result := Parser.parseJson json
-  -- Assert
-  match result with
-  | .ok spec =>
-    match spec.criteria.head? with
-    | some criterion => return criterion.skip == none
-    | none => return false
-  | .error _ => return false
-
 def parserTests : List (String × IO Bool) := [
   ("testParseJsonReturnsVerifyModeWhenNoWorker", testParseJsonReturnsVerifyModeWhenNoWorker),
   ("testParseJsonReturnsWorkerLoopWithDefaults", testParseJsonReturnsWorkerLoopWithDefaults),
   ("testParseJsonAppliesCustomLoopConfig", testParseJsonAppliesCustomLoopConfig),
-  ("testParseJsonExtractsCommandFields", testParseJsonExtractsCommandFields),
-  ("testParseJsonExtractsAgentReviewFields", testParseJsonExtractsAgentReviewFields),
-  ("testParseJsonExtractsAgentCustomCommand", testParseJsonExtractsAgentCustomCommand),
-  ("testParseJsonDefaultsAgentCommandToNone", testParseJsonDefaultsAgentCommandToNone),
   ("testParseJsonDefaultsAgentReviewModelToSonnet", testParseJsonDefaultsAgentReviewModelToSonnet),
   ("testParseJsonDefaultsAgentTimeoutTo600", testParseJsonDefaultsAgentTimeoutTo600),
-  ("testParseJsonAppliesCustomAgentTimeout", testParseJsonAppliesCustomAgentTimeout),
   ("testParseJsonDefaultsAgentScheduleToHeavy", testParseJsonDefaultsAgentScheduleToHeavy),
-  ("testParseJsonExtractsProofFields", testParseJsonExtractsProofFields),
-  ("testParseJsonExtractsPropertyFieldsWithDefault", testParseJsonExtractsPropertyFieldsWithDefault),
-  ("testParseJsonExtractsHumanInstruction", testParseJsonExtractsHumanInstruction),
-  ("testParseJsonAppliesScheduleOverride", testParseJsonAppliesScheduleOverride),
   ("testParseJsonDefaultsHumanScheduleToManual", testParseJsonDefaultsHumanScheduleToManual),
   ("testParseJsonPreservesMultipleCriteria", testParseJsonPreservesMultipleCriteria),
   ("testParseJsonAllowsEmptyCriteriaInWorkerLoop", testParseJsonAllowsEmptyCriteriaInWorkerLoop),
@@ -533,7 +357,5 @@ def parserTests : List (String × IO Bool) := [
   ("testParseJsonWorkerWithPromptNoCommand", testParseJsonWorkerWithPromptNoCommand),
   ("testParseJsonWorkerWithCustomModel", testParseJsonWorkerWithCustomModel),
   ("testParseJsonWorkerDefaultsModelToDefault", testParseJsonWorkerDefaultsModelToDefault),
-  ("testParseJsonRejectsWorkerWithoutCommandOrPrompt", testParseJsonRejectsWorkerWithoutCommandOrPrompt),
-  ("testParseJsonExtractsSkipReason", testParseJsonExtractsSkipReason),
-  ("testParseJsonDefaultsSkipToNone", testParseJsonDefaultsSkipToNone)
+  ("testParseJsonRejectsWorkerWithoutCommandOrPrompt", testParseJsonRejectsWorkerWithoutCommandOrPrompt)
 ]

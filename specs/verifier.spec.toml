@@ -9,36 +9,28 @@ name = "verifier-correctness"
 # --- Proof criteria ---
 
 [[criteria]]
-description = "targetToModule correctly extracts the module prefix from a qualified name"
+description = "targetToModule returns the module prefix iff the target has at least two dot-separated parts"
 
 [criteria.verify]
 type = "proof"
 prover = "lean4"
-target = "Qed.Proofs.VerifierProperties.targetToModule_soundness"
+target = "Qed.Proofs.VerifierProperties.targetToModule_iff"
 
 [[criteria]]
-description = "isValidModuleName guarantees only safe characters for shell interpolation"
+description = "isValidModuleName accepts only names with non-empty, identifier-char-only segments (shell-safe)"
 
 [criteria.verify]
 type = "proof"
 prover = "lean4"
-target = "Qed.Proofs.VerifierProperties.isValidModuleName_safe_chars"
+target = "Qed.Proofs.VerifierProperties.isValidModuleName_iff"
 
 [[criteria]]
-description = "containsSorry detects all standalone sorry occurrences (no false negatives)"
+description = "containsSorry detects exactly standalone sorry occurrences — no false positives or negatives"
 
 [criteria.verify]
 type = "proof"
 prover = "lean4"
-target = "Qed.Proofs.VerifierProperties.containsSorry_soundness"
-
-[[criteria]]
-description = "containsSorry ignores sorry inside identifiers (no false positives)"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.VerifierProperties.containsSorry_no_false_positive_for_identifiers"
+target = "Qed.Proofs.VerifierProperties.containsSorry_iff"
 
 # --- Agent review ---
 
@@ -56,8 +48,8 @@ Review Qed/Verifier.lean. Verify:
 3. Output truncation uses the named constant `maxOutputLength` and preserves
    the LAST N chars (most recent output is most useful for debugging)
 4. Exit code 0 maps to pass, non-zero maps to fail — no edge cases missed
-5. Unimplemented verification types return .skipped, not .fail or .pass
-6. Human verification returns .needsHuman, not .skipped
+5. Property verification dispatches through verifyCommand (same path as command)
+6. Human verification prompts interactively and returns .pass or .fail (never .needsHuman)
 
 Report any safety concerns, missing edge cases, or incorrect result mappings.
 """
