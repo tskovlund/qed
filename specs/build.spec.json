@@ -13,7 +13,8 @@
       "description": "All tests pass",
       "verify": {
         "type": "command",
-        "run": "lake test"
+        "run": "lake test",
+        "lock": ["Tests/**/*.lean"]
       }
     },
     {

@@ -10,6 +10,7 @@ description = "JSON Schema is fresh (generated output matches committed file)"
 [criteria.verify]
 type = "command"
 run = "lake build docgen && .lake/build/bin/docgen schema | diff docs/spec.schema.json -"
+lock = ["DocGen/**/*.lean"]
 
 [[criteria]]
 description = "Spec format reference is fresh (generated output matches committed file)"
@@ -17,6 +18,7 @@ description = "Spec format reference is fresh (generated output matches committe
 [criteria.verify]
 type = "command"
 run = "lake build docgen && .lake/build/bin/docgen markdown | diff docs/spec-format.md -"
+lock = ["DocGen/**/*.lean"]
 
 [[criteria]]
 description = "Architecture docs accurately describe the system"

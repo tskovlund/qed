@@ -16,9 +16,9 @@ namespace DocGen.Schema
 -- Exhaustive match on VerifyType — compile error if constructors change
 def verifyTypeConstructors : List String :=
   let _ : VerifyType → Unit := fun
-    | .command _ _ => ()
+    | .command _ _ _ => ()
     | .agent _ _ _ _ => ()
-    | .property _ _ => ()
+    | .property _ _ _ => ()
     | .proof _ _ => ()
     | .human _ => ()
   ["command", "agent", "property", "proof", "human"]
@@ -217,6 +217,11 @@ def generate : String :=
                       ("default", num defaultCommandTimeout),
                       ("minimum", num 1),
                       ("description", str "Timeout in seconds.")
+                    ]),
+                    ("lock", obj [
+                      ("type", str "array"),
+                      ("items", obj [("type", str "string")]),
+                      ("description", str "Glob patterns for files to hash into qed.lock. Workers cannot modify locked files without detection.")
                     ])
                   ])
                 ],
@@ -264,6 +269,11 @@ def generate : String :=
                       ("default", num defaultPropertyTimeout),
                       ("minimum", num 1),
                       ("description", str "Timeout in seconds.")
+                    ]),
+                    ("lock", obj [
+                      ("type", str "array"),
+                      ("items", obj [("type", str "string")]),
+                      ("description", str "Glob patterns for files to hash into qed.lock. Workers cannot modify locked files without detection.")
                     ])
                   ])
                 ],

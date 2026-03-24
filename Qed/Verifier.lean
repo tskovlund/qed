@@ -230,9 +230,9 @@ def verifyCriterion (criterion : AcceptanceCriterion) : IO VerificationResult :=
   | some reason => return .skipped reason
   | none =>
     match criterion.verify with
-    | .command run timeout => verifyCommand run timeout
+    | .command run timeout _ => verifyCommand run timeout
     | .agent prompt model command timeout => verifyAgent prompt model command timeout
-    | .property run timeout => verifyCommand run timeout
+    | .property run timeout _ => verifyCommand run timeout
     | .proof prover target => verifyProof prover target
     | .human instruction =>
       verifyHuman criterion.description instruction

@@ -74,6 +74,11 @@
                     "default": 300,
                     "minimum": 1,
                     "description": "Timeout in seconds."
+                  },
+                  "lock": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Glob patterns for files to hash into qed.lock. Workers cannot modify locked files without detection."
                   }
                 }
               },
@@ -121,6 +126,11 @@
                     "default": 600,
                     "minimum": 1,
                     "description": "Timeout in seconds."
+                  },
+                  "lock": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Glob patterns for files to hash into qed.lock. Workers cannot modify locked files without detection."
                   }
                 }
               },

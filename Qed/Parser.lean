@@ -35,6 +35,22 @@ def parseSchedule (value : String) : Except String Schedule :=
   | "manual" => .ok .manual
   | other => .error s!"invalid schedule: '{other}' (expected always, heavy, or manual)"
 
+/-- Parse a single string item from a JSON array element. Named so the
+    roundtrip proof can reference it (inline lambdas are hard to match). -/
+def parseStringItem (field : String) (item : Json) : Except String String :=
+  match item with
+  | Json.str s => .ok s
+  | _ => .error s!"field '{field}': expected array of strings"
+
+/-- Parse an optional list of strings from a JSON array field. -/
+def optionalStringList (json : Json) (field : String) : Except String (Option (List String)) :=
+  match json.getObjVal? field with
+  | .error _ => .ok none
+  | .ok (Json.arr items) => do
+    let strings ← items.toList.mapM (parseStringItem field)
+    .ok (some strings)
+  | .ok _ => .error s!"field '{field}': expected array"
+
 /-- Parse a VerifyType from a JSON object (the "verify" field of a criterion). -/
 def parseVerifyType (json : Json) : Except String VerifyType := do
   let typeName ← requireString json "type"
@@ -42,7 +58,8 @@ def parseVerifyType (json : Json) : Except String VerifyType := do
   | "command" =>
     let run ← requireString json "run"
     let timeout ← optionalNat json "timeout" defaultCommandTimeout
-    .ok (.command run timeout)
+    let lock ← optionalStringList json "lock"
+    .ok (.command run timeout lock)
   | "agent" =>
     let prompt ← requireString json "prompt"
     let model := optionalString json "model" defaultAgentModel
@@ -54,7 +71,8 @@ def parseVerifyType (json : Json) : Except String VerifyType := do
   | "property" =>
     let run ← requireString json "run"
     let timeout ← optionalNat json "timeout" defaultPropertyTimeout
-    .ok (.property run timeout)
+    let lock ← optionalStringList json "lock"
+    .ok (.property run timeout lock)
   | "proof" =>
     let prover ← requireString json "prover"
     let target ← requireString json "target"

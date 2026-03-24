@@ -56,8 +56,9 @@ def listAllSpecs (directory : System.FilePath)
           specFiles := specFiles ++ [path]
         else
           let isDir ← path.isDir
-          -- Skip hidden directories (includes .lake, .git, etc.)
-          if isDir && !entry.fileName.startsWith "." then
+          -- Skip hidden directories (.lake, .git, etc.) and archive/wip directories
+          if isDir && !entry.fileName.startsWith "." &&
+              entry.fileName != "archive" && entry.fileName != "wip" then
             queue := queue ++ [path]
   return .ok specFiles
 

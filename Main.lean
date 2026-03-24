@@ -168,6 +168,87 @@ def runParse (path : String) (jsonOutput : Bool) : IO UInt32 := do
         IO.println s!"  - {criterion.description}"
     return 0
 
+/-- Generate or update the lock file from all specs in a directory. -/
+def runLock (directory : String) (jsonOutput : Bool) : IO UInt32 := do
+  match ← SpecLoader.listAllSpecs directory with
+  | .error message =>
+    reportError message jsonOutput
+    return 2
+  | .ok specPaths =>
+    if specPaths.isEmpty then
+      reportError s!"no spec files found in '{directory}'" jsonOutput
+      return 2
+    -- Load all specs
+    let mut specs : List (String × Spec) := []
+    for specPath in specPaths do
+      match ← loadSpecSafe specPath.toString with
+      | .error message =>
+        reportError message jsonOutput
+        return 2
+      | .ok pinnedSpec =>
+        specs := specs ++ [(specPath.toString, pinnedSpec.spec)]
+    -- Generate lock file
+    match ← ContractLock.generateLockFile specs with
+    | .error message =>
+      reportError message jsonOutput
+      return 2
+    | .ok lockFile =>
+      ContractLock.writeLockFile lockFile
+      let artifactCount := lockFile.specs.foldl (init := 0) fun count specLock =>
+        count + specLock.criteria.foldl (init := 0) fun c criterionLock =>
+          c + criterionLock.artifacts.length
+      if jsonOutput then
+        IO.println (Lean.Json.mkObj [
+          ("specs", Lean.toJson lockFile.specs.length),
+          ("artifacts", Lean.toJson artifactCount)
+        ] |>.pretty 2)
+      else
+        if artifactCount == 0 then
+          IO.println "No lockable artifacts found."
+        else
+          IO.println s!"Locked {artifactCount} artifact(s) across {lockFile.specs.length} spec(s)."
+          IO.println s!"Lock file written to {ContractLock.lockFilePath}"
+      return 0
+
+/-- Promote a worker loop spec to verify mode (strip worker section). -/
+def runPromote (path : String) (output : Option String) (archive : Bool)
+    (jsonOutput : Bool) : IO UInt32 := do
+  match ← loadSpecSafe path with
+  | .error message =>
+    reportError message jsonOutput
+    return 2
+  | .ok pinnedSpec =>
+    let spec := pinnedSpec.spec
+    match spec.mode with
+    | .verify =>
+      reportError s!"'{path}' is already in verify mode" jsonOutput
+      return 2
+    | .workerLoop _ _ =>
+      if spec.criteria.isEmpty then
+        reportError s!"'{path}' has no criteria to promote" jsonOutput
+        return 2
+      let promoted : Spec := { spec with mode := .verify }
+      let promotedJson := (Serializer.specToJson promoted).pretty 2
+      match output with
+      | some outputPath =>
+        IO.FS.writeFile outputPath (promotedJson ++ "\n")
+        if !jsonOutput then
+          IO.println s!"Promoted '{spec.name}' to verify mode → {outputPath}"
+      | none =>
+        IO.println promotedJson
+      -- Archive the original if requested
+      if archive then
+        let archiveDir := (System.FilePath.mk path).parent.getD "." / "archive"
+        let archivePath := archiveDir / ((System.FilePath.mk path).fileName.getD "spec")
+        IO.FS.createDirAll archiveDir
+        -- Read, write to archive, delete original
+        let contents ← IO.FS.readFile path
+        IO.FS.writeFile archivePath contents
+        IO.FS.removeFile path
+        if !jsonOutput then
+          IO.println s!"Archived original → {archivePath}"
+      return 0
+
 def printHelp : IO Unit := do
   IO.println "qed — typed spec-driven development with deterministic verification"
   IO.println ""
@@ -175,6 +256,8 @@ def printHelp : IO Unit := do
   IO.println "  qed run <spec-file>       Run verification (verify mode) or worker loop"
   IO.println "  qed verify [spec-or-dir]  Verify a spec file, or all specs in a directory (recursive)"
   IO.println "                            Defaults to current directory if omitted"
+  IO.println "  qed lock [directory]      Generate or update qed.lock from specs (defaults to current dir)"
+  IO.println "  qed promote <spec-file>  Promote a worker loop spec to verify mode (strip worker section)"
   IO.println "  qed parse <spec-file>     Parse and validate a spec file"
   IO.println "  qed version               Print version"
   IO.println "  qed help                  Show this help"
@@ -185,19 +268,42 @@ def printHelp : IO Unit := do
   IO.println "  --extended                Include heavy criteria, skip manual (for thorough CI runs)"
   IO.println "  --full                    Run all criteria including manual (overrides CI auto-detection)"
   IO.println "  --pin                     Require spec files to match their git-committed version"
+  IO.println "  --no-lock                 Skip contract lock verification during worker loop"
+  IO.println "  --output <path>           Output file for promote command"
+  IO.println "  --archive                 Move original spec to archive/ after promoting"
   IO.println ""
   IO.println "Exit codes:"
   IO.println "  0  Success (all criteria passed)"
   IO.println "  1  Verification failure (one or more criteria failed)"
   IO.println "  2  Configuration or usage error (bad spec, missing file, unknown command)"
 
+/-- Parsed CLI flags. -/
+structure CliFlags where
+  jsonOutput : Bool
+  context : Option RunContext
+  pinned : Bool
+  noLock : Bool
+  archive : Bool
+  output : Option String
+  cleanArgs : List String
+
+/-- Extract --output <path> from args, returning the value and remaining args. -/
+private def extractOutput (args : List String) : Option String × List String :=
+  let rec go (remaining : List String) (acc : List String) : Option String × List String :=
+    match remaining with
+    | [] => (none, acc.reverse)
+    | "--output" :: value :: rest => (some value, (acc.reverse ++ rest))
+    | arg :: rest => go rest (arg :: acc)
+  go args []
+
 /-- Extract flags and remaining args from the argument list.
     Returns `none` for context when no explicit flag is given.
     Returns an error if conflicting mode flags are provided. -/
-private def extractFlags (args : List String)
-    : Except String (Bool × Option RunContext × Bool × List String) :=
+private def extractFlags (args : List String) : Except String CliFlags :=
   let jsonFlag := args.any (· == "--json")
   let pinFlag := args.any (· == "--pin")
+  let noLockFlag := args.any (· == "--no-lock")
+  let archiveFlag := args.any (· == "--archive")
   let hasAuto := args.any (· == "--auto")
   let hasExtended := args.any (· == "--extended")
   let hasFull := args.any (· == "--full")
@@ -210,9 +316,13 @@ private def extractFlags (args : List String)
       else if hasExtended then some RunContext.extended
       else if hasFull then some RunContext.full
       else none
-    let remaining := args.filter fun a =>
-      a != "--json" && a != "--auto" && a != "--extended" && a != "--full" && a != "--pin"
-    .ok (jsonFlag, context, pinFlag, remaining)
+    let filtered := args.filter fun a =>
+      a != "--json" && a != "--auto" && a != "--extended" && a != "--full" &&
+      a != "--pin" && a != "--no-lock" && a != "--archive"
+    let (outputPath, remaining) := extractOutput filtered
+    .ok { jsonOutput := jsonFlag, context, pinned := pinFlag,
+          noLock := noLockFlag, archive := archiveFlag,
+          output := outputPath, cleanArgs := remaining }
 
 /-- Resolve the execution context: explicit flag > CI env var > full. -/
 private def resolveContext (explicit : Option RunContext) : IO RunContext := do
@@ -223,41 +333,47 @@ private def resolveContext (explicit : Option RunContext) : IO RunContext := do
     return if ciEnv == some "true" then .auto else .full
 
 def main (args : List String) : IO UInt32 := do
-  let (jsonOutput, explicitContext, pinned, cleanArgs) ← match extractFlags args with
+  let flags ← match extractFlags args with
     | .ok result => pure result
     | .error message =>
       IO.eprintln s!"error: {message}"
       return 2
-  let context ← resolveContext explicitContext
-  match cleanArgs with
+  let context ← resolveContext flags.context
+  match flags.cleanArgs with
   | ["version"] =>
     IO.println s!"qed {version}"
     return 0
   | ["help"] =>
     printHelp
     return 0
+  | ["lock"] =>
+    runLock "." flags.jsonOutput
+  | ["lock", directory] =>
+    runLock directory flags.jsonOutput
+  | ["promote", path] =>
+    runPromote path flags.output flags.archive flags.jsonOutput
   | ["verify"] =>
-    runVerifyAll "." jsonOutput context pinned
+    runVerifyAll "." flags.jsonOutput context flags.pinned
   | ["verify", path] =>
     let isDir ← (path : System.FilePath).isDir
-    if isDir then runVerifyAll path jsonOutput context pinned
-    else runVerify path jsonOutput context pinned
+    if isDir then runVerifyAll path flags.jsonOutput context flags.pinned
+    else runVerify path flags.jsonOutput context flags.pinned
   | ["run", path] =>
     match ← loadSpecSafe path with
     | .error message =>
-      reportError message jsonOutput
+      reportError message flags.jsonOutput
       return 2
     | .ok pinnedSpec =>
       match pinnedSpec.spec.mode with
-      | .verify => verifySpec pinnedSpec jsonOutput context pinned
+      | .verify => verifySpec pinnedSpec flags.jsonOutput context flags.pinned
       | .workerLoop worker loopConfig =>
-        WorkerLoop.run pinnedSpec worker loopConfig jsonOutput pinned
+        WorkerLoop.run pinnedSpec worker loopConfig flags.jsonOutput flags.pinned flags.noLock
   | ["parse", path] =>
-    runParse path jsonOutput
+    runParse path flags.jsonOutput
   | [] =>
     printHelp
     return 0
   | _ =>
-    IO.eprintln s!"error: unknown command '{String.intercalate " " cleanArgs}'"
+    IO.eprintln s!"error: unknown command '{String.intercalate " " flags.cleanArgs}'"
     IO.eprintln s!"Run `qed help` for usage information."
     return 2

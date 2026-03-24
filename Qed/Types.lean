@@ -26,15 +26,18 @@ def defaultStuckThreshold : Nat := 3
 
 /-- How a single acceptance criterion is verified. -/
 inductive VerifyType where
-  /-- Run a shell command, check exit code. -/
-  | command (run : String) (timeout : Nat := defaultCommandTimeout)
+  /-- Run a shell command, check exit code.
+      `lock` lists glob patterns whose matched files are hashed into `qed.lock`. -/
+  | command (run : String) (timeout : Nat := defaultCommandTimeout) (lock : Option (List String) := none)
   /-- Spawn an independent LLM agent to review the criterion.
       `command` is a shell command that receives the prompt via `$QED_VERIFIER_PROMPT`.
       Defaults to Claude CLI. -/
   | agent (prompt : String) (model : String := defaultAgentModel) (command : Option String := none) (timeout : Nat := defaultAgentTimeout)
-  /-- Run property-based tests. -/
-  | property (run : String) (timeout : Nat := defaultPropertyTimeout)
-  /-- Run a formal proof checker. -/
+  /-- Run property-based tests.
+      `lock` lists glob patterns whose matched files are hashed into `qed.lock`. -/
+  | property (run : String) (timeout : Nat := defaultPropertyTimeout) (lock : Option (List String) := none)
+  /-- Run a formal proof checker. Proof targets are auto-locked (theorem
+      statement extraction). -/
   | proof (prover : String) (target : String)
   /-- Ask a human to verify. -/
   | human (instruction : String)

@@ -154,8 +154,8 @@ inductive TomlValue where
   | table (pairs : List (String × TomlValue))
   | array (items : List TomlValue)
 
-/-- Parse a value (string, integer, boolean). -/
-def parseValue (s : String) (i : Nat) : Except String (TomlValue × Nat) :=
+/-- Parse a value (string, integer, boolean, inline array). -/
+partial def parseValue (s : String) (i : Nat) : Except String (TomlValue × Nat) :=
   if i >= s.utf8ByteSize then .error "unexpected end of input"
   else
     let c := String.Pos.Raw.get s ⟨i⟩
@@ -163,6 +163,8 @@ def parseValue (s : String) (i : Nat) : Except String (TomlValue × Nat) :=
       match parseString s i with
       | .ok (v, j) => .ok (.str v, j)
       | .error e => .error e
+    else if c == '[' then
+      parseInlineArray s (i + 1) []
     else if c == 't' && i + 3 < s.utf8ByteSize &&
         String.Pos.Raw.get s ⟨i + 1⟩ == 'r' && String.Pos.Raw.get s ⟨i + 2⟩ == 'u' && String.Pos.Raw.get s ⟨i + 3⟩ == 'e' then
       .ok (.bool true, i + 4)
@@ -174,6 +176,27 @@ def parseValue (s : String) (i : Nat) : Except String (TomlValue × Nat) :=
       | .ok (n, j) => .ok (.int n, j)
       | .error e => .error e
     else .error s!"unexpected character '{c}' at byte {i}"
+where
+  /-- Parse the contents of an inline array `[v1, v2, ...]`. -/
+  parseInlineArray (s : String) (i : Nat) (acc : List TomlValue)
+      : Except String (TomlValue × Nat) :=
+    let j := skipWsNl s i
+    if j >= s.utf8ByteSize then .error "unterminated inline array"
+    else
+      let c := String.Pos.Raw.get s ⟨j⟩
+      if c == ']' then .ok (.array acc.reverse, j + 1)
+      else
+        -- Allow trailing comma before `]`
+        match parseValue s j with
+        | .error e => .error e
+        | .ok (value, k) =>
+          let k := skipWsNl s k
+          if k >= s.utf8ByteSize then .error "unterminated inline array"
+          else
+            let c := String.Pos.Raw.get s ⟨k⟩
+            if c == ']' then .ok (.array (value :: acc).reverse, k + 1)
+            else if c == ',' then parseInlineArray s (k + 1) (value :: acc)
+            else .error s!"expected ',' or ']' in array at byte {k}"
 
 /-- Skip to end of line (past optional inline comment). -/
 def skipToEol (s : String) (i : Nat) : Except String Nat :=

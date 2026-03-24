@@ -7,12 +7,13 @@ Follow the code standards in [CONVENTIONS.md](CONVENTIONS.md).
 ## Architecture
 
 ```
-Main.lean              CLI entry point (qed run, qed verify, qed parse, qed version, qed help)
+Main.lean              CLI entry point (qed run, qed verify, qed lock, qed promote, qed parse, qed version, qed help)
 Qed/
   Types.lean           Core types (VerifyType, SpecMode, Spec, Spec.Pinned, LoopState)
   Shell.lean           Shell command execution and quoting utilities
   Agent.lean           Shared agent invocation (env var constants, default commands)
   Integrity.lean       Content-addressed spec integrity (SHA-256 hashing, git checks)
+  ContractLock.lean    Verification contract locking (glob expansion, theorem extraction, lock file I/O)
   SpecLoader.lean      Load and pin spec files from disk (returns Spec.Pinned)
   Parser.lean          JSON spec parser (Lean.Json → Spec, parseFromJson for roundtrip proofs)
   TomlParser.lean      Pure Lean TOML parser (no external dependencies)
@@ -45,6 +46,7 @@ Tests/
   TomlParser.lean      TOML parser unit tests (values, tables, arrays, multi-line, non-ASCII)
   Integration.lean     TOML converter and SpecLoader end-to-end tests
   Verifier.lean        Command verifier tests (shell execution, exit codes, output capture)
+  ContractLock.lean    Contract lock tests (glob validation, theorem extraction, lock roundtrip)
   Cli.lean             End-to-end CLI tests (invoke built binary, check output/exit codes)
 specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry

@@ -6,6 +6,7 @@ import Qed.StateMachine
 import Qed.Verifier
 import Qed.Output
 import Qed.Integrity
+import Qed.ContractLock
 
 namespace Qed.WorkerLoop
 
@@ -88,8 +89,10 @@ def spawnWorker (worker : WorkerConfig)
     Handles interruption (SIGINT) gracefully — Lean's runtime converts the
     signal into an IO exception, which we catch to report partial progress. -/
 def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopConfig)
-    (jsonOutput : Bool) (pinned : Bool := false) : IO UInt32 := do
+    (jsonOutput : Bool) (pinned : Bool := false) (noLock : Bool := false) : IO UInt32 := do
   let spec := pinnedSpec.spec
+  -- Load lock file once (if it exists and --no-lock not set)
+  let lockFile ← if noLock then pure none else ContractLock.readLockFile
   let mut state : LoopState := .ready
   let mut context : StateMachine.LoopContext := StateMachine.LoopContext.initial
   let mut lastFailures : List (String × VerificationResult) := []
@@ -103,6 +106,8 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
   if !jsonOutput then
     IO.println s!"{Output.ansiBold}Worker loop: {spec.name}{Output.ansiReset}"
     IO.println s!"  max iterations: {loopConfig.maxIterations}, stuck threshold: {loopConfig.stuckThreshold}"
+    if lockFile.isSome then
+      IO.println s!"  contract lock: {ContractLock.lockFilePath}"
     IO.println ""
   try
     while !state.isTerminal do
@@ -142,6 +147,20 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
           let (s, c) := step loopConfig state context (.integrityViolation reason)
           state := s; context := c; continue
         | .ok () => pure ()
+        -- Contract lock check: verify locked artifacts weren't modified by worker
+        match lockFile with
+        | some lf =>
+          let violations ← ContractLock.verifyLocksForSpec lf pinnedSpec.path.toString
+          if !violations.isEmpty then
+            let reason := "contract lock violation: " ++ String.intercalate "; " violations
+            let (s, c) := step loopConfig state context (.integrityViolation reason)
+            state := s; context := c
+            if !jsonOutput then
+              IO.eprintln s!"  {Output.ansiRed}Contract lock violated:{Output.ansiReset}"
+              for violation in violations do
+                IO.eprintln s!"    - {violation}"
+            continue
+        | none => pure ()
         if !jsonOutput then
           IO.println "  Verifying criteria..."
         let results ← Verifier.verifyAll spec.criteria

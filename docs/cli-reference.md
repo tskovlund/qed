@@ -8,6 +8,8 @@
 qed run <spec-file>       Run verification (verify mode) or worker loop
 qed verify [spec-or-dir]  Verify a spec file, or all specs in a directory (recursive)
                           Defaults to current directory if omitted
+qed lock [directory]      Generate or update qed.lock from specs (defaults to current dir)
+qed promote <spec-file>   Promote a worker loop spec to verify mode (strip worker section)
 qed parse <spec-file>     Parse and validate a spec file
 qed version               Print version
 qed help                  Show this help
@@ -22,6 +24,9 @@ qed help                  Show this help
 | `--extended` | Include heavy criteria, skip manual (for thorough CI runs)                     |
 | `--full`     | Run all criteria including manual (overrides CI auto-detection)                |
 | `--pin`      | Require spec files to match their git-committed version (position-independent) |
+| `--no-lock`  | Skip contract lock verification during worker loop                             |
+| `--output`   | Output file path for `promote` command                                        |
+| `--archive`  | Move original spec to `archive/` directory after promoting                    |
 
 ## Schedule filtering
 
