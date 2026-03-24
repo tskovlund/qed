@@ -44,8 +44,8 @@ def lockFilePath : System.FilePath := "qed.lock"
 -- ═══════════════════════════════════════════════════════════════════
 
 /-- Whether a glob pattern contains only safe characters for shell expansion.
-    Allows: alphanumeric, *, ?, /, ., _, -, [, ], space
-    Rejects: $, `, ;, &, |, (, ), {, }, <, >, etc. -/
+    Allows: alphanumeric, *, ?, /, ., _, -, [, ]
+    Rejects: $, `, ;, &, |, (, ), {, }, <, >, space, etc. -/
 def isValidGlobPattern (pattern : String) : Bool :=
   !pattern.isEmpty && pattern.all fun c =>
     c.isAlpha || c.isDigit || c == '*' || c == '?' || c == '/' ||
@@ -58,6 +58,10 @@ def expandGlob (pattern : String) : IO (Except String (List String)) := do
     return .error s!"invalid glob pattern: '{pattern}' (contains unsafe characters)"
   -- Use bash with globstar and nullglob for reliable ** expansion.
   -- Pattern is validated above to contain only glob-safe characters.
+  -- Note: the pattern sits inside single quotes in the bash -c argument,
+  -- which is itself inside Shell.runShellCommand's /bin/sh -c wrapper.
+  -- isValidGlobPattern rejects quotes and all shell metacharacters,
+  -- so the double-shell nesting is safe.
   let command := s!"bash -c 'shopt -s globstar nullglob; for f in {pattern}; do [ -f \"$f\" ] && printf \"%s\\n\" \"$f\"; done'"
   let (exitCode, stdout, _) ← Shell.runShellCommand command
   if exitCode == 0 then
@@ -113,20 +117,29 @@ def extractTheoremStatement (source : String) (qualifiedName : String) : Option 
   match startIdx with
   | none => none
   | some start =>
-    -- Collect lines from start until `:=` (marks end of statement, start of proof)
+    -- Collect lines from start until `:=` or `where` (both mark end of statement).
+    -- Known limitation: `:=` inside parameter defaults (e.g., `(h : x := 0)`)
+    -- would cause early truncation. Rare in theorem signatures; a proper fix
+    -- would track parenthesis nesting depth.
     let remaining := lines.drop start
     let rec collectLines (lns : List String) (accumulated : String) : Option String :=
       match lns with
       | [] => none
       | line :: rest =>
-        -- Split on `:=` — if >1 part, we found the terminator
-        let parts := line.splitOn ":="
-        if parts.length > 1 then
-          -- Include everything before the first `:=`
-          let beforeEq := (parts.headD "").trimAsciiEnd.toString
-          some (accumulated ++ beforeEq).trimAsciiEnd.toString
+        -- Check for `where` clause (also terminates the statement)
+        let trimmed := line.trimAsciiStart.toString
+        if trimmed == "where" || trimmed.startsWith "where " then
+          -- `where` terminates the statement — include everything before it
+          some accumulated.trimAsciiEnd.toString
         else
-          collectLines rest (accumulated ++ line ++ "\n")
+          -- Split on `:=` — if >1 part, we found the terminator
+          let parts := line.splitOn ":="
+          if parts.length > 1 then
+            -- Include everything before the first `:=`
+            let beforeEq := (parts.headD "").trimAsciiEnd.toString
+            some (accumulated ++ beforeEq).trimAsciiEnd.toString
+          else
+            collectLines rest (accumulated ++ line ++ "\n")
     collectLines remaining ""
 
 /-- Extract a theorem statement from a source file and compute its hash. -/
@@ -160,7 +173,7 @@ def lockCriterion (criterion : AcceptanceCriterion) : IO (Except String Criterio
       | .error e => return .error e
       | .ok files =>
         if files.isEmpty then
-          return .error s!"lock patterns matched no files for criterion '{criterion.description}'"
+          return .error s!"lock patterns matched no files for criterion '{criterion.description}' (check patterns or use --no-lock to skip)"
         let mut artifacts : List LockedArtifact := []
         for file in files do
           let hash ← Integrity.hashFile file

@@ -129,6 +129,20 @@ def testParseLockFileRejectsInvalidJson : IO Bool := do
   | .ok _ => return false
   | .error _ => return true
 
+def testExtractTheoremStatementHandlesWhereClause : IO Bool := do
+  -- Arrange — theorem using `where` instead of `:=` for the proof
+  let source := "theorem uses_where (x : Nat) : x = x\n    where\n  foo := rfl\n"
+  -- Act
+  let result := ContractLock.extractTheoremStatement source "uses_where"
+  -- Assert
+  match result with
+  | some statement =>
+    return statement.contains "theorem uses_where" &&
+      statement.contains "x = x" &&
+      !statement.contains "foo" &&
+      !statement.contains "rfl"
+  | none => return false
+
 def contractLockTests : List (String × IO Bool) := [
   ("testIsValidGlobPatternAcceptsSimplePatterns", testIsValidGlobPatternAcceptsSimplePatterns),
   ("testIsValidGlobPatternRejectsUnsafePatterns", testIsValidGlobPatternRejectsUnsafePatterns),
@@ -137,6 +151,7 @@ def contractLockTests : List (String × IO Bool) := [
   ("testExtractTheoremStatementHandlesMultiLine", testExtractTheoremStatementHandlesMultiLine),
   ("testExtractTheoremStatementReturnsNoneForMissing", testExtractTheoremStatementReturnsNoneForMissing),
   ("testExtractTheoremStatementExcludesProofBody", testExtractTheoremStatementExcludesProofBody),
+  ("testExtractTheoremStatementHandlesWhereClause", testExtractTheoremStatementHandlesWhereClause),
   ("testShortTheoremNameExtractsLastSegment", testShortTheoremNameExtractsLastSegment),
   ("testLockFileRoundtrip", testLockFileRoundtrip),
   ("testParseLockFileRejectsInvalidVersion", testParseLockFileRejectsInvalidVersion),
