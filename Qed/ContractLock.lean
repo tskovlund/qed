@@ -239,7 +239,7 @@ def verifyArtifact (artifact : LockedArtifact) : IO (Option String) := do
     -- Theorem statement: re-extract and re-hash
     let target := (artifact.path.drop "theorem:".length).toString
     match ← hashTheoremStatement target with
-    | .error errorInfo => return some s!"cannot verify theorem lock: {errorInfo}"
+    | .error errorInfo => return some s!"cannot verify theorem lock: {errorInfo.message}"
     | .ok current =>
       if current.hash != artifact.hash then
         return some s!"theorem statement changed: {target}"
