@@ -17,16 +17,17 @@ qed help                  Show this help
 
 ## CLI flags
 
-| Flag         | Purpose                                                                        |
-| ------------ | ------------------------------------------------------------------------------ |
-| `--json`     | Machine-readable JSON output (position-independent)                            |
-| `--auto`     | Skip heavy and manual criteria (auto-detected when `CI=true`)                  |
-| `--extended` | Include heavy criteria, skip manual (for thorough CI runs)                     |
-| `--full`     | Run all criteria including manual (overrides CI auto-detection)                |
-| `--pin`      | Require spec files to match their git-committed version (position-independent) |
-| `--no-lock`  | Skip contract lock verification during worker loop                             |
-| `--output`   | Output file path for `promote` command                                         |
-| `--archive`  | Move original spec to `archive/` directory after promoting                     |
+| Flag           | Purpose                                                                        |
+| -------------- | ------------------------------------------------------------------------------ |
+| `--json`       | Machine-readable JSON output (position-independent)                            |
+| `--json-lines` | Stream results as JSON Lines (one compact JSON object per line)                |
+| `--auto`       | Skip heavy and manual criteria (auto-detected when `CI=true`)                  |
+| `--extended`   | Include heavy criteria, skip manual (for thorough CI runs)                     |
+| `--full`       | Run all criteria including manual (overrides CI auto-detection)                |
+| `--pin`        | Require spec files to match their git-committed version (position-independent) |
+| `--no-lock`    | Skip contract lock verification during worker loop                             |
+| `--output`     | Output file path for `promote` command                                         |
+| `--archive`    | Move original spec to `archive/` directory after promoting                     |
 
 ## Schedule filtering
 
@@ -87,6 +88,33 @@ With `--json`, errors produce a structured object:
   "hint": "check for typos in key names"
 }
 ```
+
+## JSON Lines events
+
+`--json-lines` streams one compact JSON object per line. Each has a `type` field. `--json` and `--json-lines` are mutually exclusive.
+
+### Verify mode
+
+| Event              | Fields                                                        |
+| ------------------ | ------------------------------------------------------------- |
+| `spec_start`       | `spec`, `criteriaCount`                                       |
+| _(criterion rows)_ | `description`, `result`, `details`, `exitCode?`, `elapsedMs?` |
+| `spec_done`        | `spec`, `passed`                                              |
+| `error`            | `message`                                                     |
+
+Criterion rows use the same shape as `--json` criteria objects (no `type` field).
+
+### Worker loop mode
+
+| Event              | Fields                                                                     |
+| ------------------ | -------------------------------------------------------------------------- |
+| `spec_start`       | `spec`, `mode`, `maxIterations`, `stuckThreshold`                          |
+| `iteration_start`  | `iteration`                                                                |
+| `worker_done`      | `iteration`, `exitCode` or `timedOut`, `elapsedMs`                         |
+| _(criterion rows)_ | `description`, `result`, `details`, `exitCode?`, `elapsedMs?`, `iteration` |
+| `iteration_done`   | `iteration`, `passed`, `failedCount`                                       |
+| `loop_done`        | `spec`, `state`, `passed`                                                  |
+| `error`            | `message`                                                                  |
 
 ## Configuration
 

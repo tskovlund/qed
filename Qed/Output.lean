@@ -184,4 +184,13 @@ def printResultLines (baseIndent : Nat)
     if result.isSkipped then skippedCount := skippedCount + 1
   return (failedCount, skippedCount)
 
+/-- Emit a single JSON line to stdout (compact, no pretty-printing).
+    Used by `--json-lines` streaming mode. -/
+def emitJsonLine (json : Json) : IO Unit :=
+  IO.println (json.compress)
+
+/-- Build a JSON Lines event with the given type and fields. -/
+def jsonLineEvent (eventType : String) (fields : List (String × Json)) : Json :=
+  Json.mkObj (("type", Json.str eventType) :: fields)
+
 end Qed.Output

@@ -481,6 +481,51 @@ def testRunWorkerLoopJsonOutputContainsExitCode : IO Bool := do
       | none => return false
     | _ => return false
 
+def testJsonLinesVerifyStreamsEvents : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"jl-verify\", \"criteria\": [{\"description\": \"passes\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", "--json-lines", specPath.toString]
+  -- Assert: each line is valid JSON, first is spec_start, last is spec_done
+  let lines := stdout.splitOn "\n" |>.filter fun l => !l.isEmpty
+  if lines.length < 3 then return false
+  let firstOk := match Lean.Json.parse (lines.headD "") with
+    | .ok json => match json.getObjValAs? String "type" with
+      | .ok "spec_start" => true | _ => false
+    | .error _ => false
+  let lastOk := match Lean.Json.parse (lines.getLastD "") with
+    | .ok json => match json.getObjValAs? String "type" with
+      | .ok "spec_done" => true | _ => false
+    | .error _ => false
+  return exitCode == 0 && firstOk && lastOk
+
+def testJsonLinesWorkerLoopStreamsEvents : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"jl-loop\", \"worker\": {\"command\": \"true\"}, \"criteria\": [{\"description\": \"passes\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["run", "--json-lines", specPath.toString]
+  -- Assert: contains spec_start, iteration_start, worker_done, criterion result, iteration_done, loop_done
+  let lines := stdout.splitOn "\n" |>.filter fun l => !l.isEmpty
+  let types := lines.filterMap fun l =>
+    match Lean.Json.parse l with
+    | .ok json => match json.getObjValAs? String "type" with
+      | .ok t => some t | .error _ => none
+    | .error _ => none
+  return exitCode == 0 &&
+    types.contains "spec_start" &&
+    types.contains "iteration_start" &&
+    types.contains "worker_done" &&
+    types.contains "iteration_done" &&
+    types.contains "loop_done"
+
+def testJsonLinesConflictsWithJson : IO Bool := do
+  -- Arrange / Act
+  let (exitCode, _, stderr) ← runQed ["verify", "--json", "--json-lines", "."]
+  -- Assert
+  return exitCode == 2 && stderr.contains "conflicting"
+
 def cliTests : List (String × IO Bool) := [
   ("testVersionPrintsVersionString", testVersionPrintsVersionString),
   ("testHelpPrintsUsageInfo", testHelpPrintsUsageInfo),
@@ -516,5 +561,8 @@ def cliTests : List (String × IO Bool) := [
   ("testVerifyJsonOutputContainsExitCode", testVerifyJsonOutputContainsExitCode),
   ("testVerifyJsonOutputContainsElapsedMs", testVerifyJsonOutputContainsElapsedMs),
   ("testVerifyJsonOutputSkippedHasNoMetadata", testVerifyJsonOutputSkippedHasNoMetadata),
-  ("testRunWorkerLoopJsonOutputContainsExitCode", testRunWorkerLoopJsonOutputContainsExitCode)
+  ("testRunWorkerLoopJsonOutputContainsExitCode", testRunWorkerLoopJsonOutputContainsExitCode),
+  ("testJsonLinesVerifyStreamsEvents", testJsonLinesVerifyStreamsEvents),
+  ("testJsonLinesWorkerLoopStreamsEvents", testJsonLinesWorkerLoopStreamsEvents),
+  ("testJsonLinesConflictsWithJson", testJsonLinesConflictsWithJson)
 ]

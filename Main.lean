@@ -55,11 +55,42 @@ private def verifySpecJson (pinnedSpec : Spec.Pinned) (context : RunContext := .
   let json := Output.executionsToJson spec.name executions
   return (if passed then 0 else 1, json)
 
+/-- Run single-pass verification in JSON Lines mode, streaming one event per criterion. -/
+private def verifySpecJsonLines (pinnedSpec : Spec.Pinned) (context : RunContext := .full)
+    (pinned : Bool := false) : IO UInt32 := do
+  let spec := pinnedSpec.spec
+  match ← Integrity.verify pinnedSpec pinned with
+  | .error reason =>
+    Output.emitJsonLine (Output.jsonLineEvent "error"
+      [("message", Lean.Json.str s!"integrity violation: {reason}")])
+    return 2
+  | .ok () => pure ()
+  let criteria := filterBySchedule spec.criteria context
+  Output.emitJsonLine (Output.jsonLineEvent "spec_start"
+    [("spec", Lean.Json.str spec.name),
+     ("criteriaCount", Lean.Json.num criteria.length)])
+  let mut anyFailed := false
+  for criterion in criteria do
+    let execution ← Verifier.verifyCriterion criterion
+    if execution.isFailed then anyFailed := true
+    Output.emitJsonLine (Output.executionToJson criterion.description execution)
+  match ← Integrity.verify pinnedSpec pinned with
+  | .error reason =>
+    Output.emitJsonLine (Output.jsonLineEvent "error"
+      [("message", Lean.Json.str s!"integrity violation: {reason}")])
+    return 2
+  | .ok () => pure ()
+  Output.emitJsonLine (Output.jsonLineEvent "spec_done"
+    [("spec", Lean.Json.str spec.name),
+     ("passed", Lean.Json.bool !anyFailed)])
+  return if anyFailed then 1 else 0
+
 /-- Run single-pass verification on an already-loaded spec.
     In text mode, results are streamed (displayed as each criterion completes)
     so human criteria prompts appear inline. -/
 def verifySpec (pinnedSpec : Spec.Pinned) (jsonOutput : Bool) (context : RunContext := .full)
-    (pinned : Bool := false) : IO UInt32 := do
+    (pinned : Bool := false) (jsonLines : Bool := false) : IO UInt32 := do
+  if jsonLines then return ← verifySpecJsonLines pinnedSpec context pinned
   if jsonOutput then
     let (exitCode, json) ← verifySpecJson pinnedSpec context pinned
     IO.println (json.pretty 2)
@@ -123,25 +154,41 @@ def loadSpecSafe (path : String) : IO (Except ErrorInfo Spec.Pinned) := do
 
 /-- Load a spec and run single-pass verification. -/
 def runVerify (path : String) (jsonOutput : Bool) (context : RunContext := .full)
-    (pinned : Bool := false) : IO UInt32 := do
+    (pinned : Bool := false) (jsonLines : Bool := false) : IO UInt32 := do
   match ← loadSpecSafe path with
   | .error info =>
-    reportError info jsonOutput
+    if jsonLines then
+      Output.emitJsonLine (Output.jsonLineEvent "error"
+        [("message", Lean.Json.str info.message)])
+    else
+      reportError info jsonOutput
     return 2
-  | .ok pinnedSpec => verifySpec pinnedSpec jsonOutput context pinned
+  | .ok pinnedSpec => verifySpec pinnedSpec jsonOutput context pinned jsonLines
 
 /-- Verify all specs in a directory. Returns 0 if all pass, 1 if any fail, 2 on error. -/
 def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext := .full)
-    (pinned : Bool := false) : IO UInt32 := do
+    (pinned : Bool := false) (jsonLines : Bool := false) : IO UInt32 := do
   match ← SpecLoader.listAllSpecs directory with
   | .error message =>
     reportErrorMsg message jsonOutput
     return 2
   | .ok specs =>
     if specs.isEmpty then
-      reportErrorMsg s!"no spec files found in '{directory}'" jsonOutput
+      if jsonLines then
+        Output.emitJsonLine (Output.jsonLineEvent "error"
+          [("message", Lean.Json.str s!"no spec files found in '{directory}'")])
+      else
+        reportErrorMsg s!"no spec files found in '{directory}'" jsonOutput
       return 2
-    if jsonOutput then
+    if jsonLines then
+      -- JSON Lines mode: stream each spec's events sequentially
+      let mut anyFailed := false
+      for specPath in specs do
+        let result ← runVerify specPath.toString false context pinned true
+        if result == 1 then anyFailed := true
+        if result == 2 then return 2
+      return if anyFailed then 1 else 0
+    else if jsonOutput then
       -- JSON mode: collect all results into a single JSON object
       let mut specResults : Array Lean.Json := #[]
       let mut anyFailed := false
@@ -288,6 +335,7 @@ def printHelp : IO Unit := do
   IO.println ""
   IO.println "Options:"
   IO.println "  --json                    Output results as JSON"
+  IO.println "  --json-lines              Stream results as JSON Lines (one event per line)"
   IO.println "  --auto                    Skip heavy and manual criteria (auto-detected when CI=true)"
   IO.println "  --extended                Include heavy criteria, skip manual (for thorough CI runs)"
   IO.println "  --full                    Run all criteria including manual (overrides CI auto-detection)"
@@ -304,6 +352,7 @@ def printHelp : IO Unit := do
 /-- Parsed CLI flags. -/
 structure CliFlags where
   jsonOutput : Bool
+  jsonLines : Bool
   context : Option RunContext
   pinned : Bool
   noLock : Bool
@@ -325,28 +374,32 @@ private def extractOutput (args : List String) : Option String × List String :=
     Returns an error if conflicting mode flags are provided. -/
 private def extractFlags (args : List String) : Except String CliFlags :=
   let jsonFlag := args.any (· == "--json")
+  let jsonLinesFlag := args.any (· == "--json-lines")
   let pinFlag := args.any (· == "--pin")
   let noLockFlag := args.any (· == "--no-lock")
   let archiveFlag := args.any (· == "--archive")
   let hasAuto := args.any (· == "--auto")
   let hasExtended := args.any (· == "--extended")
   let hasFull := args.any (· == "--full")
-  let modeCount := (if hasAuto then 1 else 0) + (if hasExtended then 1 else 0) +
-    (if hasFull then 1 else 0)
-  if modeCount > 1 then
-    .error "conflicting flags: use only one of --auto, --extended, or --full"
+  if jsonFlag && jsonLinesFlag then
+    .error "conflicting flags: use --json or --json-lines, not both"
   else
-    let context := if hasAuto then some RunContext.auto
-      else if hasExtended then some RunContext.extended
-      else if hasFull then some RunContext.full
-      else none
-    let filtered := args.filter fun a =>
-      a != "--json" && a != "--auto" && a != "--extended" && a != "--full" &&
-      a != "--pin" && a != "--no-lock" && a != "--archive"
-    let (outputPath, remaining) := extractOutput filtered
-    .ok { jsonOutput := jsonFlag, context, pinned := pinFlag,
-          noLock := noLockFlag, archive := archiveFlag,
-          output := outputPath, cleanArgs := remaining }
+    let modeCount := (if hasAuto then 1 else 0) + (if hasExtended then 1 else 0) +
+      (if hasFull then 1 else 0)
+    if modeCount > 1 then
+      .error "conflicting flags: use only one of --auto, --extended, or --full"
+    else
+      let context := if hasAuto then some RunContext.auto
+        else if hasExtended then some RunContext.extended
+        else if hasFull then some RunContext.full
+        else none
+      let filtered := args.filter fun a =>
+        a != "--json" && a != "--json-lines" && a != "--auto" && a != "--extended" &&
+        a != "--full" && a != "--pin" && a != "--no-lock" && a != "--archive"
+      let (outputPath, remaining) := extractOutput filtered
+      .ok { jsonOutput := jsonFlag, jsonLines := jsonLinesFlag, context, pinned := pinFlag,
+            noLock := noLockFlag, archive := archiveFlag,
+            output := outputPath, cleanArgs := remaining }
 
 /-- Resolve the execution context: explicit flag > CI env var > full. -/
 private def resolveContext (explicit : Option RunContext) : IO RunContext := do
@@ -377,21 +430,25 @@ def main (args : List String) : IO UInt32 := do
   | ["promote", path] =>
     runPromote path flags.output flags.archive flags.jsonOutput
   | ["verify"] =>
-    runVerifyAll "." flags.jsonOutput context flags.pinned
+    runVerifyAll "." flags.jsonOutput context flags.pinned flags.jsonLines
   | ["verify", path] =>
     let isDir ← (path : System.FilePath).isDir
-    if isDir then runVerifyAll path flags.jsonOutput context flags.pinned
-    else runVerify path flags.jsonOutput context flags.pinned
+    if isDir then runVerifyAll path flags.jsonOutput context flags.pinned flags.jsonLines
+    else runVerify path flags.jsonOutput context flags.pinned flags.jsonLines
   | ["run", path] =>
     match ← loadSpecSafe path with
     | .error info =>
-      reportError info flags.jsonOutput
+      if flags.jsonLines then
+        Output.emitJsonLine (Output.jsonLineEvent "error"
+          [("message", Lean.Json.str info.message)])
+      else
+        reportError info flags.jsonOutput
       return 2
     | .ok pinnedSpec =>
       match pinnedSpec.spec.mode with
-      | .verify => verifySpec pinnedSpec flags.jsonOutput context flags.pinned
+      | .verify => verifySpec pinnedSpec flags.jsonOutput context flags.pinned flags.jsonLines
       | .workerLoop worker loopConfig =>
-        WorkerLoop.run pinnedSpec worker loopConfig flags.jsonOutput flags.pinned flags.noLock
+        WorkerLoop.run pinnedSpec worker loopConfig flags.jsonOutput flags.pinned flags.noLock flags.jsonLines
   | ["parse", path] =>
     runParse path flags.jsonOutput
   | [] =>

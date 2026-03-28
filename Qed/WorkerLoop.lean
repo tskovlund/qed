@@ -92,7 +92,8 @@ def spawnWorker (worker : WorkerConfig)
     Handles interruption (SIGINT) gracefully — Lean's runtime converts the
     signal into an IO exception, which we catch to report partial progress. -/
 def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopConfig)
-    (jsonOutput : Bool) (pinned : Bool := false) (noLock : Bool := false) : IO UInt32 := do
+    (jsonOutput : Bool) (pinned : Bool := false) (noLock : Bool := false)
+    (jsonLines : Bool := false) : IO UInt32 := do
   let spec := pinnedSpec.spec
   -- Load lock file once at loop start. This is intentional:
   -- 1. Avoids re-reading on every iteration (performance + TOCTOU safety)
@@ -103,7 +104,10 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
     try ContractLock.readLockFile
     catch error =>
       let errorInfo : ErrorInfo := { message := s!"{error}", hint := some "run 'qed lock' to regenerate" }
-      if jsonOutput then
+      if jsonLines then
+        Output.emitJsonLine (Output.jsonLineEvent "error"
+          [("message", Lean.Json.str s!"{error}")])
+      else if jsonOutput then
         IO.println (Error.formatErrorJson errorInfo |>.pretty 2)
       else
         IO.eprintln (Error.formatError errorInfo)
@@ -118,7 +122,13 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
   let (newState, newContext) := step loopConfig state context .workerDone
   state := newState
   context := newContext
-  if !jsonOutput then
+  if jsonLines then
+    Output.emitJsonLine (Output.jsonLineEvent "spec_start"
+      [("spec", Lean.Json.str spec.name),
+       ("mode", Lean.Json.str "worker_loop"),
+       ("maxIterations", Lean.Json.num loopConfig.maxIterations),
+       ("stuckThreshold", Lean.Json.num loopConfig.stuckThreshold)])
+  else if !jsonOutput then
     IO.println s!"{Output.ansiBold}Worker loop: {spec.name}{Output.ansiReset}"
     IO.println s!"  max iterations: {loopConfig.maxIterations}, stuck threshold: {loopConfig.stuckThreshold}"
     if lockFile.isSome then
@@ -134,11 +144,26 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
           let (s, c) := step loopConfig state context (.integrityViolation reason)
           state := s; context := c; continue
         | .ok () => pure ()
-        if !jsonOutput then
+        if jsonLines then
+          Output.emitJsonLine (Output.jsonLineEvent "iteration_start"
+            [("iteration", Lean.Json.num iteration)])
+        else if !jsonOutput then
           IO.println s!"{Output.ansiBold}── Iteration {iteration} ──{Output.ansiReset}"
           IO.println "  Running worker..."
         let workerResult ← spawnWorker worker lastFailures iteration
-        if !jsonOutput then
+        if jsonLines then
+          match workerResult with
+          | .timedOut _ _ elapsedMs =>
+            Output.emitJsonLine (Output.jsonLineEvent "worker_done"
+              [("iteration", Lean.Json.num iteration),
+               ("timedOut", Lean.Json.bool true),
+               ("elapsedMs", Lean.Json.num elapsedMs)])
+          | .completed exitCode _ _ elapsedMs =>
+            Output.emitJsonLine (Output.jsonLineEvent "worker_done"
+              [("iteration", Lean.Json.num iteration),
+               ("exitCode", Lean.Json.num exitCode.toNat),
+               ("elapsedMs", Lean.Json.num elapsedMs)])
+        else if !jsonOutput then
           match workerResult with
           | .timedOut _ stderr _ =>
             IO.println s!"  {Output.ansiRed}Worker timed out after {worker.timeout}s{Output.ansiReset}"
@@ -176,16 +201,19 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
                 IO.eprintln s!"    - {violation}"
             continue
         | none => pure ()
-        if !jsonOutput then
+        if !jsonOutput && !jsonLines then
           IO.println "  Verifying criteria..."
         let executions ← Verifier.verifyAll spec.criteria
         -- Stamp iteration number on each execution
         let executions := executions.map fun (description, execution) =>
           (description, { execution with iteration := some iteration })
         allExecutions := executions
+        if jsonLines then
+          for (description, execution) in executions do
+            Output.emitJsonLine (Output.executionToJson description execution)
         let results := Output.extractResults executions
         let failed := results.filter fun (_, result) => result.isFailed
-        if !jsonOutput then
+        if !jsonOutput && !jsonLines then
           let termWidth ← Output.getTerminalWidth
           let _ ← Output.printResultLines 4 results termWidth
         -- Integrity check: after running verifiers (catches verifier tampering)
@@ -195,6 +223,11 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
           state := s; context := c; continue
         | .ok () => pure ()
         if failed.isEmpty then
+          if jsonLines then
+            Output.emitJsonLine (Output.jsonLineEvent "iteration_done"
+              [("iteration", Lean.Json.num iteration),
+               ("passed", Lean.Json.bool true),
+               ("failedCount", Lean.Json.num 0)])
           let (s, c) := step loopConfig state context .allPassed
           state := s
           context := c
@@ -204,12 +237,20 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
           let (s, c) := step loopConfig state context (.someFailed failureDescs)
           state := s
           context := c
-          if !jsonOutput && !state.isTerminal then
+          if jsonLines then
+            Output.emitJsonLine (Output.jsonLineEvent "iteration_done"
+              [("iteration", Lean.Json.num iteration),
+               ("passed", Lean.Json.bool false),
+               ("failedCount", Lean.Json.num failed.length)])
+          else if !jsonOutput && !state.isTerminal then
             IO.println s!"  {failed.length} criteria failed, retrying..."
             IO.println ""
       | _ => break  -- unreachable: while guard ensures non-terminal
   catch error =>
-    if jsonOutput then
+    if jsonLines then
+      Output.emitJsonLine (Output.jsonLineEvent "error"
+        [("message", Lean.Json.str s!"interrupted: {error}")])
+    else if jsonOutput then
       let errorJson := Lean.Json.mkObj [
         ("error", Lean.Json.str s!"interrupted: {error}"),
         ("state", Lean.Json.str (repr state).pretty)
@@ -220,14 +261,20 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
       IO.eprintln s!"  state at interruption: {repr state}"
     return (1 : UInt32)
   -- Output final result
-  if jsonOutput then
-    let stateString := match state with
-      | .passed iterations => s!"passed after {iterations} iterations"
-      | .stuck iterations _ => s!"stuck after {iterations} iterations"
-      | .maxIterationsReached iterations => s!"max iterations reached ({iterations})"
-      | .escalated reason => s!"escalated: {reason}"
-      | .integrityViolation reason => s!"integrity violation: {reason}"
-      | _ => "unknown"
+  let stateString := match state with
+    | .passed iterations => s!"passed after {iterations} iterations"
+    | .stuck iterations _ => s!"stuck after {iterations} iterations"
+    | .maxIterationsReached iterations => s!"max iterations reached ({iterations})"
+    | .escalated reason => s!"escalated: {reason}"
+    | .integrityViolation reason => s!"integrity violation: {reason}"
+    | _ => "unknown"
+  if jsonLines then
+    let passed := match state with | .passed _ => true | _ => false
+    Output.emitJsonLine (Output.jsonLineEvent "loop_done"
+      [("spec", Lean.Json.str spec.name),
+       ("state", Lean.Json.str stateString),
+       ("passed", Lean.Json.bool passed)])
+  else if jsonOutput then
     let resultJson := Output.workerExecutionsToJson spec.name stateString allExecutions
     IO.println (resultJson.pretty 2)
   else
