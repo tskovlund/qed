@@ -361,10 +361,16 @@ def emitIterationDone (format : OutputFormat) (iteration : Nat)
 /-- Emit contract lock violation message. -/
 def emitContractViolation (format : OutputFormat)
     (violations : List String) : IO Unit := do
-  if format == .text then
+  match format with
+  | .jsonLines =>
+    for violation in violations do
+      emitJsonLine (jsonLineEvent "contract_violation"
+        [("message", Json.str violation)])
+  | .text =>
     IO.eprintln s!"  {ansiRed}contract lock violated:{ansiReset}"
     for violation in violations do
       IO.eprintln s!"    - {violation}"
+  | .json => pure ()
 
 /-- Emit worker loop error (interruption). -/
 def emitLoopError (format : OutputFormat) (errorMessage : String)

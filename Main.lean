@@ -167,14 +167,15 @@ def runParse (path : String) (format : OutputFormat) : IO UInt32 := do
     return 2
   | .ok pinnedSpec =>
     let spec := pinnedSpec.spec
-    if format == .text then
+    match format with
+    | .text =>
       IO.println s!"Spec: {spec.name}"
       IO.println s!"Mode: {repr spec.mode}"
       IO.println s!"Criteria: {spec.criteria.length}"
       for criterion in spec.criteria do
         IO.println s!"  - {criterion.description}"
-    else
-      IO.println (Serializer.specToJson spec |>.pretty 2)
+    | .json => IO.println (Serializer.specToJson spec |>.pretty 2)
+    | .jsonLines => Output.emitJsonLine (Serializer.specToJson spec)
     return 0
 
 /-- Generate or update the lock file from all specs in a directory. -/
@@ -206,14 +207,15 @@ def runLock (directory : String) (format : OutputFormat) : IO UInt32 := do
       let artifactCount := lockFile.specs.foldl (init := 0) fun count specLock =>
         count + specLock.criteria.foldl (init := 0) fun c criterionLock =>
           c + criterionLock.artifacts.length
-      if format == .text then
+      match format with
+      | .text =>
         if artifactCount == 0 then
           IO.println "No lockable artifacts found."
         else
           IO.println s!"Locked {artifactCount} artifact(s) across {lockFile.specs.length} spec(s)."
           IO.println s!"Lock file written to {ContractLock.lockFilePath}"
-      else
-        IO.println (ContractLock.lockFileToJson lockFile |>.pretty 2)
+      | .json => IO.println (ContractLock.lockFileToJson lockFile |>.pretty 2)
+      | .jsonLines => Output.emitJsonLine (ContractLock.lockFileToJson lockFile)
       return 0
 
 /-- Promote a worker loop spec to verify mode (strip worker section). -/
