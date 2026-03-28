@@ -218,4 +218,15 @@ structure ErrorInfo where
 instance : ToString ErrorInfo where
   toString info := info.message
 
+/-- Output format selection. Replaces separate boolean flags for JSON and
+    JSON Lines modes with a single discriminated type. -/
+inductive OutputFormat where
+  /-- Human-readable terminal output with ANSI colors. -/
+  | text
+  /-- Single JSON object (pretty-printed). -/
+  | json
+  /-- Streaming JSON Lines — one compact JSON object per line. -/
+  | jsonLines
+  deriving BEq
+
 end Qed
