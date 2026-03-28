@@ -312,6 +312,21 @@ def testVerifyDirectorySkipsArchiveDir : IO Bool := do
   -- Assert: main spec found, archived spec skipped
   return exitCode == 0 && stdout.contains "main" && !stdout.contains "archived"
 
+def testVerifyDirectoryRespectsQedignore : IO Bool := do
+  -- Arrange: .qedignore excludes "ignored" but not "included"
+  let dir ← freshTempDir "qedignore"
+  IO.FS.writeFile (dir / ".qedignore") "ignored\n"
+  IO.FS.createDirAll (dir / "ignored")
+  IO.FS.createDirAll (dir / "included")
+  IO.FS.writeFile (dir / "included" / "a.spec.json")
+    "{\"name\": \"included-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  IO.FS.writeFile (dir / "ignored" / "b.spec.json")
+    "{\"name\": \"ignored-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", dir.toString]
+  -- Assert: included-spec found, ignored-spec skipped
+  return exitCode == 0 && stdout.contains "included-spec" && !stdout.contains "ignored-spec"
+
 def testVerifyCommandTimeoutEndToEnd : IO Bool := do
   -- Arrange: command sleeps for 10s, timeout is 1s
   let specContent := "{\"name\": \"timeout-test\", \"criteria\": [{\"description\": \"slow\", \"verify\": {\"type\": \"command\", \"run\": \"sleep 10\", \"timeout\": 1}}]}"
@@ -349,5 +364,6 @@ def cliTests : List (String × IO Bool) := [
   ("testPromoteRejectsVerifyMode", testPromoteRejectsVerifyMode),
   ("testPromoteWithOutputWritesToFile", testPromoteWithOutputWritesToFile),
   ("testPromoteWithArchiveMovesOriginal", testPromoteWithArchiveMovesOriginal),
-  ("testVerifyDirectorySkipsArchiveDir", testVerifyDirectorySkipsArchiveDir)
+  ("testVerifyDirectorySkipsArchiveDir", testVerifyDirectorySkipsArchiveDir),
+  ("testVerifyDirectoryRespectsQedignore", testVerifyDirectoryRespectsQedignore)
 ]

@@ -1,0 +1,4 @@
+# Directories to exclude from recursive spec discovery.
+# One name per line. Hidden directories (starting with .) are always excluded.
+archive
+wip

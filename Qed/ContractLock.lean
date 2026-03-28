@@ -95,6 +95,28 @@ def shortTheoremName (qualifiedName : String) : String :=
   | some name => name
   | none => qualifiedName
 
+/-- Find `:=` at bracket depth 0 in a line. Returns the text before the `:=`,
+    or `none` if no top-level `:=` exists. Tracks `()`, `{}`, and `[]` nesting
+    so that `:=` inside parameter defaults (e.g., `(h : x := 0)`) is ignored. -/
+private def findTopLevelAssignment (line : String) : Option String :=
+  let rec go (chars : List Char) (depth : Nat) (before : String) : Option String :=
+    match chars with
+    | [] => none
+    | c :: rest =>
+      if c == '(' || c == '{' || c == '[' then
+        go rest (depth + 1) (before.push c)
+      else if c == ')' || c == '}' || c == ']' then
+        go rest (if depth > 0 then depth - 1 else 0) (before.push c)
+      else if c == ':' then
+        match rest with
+        | '=' :: _ =>
+          if depth == 0 then some before
+          else go rest depth (before.push c)
+        | _ => go rest depth (before.push c)
+      else
+        go rest depth (before.push c)
+  go line.toList 0 ""
+
 /-- Extract a theorem statement from Lean source text.
     Finds the declaration of `theoremName` (short or qualified) and extracts
     the text from `theorem` to `:=` (exclusive). This captures the full
@@ -118,9 +140,8 @@ def extractTheoremStatement (source : String) (qualifiedName : String) : Option 
   | none => none
   | some start =>
     -- Collect lines from start until `:=` or `where` (both mark end of statement).
-    -- Known limitation: `:=` inside parameter defaults (e.g., `(h : x := 0)`)
-    -- would cause early truncation. Rare in theorem signatures; a proper fix
-    -- would track parenthesis nesting depth.
+    -- `:=` is only matched at bracket depth 0 to handle parameter defaults
+    -- like `(h : x := 0)` correctly.
     let remaining := lines.drop start
     let rec collectLines (lns : List String) (accumulated : String) : Option String :=
       match lns with
@@ -129,16 +150,12 @@ def extractTheoremStatement (source : String) (qualifiedName : String) : Option 
         -- Check for `where` clause (also terminates the statement)
         let trimmed := line.trimAsciiStart.toString
         if trimmed == "where" || trimmed.startsWith "where " then
-          -- `where` terminates the statement — include everything before it
           some accumulated.trimAsciiEnd.toString
         else
-          -- Split on `:=` — if >1 part, we found the terminator
-          let parts := line.splitOn ":="
-          if parts.length > 1 then
-            -- Include everything before the first `:=`
-            let beforeEq := (parts.headD "").trimAsciiEnd.toString
-            some (accumulated ++ beforeEq).trimAsciiEnd.toString
-          else
+          match findTopLevelAssignment line with
+          | some beforeEq =>
+            some (accumulated ++ beforeEq.trimAsciiEnd.toString).trimAsciiEnd.toString
+          | none =>
             collectLines rest (accumulated ++ line ++ "\n")
     collectLines remaining ""
 

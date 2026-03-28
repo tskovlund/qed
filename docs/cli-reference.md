@@ -97,6 +97,27 @@ All meaningful parameters are configurable at the spec level — defaults are se
 | `QED_VERIFIER_PROMPT`        | The criterion's review prompt                                        |
 | `QED_VERIFIER_SYSTEM_PROMPT` | Verdict format instructions (JSON block with `{"pass": true/false}`) |
 
+## `.qedignore`
+
+Controls which directories are excluded from recursive spec discovery (`qed verify <dir>`, `qed lock`). Format follows `.gitignore`/`.prettierignore` conventions:
+
+- One pattern per line
+- `#` for comments, blank lines ignored
+- Hidden directories (`.git`, `.lake`, etc.) are always excluded
+- Supports `*` wildcard: `*.bak`, `temp*`, `*test*`, `pre*suf`
+
+When no `.qedignore` file exists, defaults to excluding `archive` and `wip`.
+
+Example:
+
+```
+# Directories to exclude from spec discovery
+archive
+wip
+scratch
+*.draft
+```
+
 ## Named constants
 
 Not configurable — reasonable defaults hardcoded in the IO shell:

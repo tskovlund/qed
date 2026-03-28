@@ -44,7 +44,7 @@ private def workerLoopJson (name : String) (criteriaArr : Array Json)
 
 -- Verify-mode lookups (all provable by rfl — kernel reduces TreeMap on concrete keys)
 private theorem vj_name (n : String) (a : Array Json) :
-    requireString (verifyJson n a) "name" = .ok n := by rfl
+    parseRequiredString (verifyJson n a) "name" = .ok n := by rfl
 private theorem vj_criteria (n : String) (a : Array Json) :
     (verifyJson n a).getObjVal? "criteria" = .ok (Json.arr a) := by rfl
 private theorem vj_no_worker (n : String) (a : Array Json) :
@@ -56,15 +56,15 @@ private theorem vj_no_stuckThresh (n : String) (a : Array Json) :
 
 -- WorkerLoop-mode lookups (default parameter d is irrelevant — field is always present)
 private theorem wj_name (n : String) (a : Array Json) (w : Json) (mi st : Nat) :
-    requireString (workerLoopJson n a w mi st) "name" = .ok n := by rfl
+    parseRequiredString (workerLoopJson n a w mi st) "name" = .ok n := by rfl
 private theorem wj_criteria (n : String) (a : Array Json) (w : Json) (mi st : Nat) :
     (workerLoopJson n a w mi st).getObjVal? "criteria" = .ok (Json.arr a) := by rfl
 private theorem wj_worker (n : String) (a : Array Json) (w : Json) (mi st : Nat) :
     (workerLoopJson n a w mi st).getObjVal? "worker" = .ok w := by rfl
 private theorem wj_maxIter (n : String) (a : Array Json) (w : Json) (mi st d : Nat) :
-    optionalNat (workerLoopJson n a w mi st) "maxIterations" d = .ok mi := by rfl
+    parseOptionalNat (workerLoopJson n a w mi st) "maxIterations" d = .ok mi := by rfl
 private theorem wj_stuckThresh (n : String) (a : Array Json) (w : Json) (mi st d : Nat) :
-    optionalNat (workerLoopJson n a w mi st) "stuckThreshold" d = .ok st := by rfl
+    parseOptionalNat (workerLoopJson n a w mi st) "stuckThreshold" d = .ok st := by rfl
 
 -- specToJson shape lemmas (rfl: list append + Json.mkObj reduce definitionally)
 private theorem specToJson_verify (name : String) (criteria : List AcceptanceCriterion) :
@@ -87,11 +87,11 @@ private theorem lock_mapM (patterns : List String) (field : String) :
   | cons _ _ ih =>
     simp only [List.map, List.mapM_cons, parseStringItem_str, bind, Except.bind, ih]; rfl
 
-/-- optionalStringList inverts stringListToJson when the field is present. -/
+/-- parseOptionalStringList inverts stringListToJson when the field is present. -/
 private theorem lock_field_roundtrip (patterns : List String) (json : Json)
     (h : json.getObjVal? "lock" = .ok (Json.arr (patterns.map Json.str).toArray)) :
-    optionalStringList json "lock" = Except.ok (some patterns) := by
-  unfold optionalStringList
+    parseOptionalStringList json "lock" = Except.ok (some patterns) := by
+  unfold parseOptionalStringList
   rw [h]
   simp only [bind, Except.bind, lock_mapM]
 
@@ -105,11 +105,11 @@ private def cmdLockJson (run : String) (timeout : Nat) (lockArr : Json) : Json :
     ("timeout", Lean.toJson timeout), ("lock", lockArr)]
 
 private theorem cl_type (r : String) (t : Nat) (l : Json) :
-    requireString (cmdLockJson r t l) "type" = .ok "command" := by rfl
+    parseRequiredString (cmdLockJson r t l) "type" = .ok "command" := by rfl
 private theorem cl_run (r : String) (t : Nat) (l : Json) :
-    requireString (cmdLockJson r t l) "run" = .ok r := by rfl
+    parseRequiredString (cmdLockJson r t l) "run" = .ok r := by rfl
 private theorem cl_timeout (r : String) (t : Nat) (l : Json) (d : Nat) :
-    optionalNat (cmdLockJson r t l) "timeout" d = .ok t := by rfl
+    parseOptionalNat (cmdLockJson r t l) "timeout" d = .ok t := by rfl
 private theorem cl_lock (r : String) (t : Nat) (l : Json) :
     (cmdLockJson r t l).getObjVal? "lock" = .ok l := by rfl
 
@@ -117,8 +117,8 @@ private theorem vtj_command_lock (run : String) (timeout : Nat) (patterns : List
     verifyTypeToJson (.command run timeout (some patterns)) =
     cmdLockJson run timeout (stringListToJson patterns) := by rfl
 
-private theorem cl_optionalStringList (r : String) (t : Nat) (patterns : List String) :
-    optionalStringList (cmdLockJson r t (stringListToJson patterns)) "lock" =
+private theorem cl_parseOptionalStringList (r : String) (t : Nat) (patterns : List String) :
+    parseOptionalStringList (cmdLockJson r t (stringListToJson patterns)) "lock" =
       Except.ok (some patterns) := by
   apply lock_field_roundtrip
   unfold stringListToJson
@@ -130,11 +130,11 @@ private def propLockJson (run : String) (timeout : Nat) (lockArr : Json) : Json 
     ("timeout", Lean.toJson timeout), ("lock", lockArr)]
 
 private theorem pl_type (r : String) (t : Nat) (l : Json) :
-    requireString (propLockJson r t l) "type" = .ok "property" := by rfl
+    parseRequiredString (propLockJson r t l) "type" = .ok "property" := by rfl
 private theorem pl_run (r : String) (t : Nat) (l : Json) :
-    requireString (propLockJson r t l) "run" = .ok r := by rfl
+    parseRequiredString (propLockJson r t l) "run" = .ok r := by rfl
 private theorem pl_timeout (r : String) (t : Nat) (l : Json) (d : Nat) :
-    optionalNat (propLockJson r t l) "timeout" d = .ok t := by rfl
+    parseOptionalNat (propLockJson r t l) "timeout" d = .ok t := by rfl
 private theorem pl_lock (r : String) (t : Nat) (l : Json) :
     (propLockJson r t l).getObjVal? "lock" = .ok l := by rfl
 
@@ -142,8 +142,8 @@ private theorem vtj_property_lock (run : String) (timeout : Nat) (patterns : Lis
     verifyTypeToJson (.property run timeout (some patterns)) =
     propLockJson run timeout (stringListToJson patterns) := by rfl
 
-private theorem pl_optionalStringList (r : String) (t : Nat) (patterns : List String) :
-    optionalStringList (propLockJson r t (stringListToJson patterns)) "lock" =
+private theorem pl_parseOptionalStringList (r : String) (t : Nat) (patterns : List String) :
+    parseOptionalStringList (propLockJson r t (stringListToJson patterns)) "lock" =
       Except.ok (some patterns) := by
   apply lock_field_roundtrip
   unfold stringListToJson
@@ -176,7 +176,7 @@ private theorem criterionToJson_skip (desc : String) (vt : VerifyType) (sched : 
 
 -- Lookup lemmas for critJsonNoSkip
 private theorem cjn_desc (d : String) (v : Json) (s : String) :
-    requireString (critJsonNoSkip d v s) "description" = .ok d := by rfl
+    parseRequiredString (critJsonNoSkip d v s) "description" = .ok d := by rfl
 private theorem cjn_verify (d : String) (v : Json) (s : String) :
     (critJsonNoSkip d v s).getObjVal? "verify" = .ok v := by rfl
 private theorem cjn_schedule (d : String) (v : Json) (s : String) :
@@ -184,7 +184,7 @@ private theorem cjn_schedule (d : String) (v : Json) (s : String) :
 
 -- Lookup lemmas for critJsonSkip
 private theorem cjs_desc (d : String) (v : Json) (s : String) (r : String) :
-    requireString (critJsonSkip d v s r) "description" = .ok d := by rfl
+    parseRequiredString (critJsonSkip d v s r) "description" = .ok d := by rfl
 private theorem cjs_verify (d : String) (v : Json) (s : String) (r : String) :
     (critJsonSkip d v s r).getObjVal? "verify" = .ok v := by rfl
 private theorem cjs_schedule (d : String) (v : Json) (s : String) (r : String) :
@@ -227,7 +227,7 @@ theorem verifyType_roundtrip (vt : VerifyType) :
     | some patterns =>
       rw [vtj_command_lock]
       unfold parseVerifyType
-      simp only [cl_type, cl_run, cl_timeout, cl_optionalStringList,
+      simp only [cl_type, cl_run, cl_timeout, cl_parseOptionalStringList,
         bind, Except.bind]
   | agent prompt model command => cases command <;> rfl
   | property run timeout lock =>
@@ -236,7 +236,7 @@ theorem verifyType_roundtrip (vt : VerifyType) :
     | some patterns =>
       rw [vtj_property_lock]
       unfold parseVerifyType
-      simp only [pl_type, pl_run, pl_timeout, pl_optionalStringList,
+      simp only [pl_type, pl_run, pl_timeout, pl_parseOptionalStringList,
         bind, Except.bind]
   | proof prover target => rfl
   | human instruction => rfl

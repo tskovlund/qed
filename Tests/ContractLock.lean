@@ -67,6 +67,20 @@ def testExtractTheoremStatementExcludesProofBody : IO Bool := do
   | some statement => return !statement.contains "rfl" && !statement.contains ":="
   | none => return false
 
+def testExtractTheoremStatementIgnoresNestedAssignment : IO Bool := do
+  -- Arrange — `:=` inside parameter default should NOT terminate extraction
+  let source := "theorem nested_assign (x : Nat := 0) : x = x := by\n  rfl\n"
+  -- Act
+  let result := ContractLock.extractTheoremStatement source "nested_assign"
+  -- Assert
+  match result with
+  | some statement =>
+    return statement.contains "theorem nested_assign" &&
+      statement.contains "x = x" &&
+      statement.contains "(x : Nat := 0)" &&
+      !statement.contains "rfl"
+  | none => return false
+
 def testShortTheoremNameExtractsLastSegment : IO Bool := do
   -- Arrange / Act / Assert
   return ContractLock.shortTheoremName "Qed.Proofs.Foo.bar" == "bar" &&
@@ -151,6 +165,7 @@ def contractLockTests : List (String × IO Bool) := [
   ("testExtractTheoremStatementHandlesMultiLine", testExtractTheoremStatementHandlesMultiLine),
   ("testExtractTheoremStatementReturnsNoneForMissing", testExtractTheoremStatementReturnsNoneForMissing),
   ("testExtractTheoremStatementExcludesProofBody", testExtractTheoremStatementExcludesProofBody),
+  ("testExtractTheoremStatementIgnoresNestedAssignment", testExtractTheoremStatementIgnoresNestedAssignment),
   ("testExtractTheoremStatementHandlesWhereClause", testExtractTheoremStatementHandlesWhereClause),
   ("testShortTheoremNameExtractsLastSegment", testShortTheoremNameExtractsLastSegment),
   ("testLockFileRoundtrip", testLockFileRoundtrip),

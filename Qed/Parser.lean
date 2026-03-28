@@ -6,19 +6,19 @@ namespace Qed.Parser
 open Lean Qed
 
 /-- Helper: get a required string field from a JSON object. -/
-def requireString (json : Json) (field : String) : Except String String :=
+def parseRequiredString (json : Json) (field : String) : Except String String :=
   match json.getObjValAs? String field with
   | .ok value => .ok value
   | .error _ => .error s!"missing or invalid field '{field}': expected string"
 
 /-- Helper: get an optional string field with a default. -/
-def optionalString (json : Json) (field : String) (default : String) : String :=
+def parseOptionalString (json : Json) (field : String) (default : String) : String :=
   match json.getObjValAs? String field with
   | .ok value => value
   | .error _ => default
 
 /-- Helper: get an optional natural number field with a default. -/
-def optionalNat (json : Json) (field : String) (default : Nat) : Except String Nat :=
+def parseOptionalNat (json : Json) (field : String) (default : Nat) : Except String Nat :=
   match json.getObjValAs? Nat field with
   | .ok value => .ok value
   | .error _ =>
@@ -43,7 +43,7 @@ def parseStringItem (field : String) (item : Json) : Except String String :=
   | _ => .error s!"field '{field}': expected array of strings"
 
 /-- Parse an optional list of strings from a JSON array field. -/
-def optionalStringList (json : Json) (field : String) : Except String (Option (List String)) :=
+def parseOptionalStringList (json : Json) (field : String) : Except String (Option (List String)) :=
   match json.getObjVal? field with
   | .error _ => .ok none
   | .ok (Json.arr items) => do
@@ -53,38 +53,38 @@ def optionalStringList (json : Json) (field : String) : Except String (Option (L
 
 /-- Parse a VerifyType from a JSON object (the "verify" field of a criterion). -/
 def parseVerifyType (json : Json) : Except String VerifyType := do
-  let typeName ← requireString json "type"
+  let typeName ← parseRequiredString json "type"
   match typeName with
   | "command" =>
-    let run ← requireString json "run"
-    let timeout ← optionalNat json "timeout" defaultCommandTimeout
-    let lock ← optionalStringList json "lock"
+    let run ← parseRequiredString json "run"
+    let timeout ← parseOptionalNat json "timeout" defaultCommandTimeout
+    let lock ← parseOptionalStringList json "lock"
     .ok (.command run timeout lock)
   | "agent" =>
-    let prompt ← requireString json "prompt"
-    let model := optionalString json "model" defaultAgentModel
+    let prompt ← parseRequiredString json "prompt"
+    let model := parseOptionalString json "model" defaultAgentModel
     let command := match json.getObjVal? "command" with
       | .ok (Json.str s) => some s
       | _ => none
-    let timeout ← optionalNat json "timeout" defaultAgentTimeout
+    let timeout ← parseOptionalNat json "timeout" defaultAgentTimeout
     .ok (.agent prompt model command timeout)
   | "property" =>
-    let run ← requireString json "run"
-    let timeout ← optionalNat json "timeout" defaultPropertyTimeout
-    let lock ← optionalStringList json "lock"
+    let run ← parseRequiredString json "run"
+    let timeout ← parseOptionalNat json "timeout" defaultPropertyTimeout
+    let lock ← parseOptionalStringList json "lock"
     .ok (.property run timeout lock)
   | "proof" =>
-    let prover ← requireString json "prover"
-    let target ← requireString json "target"
+    let prover ← parseRequiredString json "prover"
+    let target ← parseRequiredString json "target"
     .ok (.proof prover target)
   | "human" =>
-    let instruction ← requireString json "instruction"
+    let instruction ← parseRequiredString json "instruction"
     .ok (.human instruction)
   | other => .error s!"unknown verify type: '{other}'"
 
 /-- Parse an AcceptanceCriterion from a JSON object. -/
 def parseCriterion (json : Json) : Except String AcceptanceCriterion := do
-  let description ← requireString json "description"
+  let description ← parseRequiredString json "description"
   let verifyJson ← match json.getObjVal? "verify" with
     | .ok value => .ok value
     | .error _ => .error "missing field 'verify'"
@@ -111,14 +111,14 @@ def parseWorkerConfig (json : Json) : Except String WorkerConfig := do
   let prompt := match json.getObjValAs? String "prompt" with
     | .ok value => some value
     | .error _ => none
-  let model := optionalString json "model" defaultAgentModel
-  let workdir := optionalString json "workdir" "."
-  let timeout ← optionalNat json "timeout" defaultWorkerTimeout
+  let model := parseOptionalString json "model" defaultAgentModel
+  let workdir := parseOptionalString json "workdir" "."
+  let timeout ← parseOptionalNat json "timeout" defaultWorkerTimeout
   .ok { command, prompt, model, workdir, timeout }
 
 /-- Parse a Spec from a parsed JSON value. -/
 def parseFromJson (json : Json) : Except String Spec := do
-  let name ← requireString json "name"
+  let name ← parseRequiredString json "name"
 
   -- Parse criteria
   let criteriaArray ← match json.getObjVal? "criteria" with
@@ -135,8 +135,8 @@ def parseFromJson (json : Json) : Except String Spec := do
       if worker.command.isNone && worker.prompt.isNone then
         .error "worker requires at least 'command' or 'prompt'"
       else
-        let maxIterations ← optionalNat json "maxIterations" defaultMaxIterations
-        let stuckThreshold ← optionalNat json "stuckThreshold" defaultStuckThreshold
+        let maxIterations ← parseOptionalNat json "maxIterations" defaultMaxIterations
+        let stuckThreshold ← parseOptionalNat json "stuckThreshold" defaultStuckThreshold
         .ok (SpecMode.workerLoop worker { maxIterations, stuckThreshold })
     | .error _ =>
       -- Verify mode: reject worker loop fields that don't apply

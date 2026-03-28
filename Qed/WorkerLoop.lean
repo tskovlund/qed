@@ -91,7 +91,11 @@ def spawnWorker (worker : WorkerConfig)
 def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopConfig)
     (jsonOutput : Bool) (pinned : Bool := false) (noLock : Bool := false) : IO UInt32 := do
   let spec := pinnedSpec.spec
-  -- Load lock file once (if it exists and --no-lock not set)
+  -- Load lock file once at loop start. This is intentional:
+  -- 1. Avoids re-reading on every iteration (performance + TOCTOU safety)
+  -- 2. The worker cannot bypass locks by regenerating qed.lock on disk —
+  --    verification checks use the in-memory snapshot, not the file
+  -- 3. New files created during the loop aren't part of the original contract
   let lockFile ← if noLock then pure none else ContractLock.readLockFile
   let mut state : LoopState := .ready
   let mut context : StateMachine.LoopContext := StateMachine.LoopContext.initial

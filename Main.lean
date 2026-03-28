@@ -241,10 +241,8 @@ def runPromote (path : String) (output : Option String) (archive : Bool)
         let archiveDir := (System.FilePath.mk path).parent.getD "." / "archive"
         let archivePath := archiveDir / ((System.FilePath.mk path).fileName.getD "spec")
         IO.FS.createDirAll archiveDir
-        -- Read, write to archive, delete original
-        let contents ← IO.FS.readFile path
-        IO.FS.writeFile archivePath contents
-        IO.FS.removeFile path
+        -- Atomic move (rename is atomic on the same filesystem)
+        IO.FS.rename path archivePath
         if !jsonOutput then
           IO.println s!"Archived original → {archivePath}"
       return 0
