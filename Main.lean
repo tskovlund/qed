@@ -51,9 +51,9 @@ private def verifySpecJson (pinnedSpec : Spec.Pinned) (context : RunContext := .
   | .error reason =>
     return (2, Error.formatErrorJson { message := s!"integrity violation: {reason}" })
   | .ok () => pure ()
+  let passed := Output.allPassed results
   let json := Output.resultsToJson spec.name results
-  let anyFailed := results.any fun (_, result) => result.isFailed
-  return (if anyFailed then 1 else 0, json)
+  return (if passed then 0 else 1, json)
 
 /-- Run single-pass verification on an already-loaded spec.
     In text mode, results are streamed (displayed as each criterion completes)
