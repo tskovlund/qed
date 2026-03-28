@@ -72,6 +72,7 @@ hint: check for typos in key names
 ```
 
 Components (all optional except the error line):
+
 - **`error: <message>`** — always present, always to stderr
 - **` --> file:line:col`** — when a source location is known
 - **Code frame** — numbered source line with caret pointer (TOML and JSON parse errors)
