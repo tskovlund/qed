@@ -138,14 +138,15 @@ def workerResultsToJson (specName : String) (stateDescription : String)
     ("criteria", Json.arr criteriaJson.toArray)
   ]
 
+/-- Width of the status prefix `[XXXX] ` used for continuation indent alignment. -/
+private def statusPrefixWidth : Nat := 7  -- `[` + 4-char status + `]` + space
+
 /-- Print a single verification result line with word wrapping.
-    `baseIndent` is the leading space count (2 for top-level, 4 for nested).
-    The continuation indent accounts for the `[XXXX] ` status prefix
-    (baseIndent + 1 + 4 + 1 + 1 = baseIndent + 7). -/
+    `baseIndent` is the leading space count (2 for top-level, 4 for nested). -/
 def printResultLine (baseIndent : Nat) (description : String)
     (result : VerificationResult) (termWidth : Nat) : IO Unit := do
   let indent := String.ofList (List.replicate baseIndent ' ')
-  let continuationIndent := baseIndent + 7
+  let continuationIndent := baseIndent + statusPrefixWidth
   let linePrefix := s!"{indent}[{colorStatusIndicator result}] "
   let text := match result with
     | .skipped reason => s!"{description} {ansiDim}— {reason}{ansiReset}"

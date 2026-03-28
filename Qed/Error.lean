@@ -2,6 +2,8 @@ import Lean.Data.Json
 import Qed.Types
 import Qed.Output
 
+set_option autoImplicit false
+
 namespace Qed.Error
 
 open Lean Qed
@@ -10,14 +12,14 @@ open Lean Qed
     Iterates through the source character-by-character, tracking UTF-8 byte
     positions. Shared by TOML and JSON parse error paths. -/
 def byteToLineCol (source : String) (bytePos : Nat) : Nat × Nat :=
-  let rec go (chars : List Char) (pos : Nat) (line : Nat) (col : Nat) : Nat × Nat :=
-    if pos >= bytePos then (line, col)
+  let rec scan (chars : List Char) (pos : Nat) (line : Nat) (column : Nat) : Nat × Nat :=
+    if pos >= bytePos then (line, column)
     else match chars with
-      | [] => (line, col)
-      | c :: rest =>
-        if c == '\n' then go rest (pos + c.utf8Size) (line + 1) 1
-        else go rest (pos + c.utf8Size) line (col + 1)
-  go source.toList 0 1 1
+      | [] => (line, column)
+      | char :: rest =>
+        if char == '\n' then scan rest (pos + char.utf8Size) (line + 1) 1
+        else scan rest (pos + char.utf8Size) line (column + 1)
+  scan source.toList 0 1 1
 
 /-- Get source line text, line number, and column from source string and byte offset.
     Returns (lineNumber, column, lineText). -/
@@ -37,11 +39,11 @@ def sourceContext (source : String) (bytePos : Nat) : Nat × Nat × String :=
       |
     ``` -/
 def codeFrame (lineNumber : Nat) (lineText : String) (column : Nat) : String :=
-  let lineNumStr := toString lineNumber
-  let gutterWidth := lineNumStr.length
+  let lineNumberText := toString lineNumber
+  let gutterWidth := lineNumberText.length
   let gutter := String.ofList (List.replicate gutterWidth ' ')
   let padding := String.ofList (List.replicate column ' ')
-  s!"{gutter} |\n{lineNumStr} | {lineText}\n{gutter} |{padding}^"
+  s!"{gutter} |\n{lineNumberText} | {lineText}\n{gutter} |{padding}^"
 
 /-- Format an ErrorInfo for human-readable display (stderr).
 
@@ -110,8 +112,8 @@ def extractJsonOffset (errorMessage : String) : Option (Nat × String) :=
     match rest.splitOn ":" with
     | [] => none
     | [_] => none
-    | offsetStr :: messageParts =>
-      match offsetStr.trimAscii.toString.toNat? with
+    | offsetString :: messageParts =>
+      match offsetString.trimAscii.toString.toNat? with
       | some offset =>
         let message := (String.intercalate ":" messageParts).trimAscii.toString
         some (offset, message)
