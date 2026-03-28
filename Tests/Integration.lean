@@ -1,5 +1,7 @@
 import Qed
 
+set_option autoImplicit false
+
 open Qed
 
 def testTomlToJsonConvertsValidToml : IO Bool := do
@@ -11,8 +13,8 @@ def testTomlToJsonConvertsValidToml : IO Bool := do
   match result with
   | .ok json =>
     return json.contains "hello" && json.contains "command"
-  | .error e =>
-    IO.eprintln s!"  toml error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  toml error: {errorInfo}"
     return false
 
 def testTomlToJsonErrorsOnInvalidToml : IO Bool := do
@@ -32,8 +34,8 @@ def testLoadSpecParsesJsonFile : IO Bool := do
   match result with
   | .ok pinnedSpec =>
     return pinnedSpec.spec.name.contains "build" && pinnedSpec.spec.mode == SpecMode.verify
-  | .error e =>
-    IO.eprintln s!"  load error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  load error: {errorInfo}"
     return false
 
 def testLoadSpecParsesTomlFile : IO Bool := do
@@ -45,8 +47,8 @@ def testLoadSpecParsesTomlFile : IO Bool := do
     return pinnedSpec.spec.name == "state-machine-correctness" &&
       pinnedSpec.spec.mode == SpecMode.verify &&
       pinnedSpec.spec.criteria.length > 0
-  | .error e =>
-    IO.eprintln s!"  load error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  load error: {errorInfo}"
     return false
 
 def testListAllSpecsReturnsBothFormats : IO Bool := do
@@ -58,8 +60,8 @@ def testListAllSpecsReturnsBothFormats : IO Bool := do
     let hasJson := paths.any fun p => p.toString.endsWith ".spec.json"
     let hasToml := paths.any fun p => p.toString.endsWith ".spec.toml"
     return hasJson && hasToml && paths.length >= 3
-  | .error e =>
-    IO.eprintln s!"  list error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  list error: {errorInfo}"
     return false
 
 def testTomlMultiLineStringPreservesContent : IO Bool := do
@@ -67,13 +69,13 @@ def testTomlMultiLineStringPreservesContent : IO Bool := do
   let toml := "name = \"review\"\n\n[[criteria]]\ndescription = \"code review\"\n\n[criteria.verify]\ntype = \"agent\"\nprompt = \"\"\"\nReview the code.\nCheck for:\n1. Correctness\n2. Style\n\"\"\"\n"
   -- Act
   match TomlConverter.tomlToJson toml with
-  | .error e =>
-    IO.eprintln s!"  toml error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  toml error: {errorInfo}"
     return false
   | .ok json =>
     match Parser.parseJson json with
-    | .error e =>
-      IO.eprintln s!"  parse error: {e}"
+    | .error errorInfo =>
+      IO.eprintln s!"  parse error: {errorInfo}"
       return false
     | .ok spec =>
       -- Assert

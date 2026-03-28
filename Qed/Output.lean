@@ -1,6 +1,8 @@
 import Lean.Data.Json
 import Qed.Types
 
+set_option autoImplicit false
+
 namespace Qed.Output
 
 open Lean Qed
@@ -66,12 +68,12 @@ def getTerminalWidth : IO Nat := do
     }
     let parts := result.stdout.trimAscii.toString.splitOn " "
     match parts with
-    | [_, cols] => pure (cols.toNat?.getD 0)
+    | [_, columns] => pure (columns.toNat?.getD 0)
     | _ => pure 0
   catch _ => pure 0
   if width > 0 then return width
   match ← IO.getEnv "COLUMNS" with
-  | some val => return val.toNat?.getD 80
+  | some value => return value.toNat?.getD 80
   | none => return 80
 
 /-- Print a line with word-wrapping. The first line starts with `firstPrefix`,
@@ -137,5 +139,34 @@ def workerResultsToJson (specName : String) (stateDescription : String)
     ("passed", Json.bool (allPassed results)),
     ("criteria", Json.arr criteriaJson.toArray)
   ]
+
+/-- Visible width of the status prefix `[STATUS] ` for a given result.
+    Accounts for varying indicator lengths (PASS=4, NEEDS-HUMAN=11, etc.). -/
+private def statusPrefixWidth (result : VerificationResult) : Nat :=
+  1 + (statusIndicator result).length + 2  -- `[` + indicator + `]` + space
+
+/-- Print a single verification result line with word wrapping.
+    `baseIndent` is the leading space count (2 for top-level, 4 for nested). -/
+def printResultLine (baseIndent : Nat) (description : String)
+    (result : VerificationResult) (termWidth : Nat) : IO Unit := do
+  let indent := String.ofList (List.replicate baseIndent ' ')
+  let continuationIndent := baseIndent + statusPrefixWidth result
+  let linePrefix := s!"{indent}[{colorStatusIndicator result}] "
+  let text := match result with
+    | .skipped reason => s!"{description} {ansiDim}— {reason}{ansiReset}"
+    | _ => description
+  printWrapped linePrefix continuationIndent text termWidth
+
+/-- Print all verification results, returning (failedCount, skippedCount). -/
+def printResultLines (baseIndent : Nat)
+    (results : List (String × VerificationResult))
+    (termWidth : Nat) : IO (Nat × Nat) := do
+  let mut failedCount : Nat := 0
+  let mut skippedCount : Nat := 0
+  for (description, result) in results do
+    printResultLine baseIndent description result termWidth
+    if result.isFailed then failedCount := failedCount + 1
+    if result.isSkipped then skippedCount := skippedCount + 1
+  return (failedCount, skippedCount)
 
 end Qed.Output

@@ -1,5 +1,7 @@
 import Qed.Types
 
+set_option autoImplicit false
+
 namespace Qed.Integrity
 
 open Qed
@@ -19,13 +21,13 @@ private def tryHashCmd (cmd : String) (args : Array String) : IO (Option String)
 /-- Compute SHA-256 hash of a file's raw bytes.
     Tries `shasum -a 256` (macOS/BSD), falls back to `sha256sum` (GNU coreutils). -/
 def hashFile (path : System.FilePath) : IO String := do
-  let pathStr := path.toString
-  match ← tryHashCmd "shasum" #["-a", "256", pathStr] with
+  let pathString := path.toString
+  match ← tryHashCmd "shasum" #["-a", "256", pathString] with
   | some hash => return hash
   | none =>
-    match ← tryHashCmd "sha256sum" #[pathStr] with
+    match ← tryHashCmd "sha256sum" #[pathString] with
     | some hash => return hash
-    | none => throw (IO.userError s!"cannot compute SHA-256 hash: neither shasum nor sha256sum available")
+    | none => throw (IO.userError "cannot compute SHA-256 hash: neither shasum nor sha256sum found (install coreutils)")
 
 /-- Compute SHA-256 hash of in-memory contents.
     Writes to a temp file to avoid TOCTOU races (hash the bytes we actually parsed). -/
@@ -58,17 +60,17 @@ def checkIntegrity (path : System.FilePath) (expectedHash : String) : IO (Except
     Returns .ok if the file matches its committed version,
     .error with a description if it has uncommitted changes. -/
 def checkGitClean (path : System.FilePath) : IO (Except String Unit) := do
-  let pathStr := path.toString
+  let pathString := path.toString
   try
     let result ← IO.Process.output {
       cmd := "git"
-      args := #["diff", "HEAD", "--exit-code", pathStr]
+      args := #["diff", "HEAD", "--exit-code", pathString]
     }
     if result.exitCode == 0 then
       -- Also check if the file is tracked
       let tracked ← IO.Process.output {
         cmd := "git"
-        args := #["ls-files", "--error-unmatch", pathStr]
+        args := #["ls-files", "--error-unmatch", pathString]
       }
       if tracked.exitCode == 0 then
         return .ok ()

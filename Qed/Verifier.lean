@@ -4,6 +4,8 @@ import Qed.Agent
 import Qed.Output
 import Lean.Data.Json
 
+set_option autoImplicit false
+
 namespace Qed.Verifier
 
 open Qed
@@ -22,9 +24,9 @@ private def truncate (s : String) (maxLength : Nat) : String :=
     Captures stdout and stderr, truncates to last `maxOutputLength` chars.
     Enforces the configured timeout — kills the process if it exceeds it. -/
 private def formatOutput (stdout stderr : String) : String :=
-  let stdoutStr := stdout.trimAscii.toString
-  let stderrStr := stderr.trimAscii.toString
-  let combined := stdoutStr ++ (if stderrStr.isEmpty then "" else "\nSTDERR:\n" ++ stderrStr)
+  let stdoutString := stdout.trimAscii.toString
+  let stderrString := stderr.trimAscii.toString
+  let combined := stdoutString ++ (if stderrString.isEmpty then "" else "\nSTDERR:\n" ++ stderrString)
   truncate combined maxOutputLength
 
 private def verifyCommand (command : String) (timeout : Nat) : IO VerificationResult := do
@@ -67,7 +69,7 @@ def parseAgentVerdict (response : String) : Except String Bool := do
     | some line =>
       let trimmed := line.trimAscii.toString
       match Lean.Json.parse trimmed with
-      | .error e => .error s!"found verdict-like line but failed to parse: {e}"
+      | .error parseError => .error s!"found verdict-like line but failed to parse: {parseError}"
       | .ok json =>
         match json.getObjValAs? Bool "pass" with
         | .ok passed => .ok passed
@@ -77,9 +79,9 @@ def parseAgentVerdict (response : String) : Except String Bool := do
     let lastPart := parts.getLastD ""
     -- Find the closing ``` (safe: splitOn always returns ≥ 1 element)
     let beforeClose := (lastPart.splitOn "```").headD ""
-    let jsonStr := beforeClose.trimAscii.toString
-    match Lean.Json.parse jsonStr with
-    | .error e => .error s!"invalid JSON in verdict block: {e}"
+    let jsonString := beforeClose.trimAscii.toString
+    match Lean.Json.parse jsonString with
+    | .error parseError => .error s!"invalid JSON in verdict block: {parseError}"
     | .ok json =>
       match json.getObjValAs? Bool "pass" with
       | .ok passed => .ok passed
@@ -100,16 +102,16 @@ private def verifyAgent (prompt : String) (model : String) (command : Option Str
     return .fail s!"agent timed out after {timeout}s\n{formatOutput stdout stderr}"
   | .completed exitCode stdout stderr =>
     if exitCode != 0 then
-      let stderrStr := stderr.trimAscii.toString
-      if Agent.isUnavailable exitCode stderrStr then
-        return .fail s!"agent unavailable: {truncate stderrStr maxOutputLength}"
+      let stderrString := stderr.trimAscii.toString
+      if Agent.isUnavailable exitCode stderrString then
+        return .fail s!"agent unavailable: {truncate stderrString maxOutputLength}"
       else
-        return .fail s!"agent exited with code {exitCode}\n{truncate stderrStr maxOutputLength}"
+        return .fail s!"agent exited with code {exitCode}\n{truncate stderrString maxOutputLength}"
     let response := stdout.trimAscii.toString
     match parseAgentVerdict response with
     | .ok true => return .pass (truncate response maxOutputLength)
     | .ok false => return .fail (truncate response maxOutputLength)
-    | .error e => return .fail s!"could not parse agent verdict: {e}\n{truncate response maxOutputLength}"
+    | .error verdictError => return .fail s!"could not parse agent verdict: {verdictError}\n{truncate response maxOutputLength}"
 
 /-- Prompt a human to verify a criterion interactively. Prints the instruction
     to stderr and reads a y/n response from stdin. Retries on invalid input.
@@ -215,11 +217,11 @@ private def verifyProof (prover : String) (target : String) : IO VerificationRes
       return .fail s!"proof build timed out after {defaultCommandTimeout}s\n{formatOutput stdout stderr}"
     | .completed exitCode stdout stderr =>
       if exitCode != 0 then
-        return .fail s!"proof build failed\n{formatOutput stdout stderr}"
+        return .fail s!"proof build failed (exit code {exitCode})\n{formatOutput stdout stderr}"
       -- Lean emits "declaration uses 'sorry'" warnings for any sorry in the
       -- dependency graph. Catch transitive sorry even when the build succeeds.
-      let stderrStr := stderr.trimAscii.toString
-      if (stderrStr.splitOn "uses 'sorry'").length > 1 then
+      let stderrString := stderr.trimAscii.toString
+      if (stderrString.splitOn "uses 'sorry'").length > 1 then
         return .fail s!"sorry detected in dependency graph\n{formatOutput stdout stderr}"
       return .pass s!"theorem {target} verified (module {module} builds, no sorry)"
 

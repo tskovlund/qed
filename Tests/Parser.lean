@@ -1,5 +1,7 @@
 import Qed
 
+set_option autoImplicit false
+
 open Qed
 
 def testParseJsonReturnsVerifyModeWhenNoWorker : IO Bool := do
@@ -13,8 +15,8 @@ def testParseJsonReturnsVerifyModeWhenNoWorker : IO Bool := do
     return spec.name == "test" &&
       spec.mode == SpecMode.verify &&
       spec.criteria.length == 1
-  | .error e =>
-    IO.eprintln s!"  parse error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  parse error: {errorInfo}"
     return false
 
 def testParseJsonReturnsWorkerLoopWithDefaults : IO Bool := do
@@ -32,8 +34,8 @@ def testParseJsonReturnsWorkerLoopWithDefaults : IO Bool := do
           config.maxIterations == 10 &&
           config.stuckThreshold == 3
         | .verify => false)
-  | .error e =>
-    IO.eprintln s!"  parse error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  parse error: {errorInfo}"
     return false
 
 def testParseJsonAppliesCustomLoopConfig : IO Bool := do
@@ -52,8 +54,8 @@ def testParseJsonAppliesCustomLoopConfig : IO Bool := do
         config.maxIterations == 5 &&
         config.stuckThreshold == 2
       | .verify => false
-  | .error e =>
-    IO.eprintln s!"  parse error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  parse error: {errorInfo}"
     return false
 
 def testParseJsonDefaultsAgentReviewModelToSonnet : IO Bool := do
@@ -129,8 +131,8 @@ def testParseJsonPreservesMultipleCriteria : IO Bool := do
       | .agent _ _ _ _ => "agent"
       | _ => "other"
     return types == ["command", "proof", "agent"]
-  | .error e =>
-    IO.eprintln s!"  parse error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  parse error: {errorInfo}"
     return false
 
 def testParseJsonAllowsEmptyCriteriaInWorkerLoop : IO Bool := do
@@ -145,8 +147,8 @@ def testParseJsonAllowsEmptyCriteriaInWorkerLoop : IO Bool := do
       (match spec.mode with
         | .workerLoop _ _ => true
         | .verify => false)
-  | .error e =>
-    IO.eprintln s!"  parse error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  parse error: {errorInfo}"
     return false
 
 def testParseJsonWorkerWithPrompt : IO Bool := do
@@ -162,8 +164,8 @@ def testParseJsonWorkerWithPrompt : IO Bool := do
         worker.command == some "claude -p" &&
         worker.prompt == some "Implement feature X"
       | .verify => false
-  | .error e =>
-    IO.eprintln s!"  parse error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  parse error: {errorInfo}"
     return false
 
 def testParseJsonWorkerWithoutPrompt : IO Bool := do
@@ -179,8 +181,8 @@ def testParseJsonWorkerWithoutPrompt : IO Bool := do
         worker.command == some "./run.sh" &&
         worker.prompt == none
       | .verify => false
-  | .error e =>
-    IO.eprintln s!"  parse error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  parse error: {errorInfo}"
     return false
 
 def testParseJsonErrorsOnMissingName : IO Bool := do
@@ -191,7 +193,10 @@ def testParseJsonErrorsOnMissingName : IO Bool := do
   -- Assert
   match result with
   | .ok _ => return false
-  | .error e => return e.contains "name"
+  | .error errorInfo =>
+    -- Parser-level errors carry only a message — file/line are added by SpecLoader
+    return errorInfo.message.contains "name" &&
+      errorInfo.file.isNone && errorInfo.line.isNone
 
 def testParseJsonErrorsOnMissingCriteria : IO Bool := do
   -- Arrange
@@ -201,7 +206,9 @@ def testParseJsonErrorsOnMissingCriteria : IO Bool := do
   -- Assert
   match result with
   | .ok _ => return false
-  | .error e => return e.contains "criteria"
+  | .error errorInfo =>
+    return errorInfo.message.contains "criteria" &&
+      errorInfo.file.isNone && errorInfo.hint.isNone
 
 def testParseJsonErrorsOnEmptyCriteriaInVerifyMode : IO Bool := do
   -- Arrange
@@ -211,7 +218,7 @@ def testParseJsonErrorsOnEmptyCriteriaInVerifyMode : IO Bool := do
   -- Assert
   match result with
   | .ok _ => return false
-  | .error e => return e.contains "at least one"
+  | .error errorInfo => return errorInfo.message.contains "at least one"
 
 def testParseJsonErrorsOnUnknownVerifyType : IO Bool := do
   -- Arrange
@@ -221,7 +228,7 @@ def testParseJsonErrorsOnUnknownVerifyType : IO Bool := do
   -- Assert
   match result with
   | .ok _ => return false
-  | .error e => return e.contains "magic"
+  | .error errorInfo => return errorInfo.message.contains "magic"
 
 def testParseJsonErrorsOnMissingVerifyField : IO Bool := do
   -- Arrange
@@ -231,7 +238,7 @@ def testParseJsonErrorsOnMissingVerifyField : IO Bool := do
   -- Assert
   match result with
   | .ok _ => return false
-  | .error e => return e.contains "verify"
+  | .error errorInfo => return errorInfo.message.contains "verify"
 
 def testParseJsonErrorsOnMissingCommandRun : IO Bool := do
   -- Arrange
@@ -241,7 +248,7 @@ def testParseJsonErrorsOnMissingCommandRun : IO Bool := do
   -- Assert
   match result with
   | .ok _ => return false
-  | .error e => return e.contains "run"
+  | .error errorInfo => return errorInfo.message.contains "run"
 
 def testParseJsonErrorsOnInvalidSchedule : IO Bool := do
   -- Arrange
@@ -251,7 +258,7 @@ def testParseJsonErrorsOnInvalidSchedule : IO Bool := do
   -- Assert
   match result with
   | .ok _ => return false
-  | .error e => return e.contains "nightly"
+  | .error errorInfo => return errorInfo.message.contains "nightly"
 
 def testParseJsonRejectsMaxIterationsWithoutWorker : IO Bool := do
   -- Arrange
@@ -261,7 +268,7 @@ def testParseJsonRejectsMaxIterationsWithoutWorker : IO Bool := do
   -- Assert
   match result with
   | .ok _ => return false
-  | .error e => return e.contains "maxIterations" && e.contains "worker"
+  | .error errorInfo => return errorInfo.message.contains "maxIterations" && errorInfo.message.contains "worker"
 
 def testParseJsonRejectsStuckThresholdWithoutWorker : IO Bool := do
   -- Arrange
@@ -271,7 +278,7 @@ def testParseJsonRejectsStuckThresholdWithoutWorker : IO Bool := do
   -- Assert
   match result with
   | .ok _ => return false
-  | .error e => return e.contains "stuckThreshold" && e.contains "worker"
+  | .error errorInfo => return errorInfo.message.contains "stuckThreshold" && errorInfo.message.contains "worker"
 
 def testParseJsonWorkerWithPromptNoCommand : IO Bool := do
   -- Arrange: agent worker with prompt, no command (defaults to Claude CLI)
@@ -287,8 +294,8 @@ def testParseJsonWorkerWithPromptNoCommand : IO Bool := do
         worker.prompt == some "Do the thing" &&
         worker.model == Qed.defaultAgentModel
       | .verify => false
-  | .error e =>
-    IO.eprintln s!"  parse error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  parse error: {errorInfo}"
     return false
 
 def testParseJsonWorkerWithCustomModel : IO Bool := do
@@ -304,8 +311,8 @@ def testParseJsonWorkerWithCustomModel : IO Bool := do
         worker.model == "claude-sonnet-4-6" &&
         worker.prompt == some "Do the thing"
       | .verify => false
-  | .error e =>
-    IO.eprintln s!"  parse error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  parse error: {errorInfo}"
     return false
 
 def testParseJsonWorkerDefaultsModelToDefault : IO Bool := do
@@ -319,8 +326,8 @@ def testParseJsonWorkerDefaultsModelToDefault : IO Bool := do
     return match spec.mode with
       | .workerLoop worker _ => worker.model == Qed.defaultAgentModel
       | .verify => false
-  | .error e =>
-    IO.eprintln s!"  parse error: {e}"
+  | .error errorInfo =>
+    IO.eprintln s!"  parse error: {errorInfo}"
     return false
 
 def testParseJsonRejectsWorkerWithoutCommandOrPrompt : IO Bool := do
@@ -331,7 +338,7 @@ def testParseJsonRejectsWorkerWithoutCommandOrPrompt : IO Bool := do
   -- Assert
   match result with
   | .ok _ => return false
-  | .error e => return e.contains "command" && e.contains "prompt"
+  | .error errorInfo => return errorInfo.message.contains "command" && errorInfo.message.contains "prompt"
 
 def parserTests : List (String × IO Bool) := [
   ("testParseJsonReturnsVerifyModeWhenNoWorker", testParseJsonReturnsVerifyModeWhenNoWorker),

@@ -1,3 +1,5 @@
+set_option autoImplicit false
+
 namespace Qed.Shell
 
 /-- Result of a command execution with timeout enforcement.
@@ -25,9 +27,9 @@ def shellQuote (s : String) : String :=
 def buildShellCommand (envVars : List (String × String)) (command : String) : String :=
   let exports := envVars.map fun (name, value) =>
     s!"export {name}={shellQuote value}"
-  let exportStr := String.intercalate "; " exports
+  let exportString := String.intercalate "; " exports
   if exports.isEmpty then command
-  else s!"{exportStr}; {command}"
+  else s!"{exportString}; {command}"
 
 /-- Run a shell command and return (exitCode, stdout, stderr).
     Catches non-UTF-8 output (Lean's IO.Process.output throws when the process

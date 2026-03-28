@@ -1,13 +1,23 @@
 import Qed
 
-/-- Path to the built qed binary. -/
-private def qedBinary : String := ".lake/build/bin/qed"
+set_option autoImplicit false
 
-/-- Run the qed binary with the given arguments, return (exitCode, stdout, stderr). -/
-private def runQed (args : List String) : IO (UInt32 × String × String) := do
+/-- Relative path to the built qed binary. -/
+private def qedBinaryRelative : String := ".lake/build/bin/qed"
+
+/-- Resolve the qed binary to an absolute path so it works with any cwd. -/
+private def resolveQedBinary : IO String := do
+  let currentDirectory ← IO.currentDir
+  return (currentDirectory / qedBinaryRelative).toString
+
+/-- Run the qed binary with the given arguments, return (exitCode, stdout, stderr).
+    Optionally set the working directory to avoid writing files in the repo root. -/
+private def runQed (args : List String) (workDir : Option String := none) : IO (UInt32 × String × String) := do
+  let binary ← resolveQedBinary
   let result ← IO.Process.output {
-    cmd := qedBinary
+    cmd := binary
     args := args.toArray
+    cwd := workDir
   }
   return (result.exitCode, result.stdout, result.stderr)
 
@@ -232,10 +242,9 @@ def testLockGeneratesLockFile : IO Bool := do
     "{\"name\": \"lock-test\", \"criteria\": [{\"description\": \"locked\", \"verify\": {\"type\": \"command\", \"run\": \"true\", \"lock\": [\"*.lean\"]}}]}"
   -- Create a file matching the glob
   IO.FS.writeFile (dir / "test.lean") "-- test\n"
-  -- Act: pass directory as argument (avoids relative path issues with cwd)
-  let (exitCode, stdout, _) ← runQed ["lock", dir.toString]
-  -- Assert: lock file is written inside the current working directory, not the target dir
-  -- qed lock scans the target dir for specs but writes qed.lock in cwd
+  -- Act: run with cwd set to temp dir so qed.lock is written there, not in the repo root
+  let (exitCode, stdout, _) ← runQed ["lock"] (some dir.toString)
+  -- Assert
   return exitCode == 0 && stdout.contains "Locked"
 
 def testLockJsonOutputReturnsValidJson : IO Bool := do
@@ -243,8 +252,8 @@ def testLockJsonOutputReturnsValidJson : IO Bool := do
   let dir ← freshTempDir "lock-json"
   IO.FS.writeFile (dir / "test.spec.json")
     "{\"name\": \"lock-json\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
-  -- Act
-  let (exitCode, stdout, _) ← runQed ["lock", "--json", dir.toString]
+  -- Act: run with cwd set to temp dir
+  let (exitCode, stdout, _) ← runQed ["lock", "--json"] (some dir.toString)
   -- Assert
   match Lean.Json.parse stdout with
   | .error _ => return false

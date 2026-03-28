@@ -1,5 +1,7 @@
 import Qed
 
+set_option autoImplicit false
+
 open Qed
 
 def testIsValidGlobPatternAcceptsSimplePatterns : IO Bool := do
@@ -131,7 +133,7 @@ def testParseLockFileRejectsInvalidVersion : IO Bool := do
   -- Assert
   match result with
   | .ok _ => return false
-  | .error e => return e.contains "version"
+  | .error errorInfo => return errorInfo.message.contains "version"
 
 def testParseLockFileRejectsInvalidJson : IO Bool := do
   -- Arrange

@@ -13,6 +13,7 @@ import Qed.SpecLoader
 import Qed.Verifier
 import Qed.WorkerLoop
 import Qed.Output
+import Qed.Error
 import Qed.Proofs.FinalStates
 import Qed.Proofs.Monotonic
 import Qed.Proofs.NoSkip

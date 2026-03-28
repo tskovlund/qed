@@ -1,6 +1,8 @@
 import DocGen.Schema
 import DocGen.Markdown
 
+set_option autoImplicit false
+
 /-! # CLI entry point for doc generation
 
 Usage:

@@ -1,5 +1,7 @@
 import Qed.Types
 
+set_option autoImplicit false
+
 open Qed
 
 /-! # JSON Schema generation from Lean types
@@ -96,7 +98,7 @@ partial def flatRender : JsonValue → String
 
 private def printWidth : Nat := 80
 
-private def indentString (level : Nat) : String :=
+private def indentPrefixing (level : Nat) : String :=
   String.ofList (List.replicate (level * 2) ' ')
 
 /-- Width-aware renderer matching prettier's JSON formatting.
@@ -107,19 +109,19 @@ partial def render (value : JsonValue) (indent : Nat := 0) (column : Nat := 0) :
   if column + flat.length ≤ printWidth then flat
   else
     let childIndent := indent + 1
-    let childIndentStr := indentString childIndent
-    let indentStr := indentString indent
+    let childIndentPrefix := indentPrefixing childIndent
+    let indentPrefix := indentPrefixing indent
     match value with
     | .arr items =>
       let rendered := items.map fun item =>
-        childIndentStr ++ render item childIndent (childIndent * 2)
-      "[\n" ++ ",\n".intercalate rendered ++ "\n" ++ indentStr ++ "]"
+        childIndentPrefix ++ render item childIndent (childIndent * 2)
+      "[\n" ++ ",\n".intercalate rendered ++ "\n" ++ indentPrefix ++ "]"
     | .obj fields =>
       let rendered := fields.map fun (k, v) =>
         let keyPart := "\"" ++ escapeJsonString k ++ "\": "
         let valueColumn := childIndent * 2 + keyPart.length
-        childIndentStr ++ keyPart ++ render v childIndent valueColumn
-      "{\n" ++ ",\n".intercalate rendered ++ "\n" ++ indentStr ++ "}"
+        childIndentPrefix ++ keyPart ++ render v childIndent valueColumn
+      "{\n" ++ ",\n".intercalate rendered ++ "\n" ++ indentPrefix ++ "}"
     | _ => flat
 
 end JsonValue

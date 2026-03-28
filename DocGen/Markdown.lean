@@ -9,6 +9,8 @@ Qed.Types — it only knows about JSON Schema structure.
 The pipeline: Lean types → JSON Schema → Markdown
 -/
 
+set_option autoImplicit false
+
 namespace DocGen.Markdown
 
 open Lean

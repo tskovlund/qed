@@ -7,6 +7,8 @@ import Tests.ContractLock
 import Tests.Ignore
 import Tests.Cli
 
+set_option autoImplicit false
+
 /-- Run a named test, print result, return whether it passed. -/
 def runTest (name : String) (test : IO Bool) : IO Bool := do
   let passed ← test

@@ -1,12 +1,14 @@
 import Qed.TomlParser
 
+set_option autoImplicit false
+
 open Qed.TomlParser
 
 /-- Helper: parse TOML and return JSON string or panic. -/
 private def parseOrFail (toml : String) : IO String := do
   match tomlToJson toml with
   | .ok json => return json
-  | .error e => throw (IO.userError s!"unexpected parse error: {e}")
+  | .error errorInfo => throw (IO.userError s!"unexpected parse error: {errorInfo}")
 
 /-- Helper: parse TOML and expect failure. -/
 private def expectParseError (toml : String) : IO Bool := do

@@ -4,6 +4,8 @@ import Qed.Verifier
 import Qed.Shell
 import Lean.Data.Json
 
+set_option autoImplicit false
+
 namespace Qed.ContractLock
 
 open Qed Lean
@@ -53,9 +55,9 @@ def isValidGlobPattern (pattern : String) : Bool :=
 
 /-- Expand a glob pattern to a list of file paths.
     Uses bash globstar for `**` support. Returns empty list for no matches. -/
-def expandGlob (pattern : String) : IO (Except String (List String)) := do
+def expandGlob (pattern : String) : IO (Except ErrorInfo (List String)) := do
   if !isValidGlobPattern pattern then
-    return .error s!"invalid glob pattern: '{pattern}' (contains unsafe characters)"
+    return .error { message := s!"invalid glob pattern: '{pattern}' (contains unsafe characters)" }
   -- Use bash with globstar and nullglob for reliable ** expansion.
   -- Pattern is validated above to contain only glob-safe characters.
   -- Note: the pattern sits inside single quotes in the bash -c argument,
@@ -73,11 +75,11 @@ def expandGlob (pattern : String) : IO (Except String (List String)) := do
     return .ok []
 
 /-- Expand multiple glob patterns, deduplicating results. -/
-def expandGlobs (patterns : List String) : IO (Except String (List String)) := do
+def expandGlobs (patterns : List String) : IO (Except ErrorInfo (List String)) := do
   let mut allFiles : List String := []
   for pattern in patterns do
     match ← expandGlob pattern with
-    | .error e => return .error e
+    | .error errorInfo => return .error errorInfo
     | .ok files =>
       for file in files do
         if !allFiles.contains file then
@@ -160,16 +162,16 @@ def extractTheoremStatement (source : String) (qualifiedName : String) : Option 
     collectLines remaining ""
 
 /-- Extract a theorem statement from a source file and compute its hash. -/
-def hashTheoremStatement (target : String) : IO (Except String LockedArtifact) := do
+def hashTheoremStatement (target : String) : IO (Except ErrorInfo LockedArtifact) := do
   match Verifier.targetToModule target with
-  | none => return .error s!"invalid target: '{target}' (expected fully qualified name)"
+  | none => return .error { message := s!"invalid target: '{target}' (expected fully qualified name)" }
   | some module =>
     let sourcePath := Verifier.moduleToPath module
     if !(← System.FilePath.pathExists sourcePath) then
-      return .error s!"source file not found: {sourcePath}"
+      return .error { message := s!"source file not found: {sourcePath}" }
     let source ← IO.FS.readFile sourcePath
     match extractTheoremStatement source target with
-    | none => return .error s!"theorem '{target}' not found in {sourcePath}"
+    | none => return .error { message := s!"theorem '{target}' not found in {sourcePath}" }
     | some statement =>
       let hash ← Integrity.hashContents statement
       -- Use a synthetic path that identifies this as a theorem statement
@@ -180,17 +182,17 @@ def hashTheoremStatement (target : String) : IO (Except String LockedArtifact) :
 -- ═══════════════════════════════════════════════════════════════════
 
 /-- Generate lock entries for a single criterion. -/
-def lockCriterion (criterion : AcceptanceCriterion) : IO (Except String CriterionLock) := do
+def lockCriterion (criterion : AcceptanceCriterion) : IO (Except ErrorInfo CriterionLock) := do
   match criterion.verify with
   | .command _ _ lock | .property _ _ lock =>
     match lock with
     | none => return .ok { description := criterion.description, artifacts := [] }
     | some patterns =>
       match ← expandGlobs patterns with
-      | .error e => return .error e
+      | .error errorInfo => return .error errorInfo
       | .ok files =>
         if files.isEmpty then
-          return .error s!"lock patterns matched no files for criterion '{criterion.description}' (check patterns or use --no-lock to skip)"
+          return .error { message := s!"lock patterns matched no files for criterion '{criterion.description}'", hint := some "check patterns or use --no-lock to skip" }
         let mut artifacts : List LockedArtifact := []
         for file in files do
           let hash ← Integrity.hashFile file
@@ -198,7 +200,7 @@ def lockCriterion (criterion : AcceptanceCriterion) : IO (Except String Criterio
         return .ok { description := criterion.description, artifacts }
   | .proof _ target =>
     match ← hashTheoremStatement target with
-    | .error e => return .error e
+    | .error errorInfo => return .error errorInfo
     | .ok artifact =>
       return .ok { description := criterion.description, artifacts := [artifact] }
   | .agent _ _ _ _ | .human _ =>
@@ -206,22 +208,22 @@ def lockCriterion (criterion : AcceptanceCriterion) : IO (Except String Criterio
     return .ok { description := criterion.description, artifacts := [] }
 
 /-- Generate lock entries for a spec. Returns only criteria that have artifacts. -/
-def lockSpec (specPath : String) (spec : Spec) : IO (Except String SpecLock) := do
+def lockSpec (specPath : String) (spec : Spec) : IO (Except ErrorInfo SpecLock) := do
   let mut criteriaLocks : List CriterionLock := []
   for criterion in spec.criteria do
     match ← lockCriterion criterion with
-    | .error e => return .error s!"spec '{specPath}': {e}"
+    | .error errorInfo => return .error { errorInfo with message := s!"spec '{specPath}': {errorInfo.message}" }
     | .ok lock =>
       if !lock.artifacts.isEmpty then
         criteriaLocks := criteriaLocks ++ [lock]
   return .ok { specPath, criteria := criteriaLocks }
 
 /-- Generate a complete lock file from a list of (path, spec) pairs. -/
-def generateLockFile (specs : List (String × Spec)) : IO (Except String LockFile) := do
+def generateLockFile (specs : List (String × Spec)) : IO (Except ErrorInfo LockFile) := do
   let mut specLocks : List SpecLock := []
   for (path, spec) in specs do
     match ← lockSpec path spec with
-    | .error e => return .error e
+    | .error errorInfo => return .error errorInfo
     | .ok lock =>
       if !lock.criteria.isEmpty then
         specLocks := specLocks ++ [lock]
@@ -237,7 +239,7 @@ def verifyArtifact (artifact : LockedArtifact) : IO (Option String) := do
     -- Theorem statement: re-extract and re-hash
     let target := (artifact.path.drop "theorem:".length).toString
     match ← hashTheoremStatement target with
-    | .error e => return some s!"cannot verify theorem lock: {e}"
+    | .error errorInfo => return some s!"cannot verify theorem lock: {errorInfo.message}"
     | .ok current =>
       if current.hash != artifact.hash then
         return some s!"theorem statement changed: {target}"
@@ -313,48 +315,48 @@ def serializeLockFile (lockFile : LockFile) : String :=
 -- ═══════════════════════════════════════════════════════════════════
 
 /-- Parse a LockedArtifact from JSON. -/
-def parseArtifact (json : Json) : Except String LockedArtifact := do
+def parseArtifact (json : Json) : Except ErrorInfo LockedArtifact := do
   let path ← match json.getObjValAs? String "path" with
-    | .ok v => .ok v
-    | .error _ => .error "artifact missing 'path'"
+    | .ok value => .ok value
+    | .error _ => .error { message := "artifact missing 'path'" }
   let hash ← match json.getObjValAs? String "hash" with
-    | .ok v => .ok v
-    | .error _ => .error "artifact missing 'hash'"
+    | .ok value => .ok value
+    | .error _ => .error { message := "artifact missing 'hash'" }
   .ok { path, hash }
 
 /-- Parse a CriterionLock from JSON. -/
-def parseCriterionLock (json : Json) : Except String CriterionLock := do
+def parseCriterionLock (json : Json) : Except ErrorInfo CriterionLock := do
   let description ← match json.getObjValAs? String "description" with
-    | .ok v => .ok v
-    | .error _ => .error "criterion lock missing 'description'"
+    | .ok value => .ok value
+    | .error _ => .error { message := "criterion lock missing 'description'" }
   let artifactsArr ← match json.getObjVal? "artifacts" with
     | .ok (Json.arr items) => .ok items
-    | _ => .error "criterion lock missing 'artifacts' array"
+    | _ => .error { message := "criterion lock missing 'artifacts' array" }
   let artifacts ← artifactsArr.toList.mapM parseArtifact
   .ok { description, artifacts }
 
 /-- Parse a SpecLock from JSON. -/
-def parseSpecLock (json : Json) : Except String SpecLock := do
+def parseSpecLock (json : Json) : Except ErrorInfo SpecLock := do
   let specPath ← match json.getObjValAs? String "specPath" with
-    | .ok v => .ok v
-    | .error _ => .error "spec lock missing 'specPath'"
+    | .ok value => .ok value
+    | .error _ => .error { message := "spec lock missing 'specPath'" }
   let criteriaArr ← match json.getObjVal? "criteria" with
     | .ok (Json.arr items) => .ok items
-    | _ => .error "spec lock missing 'criteria' array"
+    | _ => .error { message := "spec lock missing 'criteria' array" }
   let criteria ← criteriaArr.toList.mapM parseCriterionLock
   .ok { specPath, criteria }
 
 /-- Parse a LockFile from a JSON string. -/
-def parseLockFile (input : String) : Except String LockFile := do
-  let json ← Json.parse input
+def parseLockFile (input : String) : Except ErrorInfo LockFile := do
+  let json ← (Json.parse input).mapError fun error => ({ message := error } : ErrorInfo)
   let version ← match json.getObjValAs? Nat "version" with
-    | .ok v => .ok v
-    | .error _ => .error "lock file missing 'version'"
+    | .ok value => .ok value
+    | .error _ => .error { message := "lock file missing 'version'" }
   if version != 1 then
-    .error s!"unsupported lock file version: {version} (expected 1)"
+    .error { message := s!"unsupported lock file version: {version} (expected 1)" }
   let specsArr ← match json.getObjVal? "specs" with
     | .ok (Json.arr items) => .ok items
-    | _ => .error "lock file missing 'specs' array"
+    | _ => .error { message := "lock file missing 'specs' array" }
   let specs ← specsArr.toList.mapM parseSpecLock
   .ok { version, specs }
 
@@ -369,7 +371,7 @@ def readLockFile : IO (Option LockFile) := do
   let contents ← IO.FS.readFile lockFilePath
   match parseLockFile contents with
   | .ok lockFile => return some lockFile
-  | .error e => throw (IO.userError s!"failed to parse {lockFilePath}: {e}")
+  | .error errorInfo => throw (IO.userError s!"failed to parse {lockFilePath}: {errorInfo.message}")
 
 /-- Write the lock file to disk. -/
 def writeLockFile (lockFile : LockFile) : IO Unit := do
