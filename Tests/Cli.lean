@@ -487,18 +487,22 @@ def testJsonLinesVerifyStreamsEvents : IO Bool := do
   let specPath ← writeTempSpec specContent
   -- Act
   let (exitCode, stdout, _) ← runQed ["verify", "--json-lines", specPath.toString]
-  -- Assert: each line is valid JSON, first is spec_start, last is spec_done
+  -- Assert: each line is valid JSON with a type field; first is spec_start, last is spec_done
   let lines := stdout.splitOn "\n" |>.filter fun l => !l.isEmpty
   if lines.length < 3 then return false
-  let firstOk := match Lean.Json.parse (lines.headD "") with
+  let types := lines.filterMap fun l =>
+    match Lean.Json.parse l with
     | .ok json => match json.getObjValAs? String "type" with
-      | .ok "spec_start" => true | _ => false
-    | .error _ => false
-  let lastOk := match Lean.Json.parse (lines.getLastD "") with
-    | .ok json => match json.getObjValAs? String "type" with
-      | .ok "spec_done" => true | _ => false
-    | .error _ => false
-  return exitCode == 0 && firstOk && lastOk
+      | .ok t => some t | .error _ => none
+    | .error _ => none
+  -- Every line should have a type field (including criterion rows)
+  let allHaveType := types.length == lines.length
+  let firstOk := match types.head? with
+    | some "spec_start" => true | _ => false
+  let lastOk := match types.getLast? with
+    | some "spec_done" => true | _ => false
+  let hasCriterion := types.contains "criterion"
+  return exitCode == 0 && allHaveType && firstOk && lastOk && hasCriterion
 
 def testJsonLinesWorkerLoopStreamsEvents : IO Bool := do
   -- Arrange
@@ -517,6 +521,7 @@ def testJsonLinesWorkerLoopStreamsEvents : IO Bool := do
     types.contains "spec_start" &&
     types.contains "iteration_start" &&
     types.contains "worker_done" &&
+    types.contains "criterion" &&
     types.contains "iteration_done" &&
     types.contains "loop_done"
 

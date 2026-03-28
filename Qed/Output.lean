@@ -109,6 +109,7 @@ def resultDetails : VerificationResult → String
     Includes `exitCode` and `elapsedMs` when present. -/
 def executionToJson (description : String) (execution : CriterionExecution) : Json :=
   let base := [
+    ("type", Json.str "criterion"),
     ("description", Json.str description),
     ("result", Json.str (resultStatus execution.result)),
     ("details", Json.str (resultDetails execution.result))

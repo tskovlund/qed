@@ -95,26 +95,26 @@ With `--json`, errors produce a structured object:
 
 ### Verify mode
 
-| Event              | Fields                                                        |
-| ------------------ | ------------------------------------------------------------- |
-| `spec_start`       | `spec`, `criteriaCount`                                       |
-| _(criterion rows)_ | `description`, `result`, `details`, `exitCode?`, `elapsedMs?` |
-| `spec_done`        | `spec`, `passed`                                              |
-| `error`            | `message`                                                     |
+| Event        | Fields                                                        |
+| ------------ | ------------------------------------------------------------- |
+| `spec_start` | `spec`, `criteriaCount`                                       |
+| `criterion`  | `description`, `result`, `details`, `exitCode?`, `elapsedMs?` |
+| `spec_done`  | `spec`, `passed`                                              |
+| `error`      | `message`                                                     |
 
-Criterion rows use the same shape as `--json` criteria objects (no `type` field).
+All objects — including criterion rows — carry a `type` field. The criterion object shape is identical in `--json` and `--json-lines`.
 
 ### Worker loop mode
 
-| Event              | Fields                                                                     |
-| ------------------ | -------------------------------------------------------------------------- |
-| `spec_start`       | `spec`, `mode`, `maxIterations`, `stuckThreshold`                          |
-| `iteration_start`  | `iteration`                                                                |
-| `worker_done`      | `iteration`, `exitCode` or `timedOut`, `elapsedMs`                         |
-| _(criterion rows)_ | `description`, `result`, `details`, `exitCode?`, `elapsedMs?`, `iteration` |
-| `iteration_done`   | `iteration`, `passed`, `failedCount`                                       |
-| `loop_done`        | `spec`, `state`, `passed`                                                  |
-| `error`            | `message`                                                                  |
+| Event             | Fields                                                                     |
+| ----------------- | -------------------------------------------------------------------------- |
+| `spec_start`      | `spec`, `mode`, `maxIterations`, `stuckThreshold`                          |
+| `iteration_start` | `iteration`                                                                |
+| `worker_done`     | `iteration`, `exitCode` or `timedOut`, `elapsedMs`                         |
+| `criterion`       | `description`, `result`, `details`, `exitCode?`, `elapsedMs?`, `iteration` |
+| `iteration_done`  | `iteration`, `passed`, `failedCount`                                       |
+| `loop_done`       | `spec`, `state`, `passed`                                                  |
+| `error`           | `message`                                                                  |
 
 ## Configuration
 
