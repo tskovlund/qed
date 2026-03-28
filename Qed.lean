@@ -28,4 +28,7 @@ import Qed.Proofs.OutputCorrectness
 import Qed.Proofs.ParserProperties
 import Qed.Proofs.IntegrityProperties
 import Qed.Proofs.TomlProperties
+import Qed.Proofs.TomlJsonValidity
+import Qed.Proofs.TomlRoundtrip
 import Qed.Proofs.VerifierProperties
+import Qed.TomlSerializer

@@ -4,7 +4,8 @@ set_option autoImplicit false
 
 namespace Qed.Proofs.TomlJsonValidity
 
-open Qed.TomlParser Lean
+open Lean hiding toJson
+open Qed.TomlParser
 
 /-! # TOML → JSON pipeline properties
 
