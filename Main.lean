@@ -259,6 +259,8 @@ def runPromote (path : String) (output : Option String) (archive : Bool)
       match output with
       | some outputPath =>
         IO.FS.writeFile outputPath (promotedJson ++ "\n")
+        if !jsonOutput then
+          IO.println s!"Promoted '{spec.name}' to verify mode → {outputPath}"
       | none =>
         IO.println promotedJson
       -- Archive the original if requested
@@ -269,19 +271,6 @@ def runPromote (path : String) (output : Option String) (archive : Bool)
         IO.FS.rename path archivePath
         if !jsonOutput then
           IO.println s!"Archived original → {archivePath}"
-      -- Status output (only when --output redirects the spec to a file)
-      match output with
-      | some outputPath =>
-        if jsonOutput then
-          IO.println (Lean.Json.mkObj [
-            ("status", Lean.Json.str "promoted"),
-            ("specName", Lean.Json.str spec.name),
-            ("outputPath", Lean.Json.str outputPath),
-            ("archived", Lean.Json.bool archive)
-          ] |>.pretty 2)
-        else
-          IO.println s!"Promoted '{spec.name}' to verify mode → {outputPath}"
-      | none => pure ()
       return 0
 
 def printHelp : IO Unit := do
