@@ -7,6 +7,7 @@ import Qed.Serializer
 import Qed.TomlParser
 import Qed.TomlConverter
 import Qed.Integrity
+import Qed.Ignore
 import Qed.ContractLock
 import Qed.SpecLoader
 import Qed.Verifier

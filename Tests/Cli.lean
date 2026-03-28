@@ -200,6 +200,7 @@ def testVerifyDirectoryFindsNestedSpecs : IO Bool := do
   let dir ← freshTempDir "nested"
   IO.FS.createDirAll (dir / "sub" / "deep")
   IO.FS.createDirAll (dir / ".hidden")
+  IO.FS.writeFile (dir / ".qedignore") ".hidden\n"
   IO.FS.writeFile (dir / "root.spec.json")
     "{\"name\": \"root-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
   IO.FS.writeFile (dir / "sub" / "nested.spec.json")
@@ -210,7 +211,7 @@ def testVerifyDirectoryFindsNestedSpecs : IO Bool := do
     "{\"name\": \"hidden-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
   -- Act
   let (exitCode, stdout, _) ← runQed ["verify", dir.toString]
-  -- Assert: finds root, nested, and deep specs; skips hidden directory
+  -- Assert: finds root, nested, and deep specs; skips .hidden (via .qedignore)
   return exitCode == 0 && stdout.contains "root-spec" && stdout.contains "nested-spec" &&
     stdout.contains "deep-spec" && !stdout.contains "hidden-spec"
 
@@ -299,9 +300,10 @@ def testPromoteWithArchiveMovesOriginal : IO Bool := do
   let archiveExists ← (dir / "archive" / "test.spec.json").pathExists
   return exitCode == 0 && !originalExists && archiveExists
 
-def testVerifyDirectorySkipsArchiveDir : IO Bool := do
-  -- Arrange
+def testVerifyDirectorySkipsIgnoredDir : IO Bool := do
+  -- Arrange: .qedignore excludes "archive"
   let dir ← freshTempDir "skip-archive"
+  IO.FS.writeFile (dir / ".qedignore") "archive\n"
   IO.FS.createDirAll (dir / "archive")
   IO.FS.writeFile (dir / "main.spec.json")
     "{\"name\": \"main\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
@@ -364,6 +366,6 @@ def cliTests : List (String × IO Bool) := [
   ("testPromoteRejectsVerifyMode", testPromoteRejectsVerifyMode),
   ("testPromoteWithOutputWritesToFile", testPromoteWithOutputWritesToFile),
   ("testPromoteWithArchiveMovesOriginal", testPromoteWithArchiveMovesOriginal),
-  ("testVerifyDirectorySkipsArchiveDir", testVerifyDirectorySkipsArchiveDir),
+  ("testVerifyDirectorySkipsIgnoredDir", testVerifyDirectorySkipsIgnoredDir),
   ("testVerifyDirectoryRespectsQedignore", testVerifyDirectoryRespectsQedignore)
 ]

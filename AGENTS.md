@@ -13,6 +13,7 @@ Qed/
   Shell.lean           Shell command execution and quoting utilities
   Agent.lean           Shared agent invocation (env var constants, default commands)
   Integrity.lean       Content-addressed spec integrity (SHA-256 hashing, git checks)
+  Ignore.lean          .qedignore parsing and fnmatch glob matching (*, ?, [abc], [!abc], ! negation)
   ContractLock.lean    Verification contract locking (glob expansion, theorem extraction, lock file I/O)
   SpecLoader.lean      Load and pin spec files from disk (returns Spec.Pinned)
   Parser.lean          JSON spec parser (Lean.Json → Spec, parseFromJson for roundtrip proofs)
@@ -47,6 +48,7 @@ Tests/
   Integration.lean     TOML converter and SpecLoader end-to-end tests
   Verifier.lean        Command verifier tests (shell execution, exit codes, output capture)
   ContractLock.lean    Contract lock tests (glob validation, theorem extraction, lock roundtrip)
+  Ignore.lean          fnmatch glob matching and .qedignore tests (patterns, negation, parsing)
   Cli.lean             End-to-end CLI tests (invoke built binary, check output/exit codes)
 specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry

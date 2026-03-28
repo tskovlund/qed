@@ -103,19 +103,22 @@ Controls which directories are excluded from recursive spec discovery (`qed veri
 
 - One pattern per line
 - `#` for comments, blank lines ignored
-- Hidden directories (`.git`, `.lake`, etc.) are always excluded
-- Supports `*` wildcard: `*.bak`, `temp*`, `*test*`, `pre*suf`
+- fnmatch-style globs: `*` (any sequence), `?` (any single char), `[abc]` (class), `[!abc]` (negated class), `[a-z]` (range)
+- Prefix a pattern with `!` to negate (un-ignore) — last matching pattern wins
 
-When no `.qedignore` file exists, defaults to excluding `archive` and `wip`.
+When no `.qedignore` file exists, no directories are excluded.
 
 Example:
 
 ```
 # Directories to exclude from spec discovery
+.lake
+.git
 archive
 wip
 scratch
 *.draft
+!important.draft
 ```
 
 ## Named constants
