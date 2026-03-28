@@ -273,6 +273,18 @@ def emitVerifyDone (format : OutputFormat) (specName : String)
       IO.eprintln s!"{ansiRed}{failedCount} of {total} criteria failed.{ansiReset}"
   | .json => pure ()
 
+/-- Emit multi-spec failure summary with per-spec criterion details.
+    Text-only — JSON and JSON Lines carry full details per criterion. -/
+def emitMultiSpecFailureSummary (failedSpecs : Nat) (totalSpecs : Nat)
+    (specFailures : List (String × List String × Nat)) : IO Unit := do
+  IO.eprintln s!"{ansiBold}{ansiRed}{failedSpecs} of {totalSpecs} specs failed.{ansiReset}"
+  if !specFailures.isEmpty then
+    IO.eprintln ""
+    for (specName, failures, totalCriteria) in specFailures do
+      IO.eprintln s!"  {ansiBold}{specName}{ansiReset} ({failures.length} of {totalCriteria} failed):"
+      for failure in failures do
+        IO.eprintln s!"    {ansiRed}FAIL{ansiReset}: {failure}"
+
 -- ============================================================================
 -- Format-dispatched emit functions: worker loop
 -- ============================================================================

@@ -400,6 +400,20 @@ def testVerifyDirectoryJsonOutputReturnsWrappedObject : IO Bool := do
       | .ok true => true | _ => false
     return exitCode == 0 && hasSpecs && hasPassed
 
+def testVerifyDirectoryFailureSummaryRepeatsCriteria : IO Bool := do
+  -- Arrange: two specs — one passes, one fails with a named criterion
+  let dir ← freshTempDir "dir-summary"
+  IO.FS.writeFile (dir / "a.spec.json")
+    "{\"name\": \"passing-spec\", \"criteria\": [{\"description\": \"always passes\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  IO.FS.writeFile (dir / "b.spec.json")
+    "{\"name\": \"failing-spec\", \"criteria\": [{\"description\": \"always fails\", \"verify\": {\"type\": \"command\", \"run\": \"false\"}}, {\"description\": \"also passes\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  -- Act
+  let (exitCode, _, stderr) ← runQed ["verify", dir.toString]
+  -- Assert: summary repeats the failing spec name and criterion description
+  return exitCode == 1 && stderr.contains "1 of 2 specs failed" &&
+    stderr.contains "failing-spec" && stderr.contains "1 of 2 failed" &&
+    stderr.contains "always fails"
+
 def testVerifyJsonOutputContainsExitCode : IO Bool := do
   -- Arrange
   let specContent := "{\"name\": \"exit-code-test\", \"criteria\": [{\"description\": \"passes\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
@@ -563,6 +577,7 @@ def cliTests : List (String × IO Bool) := [
   ("testParseJsonOutputReturnsFullSpec", testParseJsonOutputReturnsFullSpec),
   ("testLockJsonOutputReturnsFullLockFile", testLockJsonOutputReturnsFullLockFile),
   ("testVerifyDirectoryJsonOutputReturnsWrappedObject", testVerifyDirectoryJsonOutputReturnsWrappedObject),
+  ("testVerifyDirectoryFailureSummaryRepeatsCriteria", testVerifyDirectoryFailureSummaryRepeatsCriteria),
   ("testVerifyJsonOutputContainsExitCode", testVerifyJsonOutputContainsExitCode),
   ("testVerifyJsonOutputContainsElapsedMs", testVerifyJsonOutputContainsElapsedMs),
   ("testVerifyJsonOutputSkippedHasNoMetadata", testVerifyJsonOutputSkippedHasNoMetadata),

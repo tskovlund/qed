@@ -24,6 +24,14 @@ def filterBySchedule (criteria : List AcceptanceCriterion) (context : RunContext
   | .extended => criteria.filter fun c => c.schedule != .manual
   | .auto => criteria.filter fun c => c.schedule == .always
 
+/-- Summary of a spec verification run. Carries per-criterion failure
+    details so the multi-spec summary can repeat which criteria failed. -/
+private structure VerifySummary where
+  exitCode : UInt32
+  specName : String := ""
+  failedCriteria : List String := []
+  totalCriteria : Nat := 0
+
 /-- Run single-pass verification, collecting results for the caller.
     Used by JSON mode (single-spec print) and multi-spec JSON wrapper.
     Returns exit code 2 on integrity violation (with error JSON). -/
@@ -47,44 +55,53 @@ private def verifySpecCollect (pinnedSpec : Spec.Pinned) (context : RunContext :
 /-- Run single-pass verification in streaming mode (text or JSON Lines).
     Results are emitted as each criterion completes. -/
 private def verifySpecStream (pinnedSpec : Spec.Pinned) (format : OutputFormat)
-    (context : RunContext := .full) (pinned : Bool := false) : IO UInt32 := do
+    (context : RunContext := .full) (pinned : Bool := false) : IO VerifySummary := do
   let spec := pinnedSpec.spec
   match ← Integrity.verify pinnedSpec pinned with
   | .error reason =>
     Error.reportError format { message := s!"integrity violation: {reason}" }
-    return 2
+    return { exitCode := 2, specName := spec.name }
   | .ok () => pure ()
   let criteria := filterBySchedule spec.criteria context
   Output.emitVerifyHeader format spec.name criteria.length
   if format == .text && criteria.isEmpty then
     IO.println s!"  {Output.ansiDim}No criteria to verify in this context.{Output.ansiReset}"
-    return 0
+    return { exitCode := 0, specName := spec.name }
   let mut anyFailed := false
   let mut failedCount : Nat := 0
   let mut skippedCount : Nat := 0
+  let mut failedCriteria : List String := []
   for criterion in criteria do
     let execution ← Verifier.verifyCriterion criterion
-    if execution.isFailed then anyFailed := true; failedCount := failedCount + 1
+    if execution.isFailed then
+      anyFailed := true
+      failedCount := failedCount + 1
+      failedCriteria := failedCriteria ++ [criterion.description]
     if execution.isSkipped then skippedCount := skippedCount + 1
     Output.emitCriterionResult format 2 criterion.description execution
   -- Integrity check: after verification (catches verifier tampering)
   match ← Integrity.verify pinnedSpec pinned with
   | .error reason =>
     Error.reportError format { message := s!"integrity violation: {reason}" }
-    return 2
+    return { exitCode := 2, specName := spec.name }
   | .ok () => pure ()
   Output.emitVerifyDone format spec.name anyFailed failedCount skippedCount criteria.length
-  return if anyFailed then 1 else 0
+  return {
+    exitCode := if anyFailed then 1 else 0
+    specName := spec.name
+    failedCriteria
+    totalCriteria := criteria.length
+  }
 
 /-- Run single-pass verification on an already-loaded spec.
     Dispatches to the appropriate output path based on format. -/
 def verifySpec (pinnedSpec : Spec.Pinned) (format : OutputFormat)
-    (context : RunContext := .full) (pinned : Bool := false) : IO UInt32 := do
+    (context : RunContext := .full) (pinned : Bool := false) : IO VerifySummary := do
   match format with
   | .json =>
     let (exitCode, json) ← verifySpecCollect pinnedSpec context pinned
     IO.println (json.pretty 2)
-    return exitCode
+    return { exitCode, specName := pinnedSpec.spec.name }
   | _ => verifySpecStream pinnedSpec format context pinned
 
 /-- Load a spec file, handling IO exceptions with human-readable messages. -/
@@ -101,11 +118,11 @@ def loadSpecSafe (path : String) : IO (Except ErrorInfo Spec.Pinned) := do
 
 /-- Load a spec and run single-pass verification. -/
 def runVerify (path : String) (format : OutputFormat) (context : RunContext := .full)
-    (pinned : Bool := false) : IO UInt32 := do
+    (pinned : Bool := false) : IO VerifySummary := do
   match ← loadSpecSafe path with
   | .error info =>
     Error.reportError format info
-    return 2
+    return { exitCode := 2 }
   | .ok pinnedSpec => verifySpec pinnedSpec format context pinned
 
 /-- Verify all specs in a directory. Returns 0 if all pass, 1 if any fail, 2 on error. -/
@@ -145,18 +162,22 @@ def runVerifyAll (directory : String) (format : OutputFormat)
       -- Text and JSON Lines: stream results per spec
       let mut passedSpecs : Nat := 0
       let mut failedSpecs : Nat := 0
+      let mut specFailures : List (String × List String × Nat) := []
       for specPath in specs do
-        let result ← runVerify specPath.toString format context pinned
-        if result == 1 then failedSpecs := failedSpecs + 1
-        else if result == 0 then passedSpecs := passedSpecs + 1
-        if result == 2 then return 2
+        let summary ← runVerify specPath.toString format context pinned
+        if summary.exitCode == 1 then
+          failedSpecs := failedSpecs + 1
+          if !summary.failedCriteria.isEmpty then
+            specFailures := specFailures ++ [(summary.specName, summary.failedCriteria, summary.totalCriteria)]
+        else if summary.exitCode == 0 then passedSpecs := passedSpecs + 1
+        if summary.exitCode == 2 then return 2
         if format == .text then IO.println ""
       if format == .text && specs.length > 1 then
         let total := passedSpecs + failedSpecs
         if failedSpecs == 0 then
           IO.println s!"{Output.ansiBold}{Output.ansiGreen}All {total} specs passed.{Output.ansiReset}"
         else
-          IO.eprintln s!"{Output.ansiBold}{Output.ansiRed}{failedSpecs} of {total} specs failed.{Output.ansiReset}"
+          Output.emitMultiSpecFailureSummary failedSpecs total specFailures
       return if failedSpecs > 0 then 1 else 0
 
 /-- Parse and validate a spec file, printing the parsed result. -/
@@ -370,7 +391,7 @@ def main (args : List String) : IO UInt32 := do
   | ["verify", path] =>
     let isDir ← (path : System.FilePath).isDir
     if isDir then runVerifyAll path flags.format context flags.pinned
-    else runVerify path flags.format context flags.pinned
+    else return (← runVerify path flags.format context flags.pinned).exitCode
   | ["run", path] =>
     match ← loadSpecSafe path with
     | .error info =>
@@ -378,7 +399,7 @@ def main (args : List String) : IO UInt32 := do
       return 2
     | .ok pinnedSpec =>
       match pinnedSpec.spec.mode with
-      | .verify => verifySpec pinnedSpec flags.format context flags.pinned
+      | .verify => return (← verifySpec pinnedSpec flags.format context flags.pinned).exitCode
       | .workerLoop worker loopConfig =>
         WorkerLoop.run pinnedSpec worker loopConfig flags.format flags.pinned flags.noLock
   | ["parse", path] =>
