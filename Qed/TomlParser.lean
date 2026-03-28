@@ -6,6 +6,26 @@ namespace Qed.TomlParser
 
 open Lean
 
+/-- Convert a byte position to (line, column), both 1-based. -/
+private def byteToLineCol (source : String) (bytePos : Nat) : Nat × Nat :=
+  let rec go (chars : List Char) (pos : Nat) (line : Nat) (col : Nat) : Nat × Nat :=
+    if pos >= bytePos then (line, col)
+    else match chars with
+      | [] => (line, col)
+      | c :: rest =>
+        if c == '\n' then go rest (pos + c.utf8Size) (line + 1) 1
+        else go rest (pos + c.utf8Size) line (col + 1)
+  go source.toList 0 1 1
+
+/-- Format a parse error with line:column location and a context excerpt
+    showing the offending line with a caret pointer. -/
+private def formatError (source : String) (bytePos : Nat) (message : String) : String :=
+  let (lineNumber, column) := byteToLineCol source bytePos
+  let allLines := source.splitOn "\n"
+  let lineText := (allLines.getD (lineNumber - 1) "").trimAsciiEnd.toString
+  let padding := String.ofList (List.replicate (column - 1) ' ')
+  s!"line {lineNumber}, column {column}: {message}\n  {lineText}\n  {padding}^"
+
 /-- Skip spaces and tabs from position, return new position. -/
 partial def skipWs (s : String) (i : Nat) : Nat :=
   if i < s.utf8ByteSize then
@@ -41,7 +61,7 @@ partial def parseBareKey (s : String) (i : Nat) : Except String (String × Nat) 
     if j < s.utf8ByteSize then
       let c := String.Pos.Raw.get s ⟨j⟩
       if c.isAlphanum || c == '-' || c == '_' then go (j + 1) (acc.push c)
-      else if acc.isEmpty then .error s!"expected key at byte {j}"
+      else if acc.isEmpty then .error (formatError s j "expected key")
       else .ok (acc, j)
     else if acc.isEmpty then .error "unexpected end of input, expected key"
     else .ok (acc, j)
@@ -61,7 +81,7 @@ partial def parseString (s : String) (i : Nat) : Except String (String × Nat) :
           if start + 1 < s.utf8ByteSize && String.Pos.Raw.get s ⟨start + 1⟩ == '\n' then start + 2 else start + 1
         else start
       let rec go (j : Nat) (acc : String) : Except String (String × Nat) :=
-        if j >= s.utf8ByteSize then .error "unterminated multi-line string"
+        if j >= s.utf8ByteSize then .error (formatError s i "unterminated multi-line string")
         else
           let c := String.Pos.Raw.get s ⟨j⟩
           if c == '"' && j + 2 < s.utf8ByteSize && String.Pos.Raw.get s ⟨j + 1⟩ == '"' && String.Pos.Raw.get s ⟨j + 2⟩ == '"' then
@@ -88,11 +108,11 @@ partial def parseString (s : String) (i : Nat) : Except String (String × Nat) :
     else
       -- Single-line string
       let rec goSingle (j : Nat) (acc : String) : Except String (String × Nat) :=
-        if j >= s.utf8ByteSize then .error "unterminated string"
+        if j >= s.utf8ByteSize then .error (formatError s i "unterminated string")
         else
           let c := String.Pos.Raw.get s ⟨j⟩
           if c == '"' then .ok (acc, j + 1)
-          else if c == '\n' then .error "newline in single-line string"
+          else if c == '\n' then .error (formatError s j "newline in single-line string")
           else if c == '\\' && j + 1 < s.utf8ByteSize then
             let ec := String.Pos.Raw.get s ⟨j + 1⟩
             match ec with
@@ -140,7 +160,7 @@ partial def parseInteger (s : String) (i : Nat) : Except String (Int × Nat) :=
       else if c == '_' then go (j + 1) acc
       else match acc.toInt? with
         | some n => .ok (if neg then -n else n, j)
-        | none => .error "invalid integer"
+        | none => .error (formatError s i "invalid integer")
     else match acc.toInt? with
       | some n => .ok (if neg then -n else n, j)
       | none => .error "invalid integer"
@@ -156,7 +176,7 @@ inductive TomlValue where
 
 /-- Parse a value (string, integer, boolean, inline array). -/
 partial def parseValue (s : String) (i : Nat) : Except String (TomlValue × Nat) :=
-  if i >= s.utf8ByteSize then .error "unexpected end of input"
+  if i >= s.utf8ByteSize then .error (formatError s i "unexpected end of input")
   else
     let c := String.Pos.Raw.get s ⟨i⟩
     if c == '"' then
@@ -175,13 +195,13 @@ partial def parseValue (s : String) (i : Nat) : Except String (TomlValue × Nat)
       match parseInteger s i with
       | .ok (n, j) => .ok (.int n, j)
       | .error e => .error e
-    else .error s!"unexpected character '{c}' at byte {i}"
+    else .error (formatError s i s!"unexpected character '{c}'")
 where
   /-- Parse the contents of an inline array `[v1, v2, ...]`. -/
   parseInlineArray (s : String) (i : Nat) (acc : List TomlValue)
       : Except String (TomlValue × Nat) :=
     let j := skipWsNl s i
-    if j >= s.utf8ByteSize then .error "unterminated inline array"
+    if j >= s.utf8ByteSize then .error (formatError s i "unterminated inline array")
     else
       let c := String.Pos.Raw.get s ⟨j⟩
       if c == ']' then .ok (.array acc.reverse, j + 1)
@@ -191,12 +211,12 @@ where
         | .error e => .error e
         | .ok (value, k) =>
           let k := skipWsNl s k
-          if k >= s.utf8ByteSize then .error "unterminated inline array"
+          if k >= s.utf8ByteSize then .error (formatError s i "unterminated inline array")
           else
             let c := String.Pos.Raw.get s ⟨k⟩
             if c == ']' then .ok (.array (value :: acc).reverse, k + 1)
             else if c == ',' then parseInlineArray s (k + 1) (value :: acc)
-            else .error s!"expected ',' or ']' in array at byte {k}"
+            else .error (formatError s k "expected ',' or ']' in array")
 
 /-- Skip to end of line (past optional inline comment). -/
 def skipToEol (s : String) (i : Nat) : Except String Nat :=
@@ -207,7 +227,7 @@ def skipToEol (s : String) (i : Nat) : Except String Nat :=
     if c == '\n' then .ok (i + 1)
     else if c == '\r' then
       if i + 1 < s.utf8ByteSize && String.Pos.Raw.get s ⟨i + 1⟩ == '\n' then .ok (i + 2) else .ok (i + 1)
-    else .error s!"expected end of line at byte {i}, got '{c}'"
+    else .error (formatError s i s!"expected end of line, got '{c}'")
 
 /-- Set a value at a dotted key path, creating intermediate tables. -/
 def setNested (pairs : List (String × TomlValue)) (keys : List String) (value : TomlValue)
@@ -316,7 +336,7 @@ partial def parseDoc (s : String) : Except String (List (String × TomlValue)) :
               match appendArray pairs keys with
               | .error e => .error e
               | .ok p => go j p (.arr keys [])
-          else .error s!"expected ']]' at byte {j}"
+          else .error (formatError s j "expected ']]'")
       else
         -- [table.header]
         let j := skipWs s (i + 1)
@@ -346,7 +366,7 @@ partial def parseDoc (s : String) : Except String (List (String × TomlValue)) :
                 match setNested pairs keys (.table []) with
                 | .error _ => go j pairs (.tbl keys)
                 | .ok p => go j p (.tbl keys)
-          else .error s!"expected ']' at byte {j}"
+          else .error (formatError s j "expected ']'")
     else
       -- key = value
       match parseDottedKey s i with
@@ -368,7 +388,7 @@ partial def parseDoc (s : String) : Except String (List (String × TomlValue)) :
               match result with
               | .error e => .error e
               | .ok p => go j p context
-        else .error s!"expected '=' at byte {j}"
+        else .error (formatError s j "expected '='")
   go 0 [] .root
 
 mutual

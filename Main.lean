@@ -100,8 +100,13 @@ def verifySpec (pinnedSpec : Spec.Pinned) (jsonOutput : Bool) (context : RunCont
       IO.eprintln s!"{Output.ansiRed}{failedCount} of {total} criteria failed.{Output.ansiReset}"
     return if anyFailed then 1 else 0
 
-/-- Load a spec file, handling IO exceptions (e.g., missing files). -/
+/-- Load a spec file, handling IO exceptions with human-readable messages. -/
 def loadSpecSafe (path : String) : IO (Except String Spec.Pinned) := do
+  if !(← System.FilePath.pathExists path) then
+    let hint := if !path.endsWith ".spec.json" && !path.endsWith ".spec.toml" then
+      s!"\nhint: spec files use .spec.json or .spec.toml extensions"
+    else ""
+    return .error s!"file not found: {path}{hint}"
   try
     SpecLoader.loadSpec path
   catch error =>

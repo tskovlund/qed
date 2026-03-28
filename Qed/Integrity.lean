@@ -25,7 +25,7 @@ def hashFile (path : System.FilePath) : IO String := do
   | none =>
     match ← tryHashCmd "sha256sum" #[pathStr] with
     | some hash => return hash
-    | none => throw (IO.userError s!"cannot compute SHA-256 hash: neither shasum nor sha256sum available")
+    | none => throw (IO.userError "cannot compute SHA-256 hash: neither shasum nor sha256sum found (install coreutils)")
 
 /-- Compute SHA-256 hash of in-memory contents.
     Writes to a temp file to avoid TOCTOU races (hash the bytes we actually parsed). -/

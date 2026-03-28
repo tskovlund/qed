@@ -215,7 +215,7 @@ private def verifyProof (prover : String) (target : String) : IO VerificationRes
       return .fail s!"proof build timed out after {defaultCommandTimeout}s\n{formatOutput stdout stderr}"
     | .completed exitCode stdout stderr =>
       if exitCode != 0 then
-        return .fail s!"proof build failed\n{formatOutput stdout stderr}"
+        return .fail s!"proof build failed (exit code {exitCode})\n{formatOutput stdout stderr}"
       -- Lean emits "declaration uses 'sorry'" warnings for any sorry in the
       -- dependency graph. Catch transitive sorry even when the build succeeds.
       let stderrStr := stderr.trimAscii.toString

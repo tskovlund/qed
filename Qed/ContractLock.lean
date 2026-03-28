@@ -369,7 +369,7 @@ def readLockFile : IO (Option LockFile) := do
   let contents ← IO.FS.readFile lockFilePath
   match parseLockFile contents with
   | .ok lockFile => return some lockFile
-  | .error e => throw (IO.userError s!"failed to parse {lockFilePath}: {e}")
+  | .error e => throw (IO.userError s!"failed to parse {lockFilePath}: {e}\nhint: run 'qed lock' to regenerate")
 
 /-- Write the lock file to disk. -/
 def writeLockFile (lockFile : LockFile) : IO Unit := do
