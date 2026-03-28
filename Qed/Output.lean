@@ -105,41 +105,6 @@ def resultDetails : VerificationResult → String
   | .needsHuman instruction => instruction
   | .skipped reason => reason
 
-/-- Serialize a single verification result (description + result) to JSON. -/
-def resultToJson (description : String) (result : VerificationResult) : Json :=
-  Json.mkObj [
-    ("description", Json.str description),
-    ("result", Json.str (resultStatus result)),
-    ("details", Json.str (resultDetails result))
-  ]
-
-/-- Whether all results passed (no failures). -/
-def allPassed (results : List (String × VerificationResult)) : Bool :=
-  results.all fun (_, result) => !result.isFailed
-
-/-- Serialize all verification results with spec name and overall pass/fail. -/
-def resultsToJson (specName : String) (results : List (String × VerificationResult)) : Json :=
-  let criteriaJson := results.map fun (description, result) =>
-    resultToJson description result
-  Json.mkObj [
-    ("spec", Json.str specName),
-    ("passed", Json.bool (allPassed results)),
-    ("criteria", Json.arr criteriaJson.toArray)
-  ]
-
-/-- Serialize worker loop results with spec name, state description, and overall pass/fail.
-    Extends resultsToJson with a "state" field for worker loop context. -/
-def workerResultsToJson (specName : String) (stateDescription : String)
-    (results : List (String × VerificationResult)) : Json :=
-  let criteriaJson := results.map fun (description, result) =>
-    resultToJson description result
-  Json.mkObj [
-    ("spec", Json.str specName),
-    ("state", Json.str stateDescription),
-    ("passed", Json.bool (allPassed results)),
-    ("criteria", Json.arr criteriaJson.toArray)
-  ]
-
 /-- Serialize a single criterion execution to JSON with optional metadata fields.
     Includes `exitCode` and `elapsedMs` when present. -/
 def executionToJson (description : String) (execution : CriterionExecution) : Json :=

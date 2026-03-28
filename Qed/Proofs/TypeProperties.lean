@@ -71,7 +71,7 @@ theorem result_exhaustive (result : VerificationResult) :
 /-- Every VerificationResult falls into exactly one of four categories.
 For each category, isPassed, isFailed, and isSkipped correctly reflect the
 variant. This is the complete partition of the result space — the foundation
-for allPassed correctness (OutputCorrectness.allPassed_iff_no_failures). -/
+for pass/fail correctness (OutputCorrectness.allExecutionsPassed_iff_no_failures). -/
 theorem result_complete_partition (result : VerificationResult) :
     (∃ d, result = .pass d) ∧ result.isPassed = true ∧ result.isFailed = false ∧ result.isSkipped = false
   ∨ (∃ d, result = .fail d) ∧ result.isPassed = false ∧ result.isFailed = true ∧ result.isSkipped = false
