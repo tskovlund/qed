@@ -138,4 +138,30 @@ def workerResultsToJson (specName : String) (stateDescription : String)
     ("criteria", Json.arr criteriaJson.toArray)
   ]
 
+/-- Print a single verification result line with word wrapping.
+    `baseIndent` is the leading space count (2 for top-level, 4 for nested).
+    The continuation indent accounts for the `[XXXX] ` status prefix
+    (baseIndent + 1 + 4 + 1 + 1 = baseIndent + 7). -/
+def printResultLine (baseIndent : Nat) (description : String)
+    (result : VerificationResult) (termWidth : Nat) : IO Unit := do
+  let indent := String.ofList (List.replicate baseIndent ' ')
+  let continuationIndent := baseIndent + 7
+  let linePrefix := s!"{indent}[{colorStatusIndicator result}] "
+  let text := match result with
+    | .skipped reason => s!"{description} {ansiDim}— {reason}{ansiReset}"
+    | _ => description
+  printWrapped linePrefix continuationIndent text termWidth
+
+/-- Print all verification results, returning (failedCount, skippedCount). -/
+def printResultLines (baseIndent : Nat)
+    (results : List (String × VerificationResult))
+    (termWidth : Nat) : IO (Nat × Nat) := do
+  let mut failedCount : Nat := 0
+  let mut skippedCount : Nat := 0
+  for (description, result) in results do
+    printResultLine baseIndent description result termWidth
+    if result.isFailed then failedCount := failedCount + 1
+    if result.isSkipped then skippedCount := skippedCount + 1
+  return (failedCount, skippedCount)
+
 end Qed.Output

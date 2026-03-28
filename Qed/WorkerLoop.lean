@@ -5,6 +5,7 @@ import Qed.Agent
 import Qed.StateMachine
 import Qed.Verifier
 import Qed.Output
+import Qed.Error
 import Qed.Integrity
 import Qed.ContractLock
 
@@ -96,7 +97,15 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
   -- 2. The worker cannot bypass locks by regenerating qed.lock on disk —
   --    verification checks use the in-memory snapshot, not the file
   -- 3. New files created during the loop aren't part of the original contract
-  let lockFile ← if noLock then pure none else ContractLock.readLockFile
+  let lockFile ← if noLock then pure none else
+    try ContractLock.readLockFile
+    catch error =>
+      let errorInfo : ErrorInfo := { message := s!"{error}", hint := some "run 'qed lock' to regenerate" }
+      if jsonOutput then
+        IO.println (Error.formatErrorJson errorInfo |>.pretty 2)
+      else
+        IO.eprintln (Error.formatError errorInfo)
+      return (2 : UInt32)
   let mut state : LoopState := .ready
   let mut context : StateMachine.LoopContext := StateMachine.LoopContext.initial
   let mut lastFailures : List (String × VerificationResult) := []
@@ -135,7 +144,7 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
               IO.println s!"  Worker stderr: {stderr.trimAscii.take stderrPreviewLength}"
           | .completed exitCode stdout stderr =>
             if exitCode != 0 then
-              IO.println s!"  Worker exited with code {exitCode}"
+              IO.println s!"  {Output.ansiRed}Worker exited with code {exitCode}{Output.ansiReset}"
             else
               IO.println s!"  Worker completed (stdout: {stdout.length} chars)"
             if !stderr.isEmpty then
@@ -153,14 +162,14 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
         | .ok () => pure ()
         -- Contract lock check: verify locked artifacts weren't modified by worker
         match lockFile with
-        | some lf =>
-          let violations ← ContractLock.verifyLocksForSpec lf pinnedSpec.path.toString
+        | some activeLockFile =>
+          let violations ← ContractLock.verifyLocksForSpec activeLockFile pinnedSpec.path.toString
           if !violations.isEmpty then
             let reason := "contract lock violation: " ++ String.intercalate "; " violations
             let (s, c) := step loopConfig state context (.integrityViolation reason)
             state := s; context := c
             if !jsonOutput then
-              IO.eprintln s!"  {Output.ansiRed}Contract lock violated:{Output.ansiReset}"
+              IO.eprintln s!"  {Output.ansiRed}contract lock violated:{Output.ansiReset}"
               for violation in violations do
                 IO.eprintln s!"    - {violation}"
             continue
@@ -172,14 +181,7 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
         let failed := results.filter fun (_, result) => result.isFailed
         if !jsonOutput then
           let termWidth ← Output.getTerminalWidth
-          -- Visible width of "    [XXXX] " prefix (4 + 1 + 4 + 1 + 1 = 11)
-          let continuationIndent : Nat := 11
-          for (description, result) in results do
-            let linePrefix := s!"    [{Output.colorStatusIndicator result}] "
-            let text := match result with
-              | .skipped reason => s!"{description} {Output.ansiDim}— {reason}{Output.ansiReset}"
-              | _ => description
-            Output.printWrapped linePrefix continuationIndent text termWidth
+          let _ ← Output.printResultLines 4 results termWidth
         -- Integrity check: after running verifiers (catches verifier tampering)
         match ← Integrity.verify pinnedSpec pinned with
         | .error reason =>
@@ -208,8 +210,8 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
       ]
       IO.println (errorJson.pretty 2)
     else
-      IO.eprintln s!"\nInterrupted: {error}"
-      IO.eprintln s!"  State at interruption: {repr state}"
+      IO.eprintln s!"\n{Output.ansiRed}error:{Output.ansiReset} interrupted: {error}"
+      IO.eprintln s!"  state at interruption: {repr state}"
     return (1 : UInt32)
   -- Output final result
   if jsonOutput then
@@ -229,8 +231,8 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
       IO.println s!"{Output.ansiGreen}All criteria passed after {iterations} iteration(s).{Output.ansiReset}"
     | .stuck iterations failures =>
       IO.eprintln s!"{Output.ansiRed}Stuck after {iterations} iteration(s). Same failures for {loopConfig.stuckThreshold} consecutive iterations:{Output.ansiReset}"
-      for f in failures do
-        IO.eprintln s!"  - {f}"
+      for failure in failures do
+        IO.eprintln s!"  - {failure}"
     | .maxIterationsReached iterations =>
       IO.eprintln s!"{Output.ansiRed}Reached maximum iterations ({iterations}).{Output.ansiReset}"
     | .escalated reason =>

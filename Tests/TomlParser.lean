@@ -6,7 +6,7 @@ open Qed.TomlParser
 private def parseOrFail (toml : String) : IO String := do
   match tomlToJson toml with
   | .ok json => return json
-  | .error e => throw (IO.userError s!"unexpected parse error: {e}")
+  | .error errorInfo => throw (IO.userError s!"unexpected parse error: {errorInfo}")
 
 /-- Helper: parse TOML and expect failure. -/
 private def expectParseError (toml : String) : IO Bool := do

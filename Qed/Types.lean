@@ -177,4 +177,21 @@ def LoopState.isTerminal : LoopState → Bool
   | .integrityViolation _ => true
   | _ => false
 
+/-- Structured error with optional location, source context, and hint.
+    Used as the error type in `Except ErrorInfo` throughout the codebase.
+    Error creation sites populate whatever context is available — parsers
+    set line/col, the loader adds the file path, validation errors carry
+    just the message. The display layer renders all fields consistently. -/
+structure ErrorInfo where
+  message : String
+  file : Option String := none
+  line : Option Nat := none
+  column : Option Nat := none
+  sourceLineText : Option String := none
+  hint : Option String := none
+  deriving Repr, BEq, Inhabited
+
+instance : ToString ErrorInfo where
+  toString info := info.message
+
 end Qed
