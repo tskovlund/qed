@@ -380,7 +380,7 @@ def testLockJsonOutputReturnsFullLockFile : IO Bool := do
     let hasHash := stdout.contains "\"hash\""
     return exitCode == 0 && hasVersion && hasSpecs && hasArtifacts && hasHash
 
-def testVerifyDirectoryJsonOutputReturnsArray : IO Bool := do
+def testVerifyDirectoryJsonOutputReturnsWrappedObject : IO Bool := do
   -- Arrange
   let dir ← freshTempDir "dir-json"
   IO.FS.writeFile (dir / "a.spec.json")
@@ -431,5 +431,5 @@ def cliTests : List (String × IO Bool) := [
   ("testVerifyDirectoryRespectsQedignore", testVerifyDirectoryRespectsQedignore),
   ("testParseJsonOutputReturnsFullSpec", testParseJsonOutputReturnsFullSpec),
   ("testLockJsonOutputReturnsFullLockFile", testLockJsonOutputReturnsFullLockFile),
-  ("testVerifyDirectoryJsonOutputReturnsArray", testVerifyDirectoryJsonOutputReturnsArray)
+  ("testVerifyDirectoryJsonOutputReturnsWrappedObject", testVerifyDirectoryJsonOutputReturnsWrappedObject)
 ]

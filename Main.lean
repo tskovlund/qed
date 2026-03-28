@@ -143,7 +143,7 @@ def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext 
       return 2
     if jsonOutput then
       -- JSON mode: collect all results into a single JSON object
-      let mut specResults : List Lean.Json := []
+      let mut specResults : Array Lean.Json := #[]
       let mut anyFailed := false
       for specPath in specs do
         match ← loadSpecSafe specPath.toString with
@@ -155,10 +155,10 @@ def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext 
           if exitCode == 2 then
             IO.println (json.pretty 2)
             return 2
-          specResults := specResults ++ [json]
+          specResults := specResults.push json
           if exitCode == 1 then anyFailed := true
       IO.println (Lean.Json.mkObj [
-        ("specs", Lean.Json.arr specResults.toArray),
+        ("specs", Lean.Json.arr specResults),
         ("passed", Lean.Json.bool !anyFailed)
       ] |>.pretty 2)
       return if anyFailed then 1 else 0
