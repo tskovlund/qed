@@ -333,6 +333,73 @@ def testVerifyCommandTimeoutEndToEnd : IO Bool := do
   -- Assert: should fail (exit 1) with timeout in JSON details
   return exitCode == 1 && stdout.contains "timed out"
 
+def testParseJsonOutputReturnsFullSpec : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"full-parse\", \"criteria\": [{\"description\": \"builds\", \"verify\": {\"type\": \"command\", \"run\": \"make build\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["parse", "--json", specPath.toString]
+  -- Assert: full spec structure from Serializer, not just summary
+  match Lean.Json.parse stdout with
+  | .error _ => return false
+  | .ok json =>
+    let hasName := match json.getObjValAs? String "name" with
+      | .ok "full-parse" => true | _ => false
+    let hasCriteria := match json.getObjVal? "criteria" with
+      | .ok (Lean.Json.arr arr) => arr.size == 1
+      | _ => false
+    -- Full spec includes nested verify objects with type field
+    let hasVerifyType := match json.getObjVal? "criteria" with
+      | .ok (Lean.Json.arr arr) => match arr[0]? with
+        | some criterion => match criterion.getObjVal? "verify" with
+          | .ok verify => match verify.getObjValAs? String "type" with
+            | .ok "command" => true | _ => false
+          | _ => false
+        | none => false
+      | _ => false
+    return exitCode == 0 && hasName && hasCriteria && hasVerifyType
+
+def testLockJsonOutputReturnsFullLockFile : IO Bool := do
+  -- Arrange: spec with lock patterns and a matching file
+  let dir ← freshTempDir "lock-full-json"
+  IO.FS.writeFile (dir / "test.spec.json")
+    "{\"name\": \"lock-full\", \"criteria\": [{\"description\": \"locked\", \"verify\": {\"type\": \"command\", \"run\": \"true\", \"lock\": [\"*.txt\"]}}]}"
+  IO.FS.writeFile (dir / "data.txt") "content\n"
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["lock", "--json"] (some dir.toString)
+  -- Assert: full lock file structure with version, specs array, and artifacts
+  match Lean.Json.parse stdout with
+  | .error _ => return false
+  | .ok json =>
+    let hasVersion := match json.getObjValAs? Nat "version" with
+      | .ok 1 => true | _ => false
+    let hasSpecs := match json.getObjVal? "specs" with
+      | .ok (Lean.Json.arr arr) => arr.size == 1
+      | _ => false
+    let hasArtifacts := stdout.contains "\"artifacts\""
+    let hasHash := stdout.contains "\"hash\""
+    return exitCode == 0 && hasVersion && hasSpecs && hasArtifacts && hasHash
+
+def testVerifyDirectoryJsonOutputReturnsWrappedObject : IO Bool := do
+  -- Arrange
+  let dir ← freshTempDir "dir-json"
+  IO.FS.writeFile (dir / "a.spec.json")
+    "{\"name\": \"a\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  IO.FS.writeFile (dir / "b.spec.json")
+    "{\"name\": \"b\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", "--json", dir.toString]
+  -- Assert: single JSON object wrapping all specs
+  match Lean.Json.parse stdout with
+  | .error _ => return false
+  | .ok json =>
+    let hasSpecs := match json.getObjVal? "specs" with
+      | .ok (Lean.Json.arr arr) => arr.size == 2
+      | _ => false
+    let hasPassed := match json.getObjValAs? Bool "passed" with
+      | .ok true => true | _ => false
+    return exitCode == 0 && hasSpecs && hasPassed
+
 def cliTests : List (String × IO Bool) := [
   ("testVersionPrintsVersionString", testVersionPrintsVersionString),
   ("testHelpPrintsUsageInfo", testHelpPrintsUsageInfo),
@@ -361,5 +428,8 @@ def cliTests : List (String × IO Bool) := [
   ("testPromoteRejectsVerifyMode", testPromoteRejectsVerifyMode),
   ("testPromoteWithOutputWritesToFile", testPromoteWithOutputWritesToFile),
   ("testPromoteWithArchiveMovesOriginal", testPromoteWithArchiveMovesOriginal),
-  ("testVerifyDirectoryRespectsQedignore", testVerifyDirectoryRespectsQedignore)
+  ("testVerifyDirectoryRespectsQedignore", testVerifyDirectoryRespectsQedignore),
+  ("testParseJsonOutputReturnsFullSpec", testParseJsonOutputReturnsFullSpec),
+  ("testLockJsonOutputReturnsFullLockFile", testLockJsonOutputReturnsFullLockFile),
+  ("testVerifyDirectoryJsonOutputReturnsWrappedObject", testVerifyDirectoryJsonOutputReturnsWrappedObject)
 ]

@@ -35,11 +35,35 @@ private def reportError (error : ErrorInfo) (jsonOutput : Bool) : IO Unit := do
 private def reportErrorMsg (message : String) (jsonOutput : Bool) : IO Unit :=
   reportError { message } jsonOutput
 
+/-- Run single-pass verification and return the result as JSON with exit code.
+    Used by both single-spec and multi-spec JSON output paths.
+    Returns exit code 2 on integrity violation (with error JSON). -/
+private def verifySpecJson (pinnedSpec : Spec.Pinned) (context : RunContext := .full)
+    (pinned : Bool := false) : IO (UInt32 × Lean.Json) := do
+  let spec := pinnedSpec.spec
+  match ← Integrity.verify pinnedSpec pinned with
+  | .error reason =>
+    return (2, Error.formatErrorJson { message := s!"integrity violation: {reason}" })
+  | .ok () => pure ()
+  let criteria := filterBySchedule spec.criteria context
+  let results ← Verifier.verifyAll criteria
+  match ← Integrity.verify pinnedSpec pinned with
+  | .error reason =>
+    return (2, Error.formatErrorJson { message := s!"integrity violation: {reason}" })
+  | .ok () => pure ()
+  let passed := Output.allPassed results
+  let json := Output.resultsToJson spec.name results
+  return (if passed then 0 else 1, json)
+
 /-- Run single-pass verification on an already-loaded spec.
     In text mode, results are streamed (displayed as each criterion completes)
     so human criteria prompts appear inline. -/
 def verifySpec (pinnedSpec : Spec.Pinned) (jsonOutput : Bool) (context : RunContext := .full)
     (pinned : Bool := false) : IO UInt32 := do
+  if jsonOutput then
+    let (exitCode, json) ← verifySpecJson pinnedSpec context pinned
+    IO.println (json.pretty 2)
+    return exitCode
   let spec := pinnedSpec.spec
   -- Integrity check: before verification (hash + optional git pin)
   match ← Integrity.verify pinnedSpec pinned with
@@ -48,55 +72,42 @@ def verifySpec (pinnedSpec : Spec.Pinned) (jsonOutput : Bool) (context : RunCont
     return 2
   | .ok () => pure ()
   let criteria := filterBySchedule spec.criteria context
-  if jsonOutput then
-    let results ← Verifier.verifyAll criteria
-    -- Integrity check: after verification (catches verifier tampering)
-    match ← Integrity.verify pinnedSpec pinned with
-    | .error reason =>
-      reportErrorMsg s!"integrity violation: {reason}" jsonOutput
-      return 2
-    | .ok () => pure ()
-    let json := Output.resultsToJson spec.name results
-    IO.println (json.pretty 2)
-    let anyFailed := results.any fun (_, result) => result.isFailed
-    return if anyFailed then 1 else 0
-  else
-    let termWidth ← Output.getTerminalWidth
-    IO.println s!"{Output.ansiBold}Verifying: {spec.name}{Output.ansiReset}"
-    IO.println ""
-    if criteria.isEmpty then
-      IO.println s!"  {Output.ansiDim}No criteria to verify in this context.{Output.ansiReset}"
-      return 0
-    let mut anyFailed := false
-    let mut total : Nat := 0
-    let mut failedCount : Nat := 0
-    let mut skippedCount : Nat := 0
-    for criterion in criteria do
-      let result ← Verifier.verifyCriterion criterion
-      total := total + 1
-      if result.isFailed then
-        anyFailed := true
-        failedCount := failedCount + 1
-      if result.isSkipped then
-        skippedCount := skippedCount + 1
-      Output.printResultLine 2 criterion.description result termWidth
-    -- Integrity check: after verification (catches verifier tampering)
-    match ← Integrity.verify pinnedSpec pinned with
-    | .error reason =>
-      IO.eprintln ""
-      reportErrorMsg s!"integrity violation: {reason}" jsonOutput
-      return 2
-    | .ok () => pure ()
-    IO.println ""
-    if failedCount == 0 then
-      if skippedCount == total then
-        IO.println s!"{Output.ansiYellow}All {total} criteria skipped.{Output.ansiReset}"
-      else
-        let skippedNote := if skippedCount > 0 then s!" ({skippedCount} skipped)" else ""
-        IO.println s!"{Output.ansiGreen}All {total - skippedCount} criteria passed.{Output.ansiReset}{skippedNote}"
+  let termWidth ← Output.getTerminalWidth
+  IO.println s!"{Output.ansiBold}Verifying: {spec.name}{Output.ansiReset}"
+  IO.println ""
+  if criteria.isEmpty then
+    IO.println s!"  {Output.ansiDim}No criteria to verify in this context.{Output.ansiReset}"
+    return 0
+  let mut anyFailed := false
+  let mut total : Nat := 0
+  let mut failedCount : Nat := 0
+  let mut skippedCount : Nat := 0
+  for criterion in criteria do
+    let result ← Verifier.verifyCriterion criterion
+    total := total + 1
+    if result.isFailed then
+      anyFailed := true
+      failedCount := failedCount + 1
+    if result.isSkipped then
+      skippedCount := skippedCount + 1
+    Output.printResultLine 2 criterion.description result termWidth
+  -- Integrity check: after verification (catches verifier tampering)
+  match ← Integrity.verify pinnedSpec pinned with
+  | .error reason =>
+    IO.eprintln ""
+    reportErrorMsg s!"integrity violation: {reason}" jsonOutput
+    return 2
+  | .ok () => pure ()
+  IO.println ""
+  if failedCount == 0 then
+    if skippedCount == total then
+      IO.println s!"{Output.ansiYellow}All {total} criteria skipped.{Output.ansiReset}"
     else
-      IO.eprintln s!"{Output.ansiRed}{failedCount} of {total} criteria failed.{Output.ansiReset}"
-    return if anyFailed then 1 else 0
+      let skippedNote := if skippedCount > 0 then s!" ({skippedCount} skipped)" else ""
+      IO.println s!"{Output.ansiGreen}All {total - skippedCount} criteria passed.{Output.ansiReset}{skippedNote}"
+  else
+    IO.eprintln s!"{Output.ansiRed}{failedCount} of {total} criteria failed.{Output.ansiReset}"
+  return if anyFailed then 1 else 0
 
 /-- Load a spec file, handling IO exceptions with human-readable messages. -/
 def loadSpecSafe (path : String) : IO (Except ErrorInfo Spec.Pinned) := do
@@ -130,21 +141,44 @@ def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext 
     if specs.isEmpty then
       reportErrorMsg s!"no spec files found in '{directory}'" jsonOutput
       return 2
-    let mut passedSpecs : Nat := 0
-    let mut failedSpecs : Nat := 0
-    for specPath in specs do
-      let result ← runVerify specPath.toString jsonOutput context pinned
-      if result == 1 then failedSpecs := failedSpecs + 1
-      else if result == 0 then passedSpecs := passedSpecs + 1
-      if result == 2 then return 2
-      if !jsonOutput then IO.println ""
-    if !jsonOutput && specs.length > 1 then
-      let total := passedSpecs + failedSpecs
-      if failedSpecs == 0 then
-        IO.println s!"{Output.ansiBold}{Output.ansiGreen}All {total} specs passed.{Output.ansiReset}"
-      else
-        IO.eprintln s!"{Output.ansiBold}{Output.ansiRed}{failedSpecs} of {total} specs failed.{Output.ansiReset}"
-    return if failedSpecs > 0 then 1 else 0
+    if jsonOutput then
+      -- JSON mode: collect all results into a single JSON object
+      let mut specResults : Array Lean.Json := #[]
+      let mut anyFailed := false
+      for specPath in specs do
+        match ← loadSpecSafe specPath.toString with
+        | .error info =>
+          reportError info jsonOutput
+          return 2
+        | .ok pinnedSpec =>
+          let (exitCode, json) ← verifySpecJson pinnedSpec context pinned
+          if exitCode == 2 then
+            IO.println (json.pretty 2)
+            return 2
+          specResults := specResults.push json
+          if exitCode == 1 then anyFailed := true
+      IO.println (Lean.Json.mkObj [
+        ("specs", Lean.Json.arr specResults),
+        ("passed", Lean.Json.bool !anyFailed)
+      ] |>.pretty 2)
+      return if anyFailed then 1 else 0
+    else
+      -- Text mode: stream results as each spec completes
+      let mut passedSpecs : Nat := 0
+      let mut failedSpecs : Nat := 0
+      for specPath in specs do
+        let result ← runVerify specPath.toString jsonOutput context pinned
+        if result == 1 then failedSpecs := failedSpecs + 1
+        else if result == 0 then passedSpecs := passedSpecs + 1
+        if result == 2 then return 2
+        IO.println ""
+      if specs.length > 1 then
+        let total := passedSpecs + failedSpecs
+        if failedSpecs == 0 then
+          IO.println s!"{Output.ansiBold}{Output.ansiGreen}All {total} specs passed.{Output.ansiReset}"
+        else
+          IO.eprintln s!"{Output.ansiBold}{Output.ansiRed}{failedSpecs} of {total} specs failed.{Output.ansiReset}"
+      return if failedSpecs > 0 then 1 else 0
 
 /-- Parse and validate a spec file, printing the parsed result. -/
 def runParse (path : String) (jsonOutput : Bool) : IO UInt32 := do
@@ -155,14 +189,7 @@ def runParse (path : String) (jsonOutput : Bool) : IO UInt32 := do
   | .ok pinnedSpec =>
     let spec := pinnedSpec.spec
     if jsonOutput then
-      let modeString := match spec.mode with
-        | .verify => "verify"
-        | .workerLoop _ _ => "workerLoop"
-      IO.println (Lean.Json.mkObj [
-        ("name", Lean.Json.str spec.name),
-        ("mode", Lean.Json.str modeString),
-        ("criteriaCount", Lean.Json.num spec.criteria.length)
-      ] |>.pretty 2)
+      IO.println (Serializer.specToJson spec |>.pretty 2)
     else
       IO.println s!"Spec: {spec.name}"
       IO.println s!"Mode: {repr spec.mode}"
@@ -201,10 +228,7 @@ def runLock (directory : String) (jsonOutput : Bool) : IO UInt32 := do
         count + specLock.criteria.foldl (init := 0) fun c criterionLock =>
           c + criterionLock.artifacts.length
       if jsonOutput then
-        IO.println (Lean.Json.mkObj [
-          ("specs", Lean.toJson lockFile.specs.length),
-          ("artifacts", Lean.toJson artifactCount)
-        ] |>.pretty 2)
+        IO.println (ContractLock.lockFileToJson lockFile |>.pretty 2)
       else
         if artifactCount == 0 then
           IO.println "No lockable artifacts found."
@@ -244,7 +268,6 @@ def runPromote (path : String) (output : Option String) (archive : Bool)
         let archiveDir := (System.FilePath.mk path).parent.getD "." / "archive"
         let archivePath := archiveDir / ((System.FilePath.mk path).fileName.getD "spec")
         IO.FS.createDirAll archiveDir
-        -- Atomic move (rename is atomic on the same filesystem)
         IO.FS.rename path archivePath
         if !jsonOutput then
           IO.println s!"Archived original → {archivePath}"
