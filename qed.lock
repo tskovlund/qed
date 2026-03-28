@@ -1,0 +1,348 @@
+{"version":
+ 1,
+ "specs":
+ [{"specPath":
+   "./specs/build.spec.json",
+   "criteria":
+   [{"description":
+     "All tests pass",
+     "artifacts":
+     [{"path":
+       "Tests/Cli.lean",
+       "hash":
+       "153f5f7342f8a97688f991520cdf03d72dc220999bcd6ef7f65ba2897c577df9"},
+      {"path":
+       "Tests/ContractLock.lean",
+       "hash":
+       "e04c983e3403a5932b7ee9abec92f4f097b751cc501226f3afb3962dbf176b67"},
+      {"path":
+       "Tests/Ignore.lean",
+       "hash":
+       "990a7ebd65afe5ae3ce510f11e36988ab6b1c8b648ca9fd5cab33c2a789af538"},
+      {"path":
+       "Tests/Integration.lean",
+       "hash":
+       "95a5bf54bde523eb98af4d480702409de6515bec2e964ace652ad730df449eeb"},
+      {"path":
+       "Tests/Main.lean",
+       "hash":
+       "881e8081a700d0574d759a04d7d8d80b2a8beaa37168c8ed5d71f6ce49c07382"},
+      {"path":
+       "Tests/Parser.lean",
+       "hash":
+       "7a6df865b1bd5077f5bc4b5beebf4bc9fd2d034a2f8bedc98ca7de783917d80c"},
+      {"path":
+       "Tests/TomlParser.lean",
+       "hash":
+       "fe7c4ce28c963305cc2869e7fe7ba6057cb3687e48e599ce6a5150f72c97e2e7"},
+      {"path":
+       "Tests/Types.lean",
+       "hash":
+       "9c4602cae70d7260c87990374ccf0f07ad95c05e58e5fdf36bc72128769ab661"},
+      {"path":
+       "Tests/Verifier.lean",
+       "hash":
+       "bca3b1efaee2194eeb1e6c248aebc32c59f4082ac7dab1f8d6c071afa78dfa19"}]}]},
+  {"specPath":
+   "./specs/cli.spec.toml",
+   "criteria":
+   [{"description":
+     "Result space is a complete partition: every result is exactly one variant, predicates agree",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.TypeProperties.result_complete_partition",
+       "hash":
+       "a6e1db808930f8df259271d1b7e669fe3af7028ca82d25d93e1dee1931563b7b"}]},
+    {"description":
+     "Pass/fail decision is correct: allPassed returns true iff no result is .fail",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.OutputCorrectness.allPassed_iff_no_failures",
+       "hash":
+       "88dd43cd2256d311bfb1a15fd6c6991b1c173754553a18886fa096e3f60254ba"}]},
+    {"description":
+     "Verify-mode JSON output always contains 'spec', 'passed', and 'criteria' fields",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.OutputCorrectness.resultsToJson_has_required_fields",
+       "hash":
+       "c8c9f8405cfa7fb0980bb963923fbedb0f73166102f9cd132e2e8b66b6108195"}]},
+    {"description":
+     "Worker-loop JSON output always contains 'spec', 'state', 'passed', and 'criteria' fields",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.OutputCorrectness.workerResultsToJson_has_required_fields",
+       "hash":
+       "46d6328ff5d847b0e574442e38d4b9021f2d68c3edbdbebb2cd43ffac49570b0"}]}]},
+  {"specPath":
+   "./specs/state-machine.spec.toml",
+   "criteria":
+   [{"description":
+     "The ready state always advances — transitions to workerRunning(1) or integrityViolation",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.Invariants.ready_always_advances",
+       "hash":
+       "8950bd305d92df5fd17ea88252c383454d6d6103d7a7aa66612ffb47fe23f225"}]},
+    {"description":
+     "Terminal states are absorbing — transitioning from a terminal state always returns the same state unchanged",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.FinalStates.terminal_absorbing",
+       "hash":
+       "e9d8bfc79ad3fb8e8f55d28beb60aae11e29fc63cf34b84723a4bb75bc2e1bb0"}]},
+    {"description":
+     "Worker must pass through verification before reaching any terminal success state",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.NoSkip.no_skip_verification",
+       "hash":
+       "bba355a72584f970f8c4ad43ff3c3d7ec1cf96267f9aebbdaa84f0a67cff5488"}]},
+    {"description":
+     "Iteration count never exceeds maxIterations — the configured bound is respected",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.Invariants.iteration_bounded",
+       "hash":
+       "899adb87bbfd56d256258cb616f6893be5110648c7ce2d243328d86f6f20c9a1"}]},
+    {"description":
+     "Every non-terminal transition either terminates, self-loops, or follows one of three advance patterns (ready→working, working→verifying, verifying→next iteration)",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.Invariants.lifecycle_ordering",
+       "hash":
+       "ce6ec4753b6634f44c01c411565a14c8bccfc01a4ccaf8aa05c1fbe464ebc48a"}]},
+    {"description":
+     "The transition function is deterministic — equal inputs always produce equal outputs",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.Invariants.transition_deterministic",
+       "hash":
+       "4f3a8e9e678b6f1d29a42889b6c62b0d15dcef06db433f78a154c7226e6c8b55"}]},
+    {"description":
+     "Iteration count never decreases across transitions",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.Monotonic.iteration_monotonic",
+       "hash":
+       "a0884f81530961aaa36ffd3f711c22b4e8a8d26b3e4fee6774b9cad270d34bd8"}]},
+    {"description":
+     "State lifecycle phase (initial → working → terminal) never decreases",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.Invariants.phase_monotonic",
+       "hash":
+       "2ed2b13e6023d649ef1296510d77f194d82a13d69e08d3c243558825b84f8a1f"}]},
+    {"description":
+     "The loop always reaches a terminal state within maxIterations transitions",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.Termination.loop_terminates",
+       "hash":
+       "8ed1416051c33019c5f24b04407f179df3d9c49af7b58fbb403287d503c7c47b"}]},
+    {"description":
+     "Every state-changing non-terminal transition either terminates or strictly increases the progress measure",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.Termination.progress_or_terminal",
+       "hash":
+       "bfe70dbf012caa17be4cef44d0af330965871bd70aeb0f7a091efa7828fcd855"}]},
+    {"description":
+     "Stuck detection fires iff the same failures repeat for stuckThreshold consecutive iterations",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.StuckDetection.stuck_iff_threshold",
+       "hash":
+       "6ab92eded0d98fc067dc4e5105729ff7d916866e4bbc04f01016afb23ee490a0"}]},
+    {"description":
+     "The initial state (ready) is never revisited after leaving it",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.Invariants.ready_unreachable",
+       "hash":
+       "52ec20533331f53e02e5ae3f5e1178445ebecb5c44de634d95de1fe75866ba1c"}]},
+    {"description":
+     "Integrity violation from any non-terminal state always produces terminal integrityViolation",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.IntegrityProperties.integrity_violation_terminal",
+       "hash":
+       "67eba8d6bd9127bd11098fe5fe895e8d97f2ea73c8e4f4cde8cd7d10fa37c63b"}]},
+    {"description":
+     "Integrity violation from a non-terminal state can never produce passed — violated results are never accepted",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.IntegrityProperties.integrity_violation_not_passed",
+       "hash":
+       "d57e23d56d631f0fcd94c8596281f9e93b59421f3371ac9e22ece4cc70095886"}]}]},
+  {"specPath":
+   "./specs/parser.spec.toml",
+   "criteria":
+   [{"description":
+     "Schedule parser accepts exactly the three valid strings and rejects everything else",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.ParserProperties.parseSchedule_iff",
+       "hash":
+       "4021dc1cfc2a6c9afe1da7aacc551fd2f3a671b6f4df2e0f74966a862a556da0"}]},
+    {"description":
+     "Serializer→parser roundtrip: parsing serialized JSON recovers the original spec exactly",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.Roundtrip.spec_roundtrip",
+       "hash":
+       "b9321515ec593b0dfc7ff4e5d09a9c474d7b680fd2a7c3d196f123ef1957b7ef"}]},
+    {"description":
+     "TOML→JSON conversion is total: always returns ok or error, never diverges",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.TomlJsonValidity.tomlToJson_total",
+       "hash":
+       "2d2ee418d3c38bf31b36cdfd41f865c33c93e4e46f797d4466add736a25d0bf5"}]},
+    {"description":
+     "Successful TOML→JSON conversion implies the input was valid TOML",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.TomlJsonValidity.tomlToJson_ok_implies_parseDoc_ok",
+       "hash":
+       "201cc8dda4fc08d445d1c97ee4720c33abf0bfd9cd0f32fa078c5a97ea6fd4f7"}]},
+    {"description":
+     "TOML parse errors propagate to the conversion result (never swallowed)",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.TomlJsonValidity.parseDoc_error_implies_tomlToJson_error",
+       "hash":
+       "095e4ee8b48df7ac34caafb35d374e61ed5fc53aa43296c7ef71e0f51ea586ab"}]},
+    {"description":
+     "TOML parser rejects duplicate keys at the leaf level",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.TomlProperties.setNested_rejects_duplicate",
+       "hash":
+       "f570bbc3b05638fdafc1c4f2015e7f45f11f4efc5b8809482202a1eb7b52fbff"}]}]},
+  {"specPath":
+   "./specs/verifier.spec.toml",
+   "criteria":
+   [{"description":
+     "targetToModule returns the module prefix iff the target has at least two dot-separated parts",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.VerifierProperties.targetToModule_iff",
+       "hash":
+       "cbf016d1c17127ba823c4c4c68c79b4605a00a6bfba55901683244dadcd19903"}]},
+    {"description":
+     "isValidModuleName accepts only names with non-empty, identifier-char-only segments (shell-safe)",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.VerifierProperties.isValidModuleName_iff",
+       "hash":
+       "27fc537b27e743c450462454278795556379a415f174d6db438e427a3f6bbcd8"}]},
+    {"description":
+     "containsSorry detects exactly standalone sorry occurrences — no false positives or negatives",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.VerifierProperties.containsSorry_iff",
+       "hash":
+       "a6c81108adb8be6b4c4955d8169b72382d42c6ccd8caf3d738be27cb01db5a5f"}]}]},
+  {"specPath":
+   "./specs/verify-mode.spec.toml",
+   "criteria":
+   [{"description":
+     "SpecMode has exactly two constructors: workerLoop and verify",
+     "artifacts":
+     [{"path":
+       "Qed/Types.lean",
+       "hash":
+       "07b53a5ccead846227dd55049d0e702686de3d3203a2ff7600b8010bb8954fb0"}]},
+    {"description":
+     "JSON Schema enforces at least one criterion when no worker is present",
+     "artifacts":
+     [{"path":
+       "DocGen/Schema.lean",
+       "hash":
+       "32b19861274a91cbbf5b4d44621ef4a7226639f888f167da498fe96e207dd8a0"}]},
+    {"description":
+     "Verify mode cannot carry a WorkerConfig or LoopConfig",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.VerifyMode.verify_has_no_worker",
+       "hash":
+       "ea23c3f71f1f60e6edd03613353363b7a9ceff41b2970e37f56b8da5d90bcf82"}]},
+    {"description":
+     "Verify mode does not depend on the state machine transition function",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.VerifyMode.verify_independent_of_loop",
+       "hash":
+       "5e35c3cf8053bbd392577fceee91abf95bccab807bafb994dd105513de52d617"}]}]},
+  {"specPath":
+   "./specs/worker-loop.spec.toml",
+   "criteria":
+   [{"description":
+     "Worker loop drives StateMachine.transition exclusively (step = transition)",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.WorkerLoopProperties.step_eq_transition",
+       "hash":
+       "4db362719b25c331c68c431bb717b93cac40eef6f4e5003214d457da2144c1eb"}]},
+    {"description":
+     "Empty failures produce the base prompt unchanged",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.WorkerLoopProperties.buildPrompt_empty_failures",
+       "hash":
+       "7426b494e8c17737d5b296cf633db64dc51a48cac055d9b76a720eb5bec19a80"}]},
+    {"description":
+     "Non-empty failures extend (not replace) the base prompt",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.WorkerLoopProperties.buildPrompt_nonempty_appends",
+       "hash":
+       "58029784262fce5d4a6120b229e936f327f0228adecc1b5cf8afd03faacebc7f"}]},
+    {"description":
+     "shellQuote wraps its input in single quotes",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.WorkerLoopProperties.shellQuote_wraps",
+       "hash":
+       "063fea70c620fcb1cb1a83b97f7b24c38fd21ee032b92adbd4c2b4b878d777b9"}]},
+    {"description":
+     "shellQuote of empty string produces the empty shell string ''",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.WorkerLoopProperties.shellQuote_empty",
+       "hash":
+       "02ab538b0772b8b6a52e6ee443b109729082982c3f872871ae61791e9c1d8bc2"}]}]},
+  {"specPath":
+   "./specs/docs.spec.toml",
+   "criteria":
+   [{"description":
+     "JSON Schema is fresh (generated output matches committed file)",
+     "artifacts":
+     [{"path":
+       "DocGen/Main.lean",
+       "hash":
+       "122c42e21b0c3a1fb9432c5b47e103ca068f4e624b5b2de1084a4c9d4e389643"},
+      {"path":
+       "DocGen/Markdown.lean",
+       "hash":
+       "ea7e0bbcdea3d08a37d461ae56427d6a6a823ed3cf23216f4cdf51ceb9ac1a1c"},
+      {"path":
+       "DocGen/Schema.lean",
+       "hash":
+       "32b19861274a91cbbf5b4d44621ef4a7226639f888f167da498fe96e207dd8a0"}]},
+    {"description":
+     "Spec format reference is fresh (generated output matches committed file)",
+     "artifacts":
+     [{"path":
+       "DocGen/Main.lean",
+       "hash":
+       "122c42e21b0c3a1fb9432c5b47e103ca068f4e624b5b2de1084a4c9d4e389643"},
+      {"path":
+       "DocGen/Markdown.lean",
+       "hash":
+       "ea7e0bbcdea3d08a37d461ae56427d6a6a823ed3cf23216f4cdf51ceb9ac1a1c"},
+      {"path":
+       "DocGen/Schema.lean",
+       "hash":
+       "32b19861274a91cbbf5b4d44621ef4a7226639f888f167da498fe96e207dd8a0"}]}]}]}
