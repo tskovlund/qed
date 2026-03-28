@@ -120,4 +120,15 @@ def extractJsonOffset (errorMessage : String) : Option (Nat × String) :=
       | none => none
   else none
 
+/-- Report a structured error in the appropriate output format. -/
+def reportError (format : OutputFormat) (error : ErrorInfo) : IO Unit :=
+  match format with
+  | .jsonLines =>
+    Output.emitJsonLine (Output.jsonLineEvent "error"
+      [("message", Lean.Json.str error.message)])
+  | .json =>
+    IO.println (formatErrorJson error |>.pretty 2)
+  | .text =>
+    IO.eprintln (formatError error)
+
 end Qed.Error

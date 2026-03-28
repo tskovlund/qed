@@ -1,11 +1,16 @@
 import Lean.Data.Json
 import Qed.Types
+import Qed.Shell
 
 set_option autoImplicit false
 
 namespace Qed.Output
 
 open Lean Qed
+
+-- ============================================================================
+-- Primitives: ANSI codes, status indicators, text wrapping
+-- ============================================================================
 
 /-- Human-readable status indicator for display output (PASS/FAIL/etc). -/
 def statusIndicator : VerificationResult → String
@@ -22,6 +27,9 @@ def ansiRed : String := "\x1b[31m"
 def ansiYellow : String := "\x1b[33m"
 def ansiCyan : String := "\x1b[36m"
 def ansiDim : String := "\x1b[2m"
+
+/-- Maximum characters of stderr to preview in terminal output. -/
+def stderrPreviewLength : Nat := 200
 
 /-- Status indicator with ANSI color for terminal display. -/
 def colorStatusIndicator : VerificationResult → String
@@ -91,6 +99,10 @@ def printWrapped (firstPrefix : String) (continuationIndent : Nat)
     for line in rest do
       IO.println s!"{pad}{line}"
 
+-- ============================================================================
+-- JSON serialization
+-- ============================================================================
+
 /-- Serialize a VerificationResult to a JSON-friendly result string. -/
 def resultStatus : VerificationResult → String
   | .pass _ => "passed"
@@ -109,6 +121,7 @@ def resultDetails : VerificationResult → String
     Includes `exitCode` and `elapsedMs` when present. -/
 def executionToJson (description : String) (execution : CriterionExecution) : Json :=
   let base := [
+    ("type", Json.str "criterion"),
     ("description", Json.str description),
     ("result", Json.str (resultStatus execution.result)),
     ("details", Json.str (resultDetails execution.result))
@@ -155,6 +168,19 @@ def workerExecutionsToJson (specName : String) (stateDescription : String)
 def extractResults (executions : List (String × CriterionExecution)) : List (String × VerificationResult) :=
   executions.map fun (description, execution) => (description, execution.result)
 
+/-- Emit a single JSON line to stdout (compact, no pretty-printing).
+    Used by `--json-lines` streaming mode. -/
+def emitJsonLine (json : Json) : IO Unit :=
+  IO.println (json.compress)
+
+/-- Build a JSON Lines event with the given type and fields. -/
+def jsonLineEvent (eventType : String) (fields : List (String × Json)) : Json :=
+  Json.mkObj (("type", Json.str eventType) :: fields)
+
+-- ============================================================================
+-- Text-mode printing helpers
+-- ============================================================================
+
 /-- Visible width of the status prefix `[STATUS] ` for a given result.
     Accounts for varying indicator lengths (PASS=4, NEEDS-HUMAN=11, etc.). -/
 private def statusPrefixWidth (result : VerificationResult) : Nat :=
@@ -183,5 +209,222 @@ def printResultLines (baseIndent : Nat)
     if result.isFailed then failedCount := failedCount + 1
     if result.isSkipped then skippedCount := skippedCount + 1
   return (failedCount, skippedCount)
+
+-- ============================================================================
+-- Format-dispatched emit functions: verify mode
+-- ============================================================================
+
+/-- Emit verify mode header. Text prints the spec name, JSON Lines emits
+    a `spec_start` event, JSON is a no-op (output is batched). -/
+def emitVerifyHeader (format : OutputFormat) (specName : String)
+    (criteriaCount : Nat) : IO Unit := do
+  match format with
+  | .jsonLines =>
+    emitJsonLine (jsonLineEvent "spec_start"
+      [("spec", Json.str specName),
+       ("criteriaCount", Json.num criteriaCount)])
+  | .text =>
+    IO.println s!"{ansiBold}Verifying: {specName}{ansiReset}"
+    IO.println ""
+  | .json => pure ()
+
+/-- Emit a single criterion result. Text prints the status line, JSON Lines
+    emits the criterion event, JSON is a no-op (results are batched). -/
+def emitCriterionResult (format : OutputFormat) (indent : Nat)
+    (description : String) (execution : CriterionExecution) : IO Unit := do
+  match format with
+  | .jsonLines => emitJsonLine (executionToJson description execution)
+  | .text =>
+    let termWidth ← getTerminalWidth
+    printResultLine indent description execution.result termWidth
+  | .json => pure ()
+
+/-- Emit all criterion results for a batch (worker loop iterations). -/
+def emitCriteriaResults (format : OutputFormat) (indent : Nat)
+    (executions : List (String × CriterionExecution)) : IO Unit := do
+  match format with
+  | .jsonLines =>
+    for (description, execution) in executions do
+      emitJsonLine (executionToJson description execution)
+  | .text =>
+    let termWidth ← getTerminalWidth
+    let results := extractResults executions
+    let _ ← printResultLines indent results termWidth
+  | .json => pure ()
+
+/-- Emit verify mode completion summary. -/
+def emitVerifyDone (format : OutputFormat) (specName : String)
+    (anyFailed : Bool) (failedCount : Nat) (skippedCount : Nat)
+    (total : Nat) : IO Unit := do
+  match format with
+  | .jsonLines =>
+    emitJsonLine (jsonLineEvent "spec_done"
+      [("spec", Json.str specName),
+       ("passed", Json.bool !anyFailed)])
+  | .text =>
+    IO.println ""
+    if failedCount == 0 then
+      if skippedCount == total then
+        IO.println s!"{ansiYellow}All {total} criteria skipped.{ansiReset}"
+      else
+        let skippedNote := if skippedCount > 0 then s!" ({skippedCount} skipped)" else ""
+        IO.println s!"{ansiGreen}All {total - skippedCount} criteria passed.{ansiReset}{skippedNote}"
+    else
+      IO.eprintln s!"{ansiRed}{failedCount} of {total} criteria failed.{ansiReset}"
+  | .json => pure ()
+
+-- ============================================================================
+-- Format-dispatched emit functions: worker loop
+-- ============================================================================
+
+/-- Emit worker loop header: spec name, config, lock status. -/
+def emitLoopHeader (format : OutputFormat) (specName : String)
+    (maxIterations : Nat) (stuckThreshold : Nat)
+    (lockFilePath : Option String) : IO Unit := do
+  match format with
+  | .jsonLines =>
+    emitJsonLine (jsonLineEvent "spec_start"
+      [("spec", Json.str specName),
+       ("mode", Json.str "worker_loop"),
+       ("maxIterations", Json.num maxIterations),
+       ("stuckThreshold", Json.num stuckThreshold)])
+  | .text =>
+    IO.println s!"{ansiBold}Worker loop: {specName}{ansiReset}"
+    IO.println s!"  max iterations: {maxIterations}, stuck threshold: {stuckThreshold}"
+    match lockFilePath with
+    | some path => IO.println s!"  contract lock: {path}"
+    | none => pure ()
+    IO.println ""
+  | .json => pure ()
+
+/-- Emit iteration start marker. -/
+def emitIterationStart (format : OutputFormat) (iteration : Nat) : IO Unit := do
+  match format with
+  | .jsonLines =>
+    emitJsonLine (jsonLineEvent "iteration_start"
+      [("iteration", Json.num iteration)])
+  | .text =>
+    IO.println s!"{ansiBold}── Iteration {iteration} ──{ansiReset}"
+    IO.println "  Running worker..."
+  | .json => pure ()
+
+/-- Emit worker completion result with timing and exit info. -/
+def emitWorkerResult (format : OutputFormat) (iteration : Nat)
+    (workerResult : Shell.TimeoutResult) (workerTimeout : Nat) : IO Unit := do
+  match format with
+  | .jsonLines =>
+    match workerResult with
+    | .timedOut _ _ elapsedMs =>
+      emitJsonLine (jsonLineEvent "worker_done"
+        [("iteration", Json.num iteration),
+         ("timedOut", Json.bool true),
+         ("elapsedMs", Json.num elapsedMs)])
+    | .completed exitCode _ _ elapsedMs =>
+      emitJsonLine (jsonLineEvent "worker_done"
+        [("iteration", Json.num iteration),
+         ("exitCode", Json.num exitCode.toNat),
+         ("elapsedMs", Json.num elapsedMs)])
+  | .text =>
+    match workerResult with
+    | .timedOut _ stderr _ =>
+      IO.println s!"  {ansiRed}Worker timed out after {workerTimeout}s{ansiReset}"
+      if !stderr.isEmpty then
+        IO.println s!"  Worker stderr: {stderr.trimAscii.take stderrPreviewLength}"
+    | .completed exitCode stdout stderr _ =>
+      if exitCode != 0 then
+        IO.println s!"  {ansiRed}Worker exited with code {exitCode}{ansiReset}"
+      else
+        IO.println s!"  Worker completed (stdout: {stdout.length} chars)"
+      if !stderr.isEmpty then
+        IO.println s!"  Worker stderr: {stderr.trimAscii.take stderrPreviewLength}"
+  | .json => pure ()
+
+/-- Emit "Verifying criteria..." in text mode. -/
+def emitVerifyingCriteria (format : OutputFormat) : IO Unit :=
+  if format == .text then IO.println "  Verifying criteria..." else pure ()
+
+/-- Emit iteration done summary. -/
+def emitIterationDone (format : OutputFormat) (iteration : Nat)
+    (passed : Bool) (failedCount : Nat) (isTerminal : Bool) : IO Unit := do
+  match format with
+  | .jsonLines =>
+    emitJsonLine (jsonLineEvent "iteration_done"
+      [("iteration", Json.num iteration),
+       ("passed", Json.bool passed),
+       ("failedCount", Json.num failedCount)])
+  | .text =>
+    if !passed && !isTerminal then
+      IO.println s!"  {failedCount} criteria failed, retrying..."
+      IO.println ""
+  | .json => pure ()
+
+/-- Emit contract lock violation message. -/
+def emitContractViolation (format : OutputFormat)
+    (violations : List String) : IO Unit := do
+  match format with
+  | .jsonLines =>
+    for violation in violations do
+      emitJsonLine (jsonLineEvent "contract_violation"
+        [("message", Json.str violation)])
+  | .text =>
+    IO.eprintln s!"  {ansiRed}contract lock violated:{ansiReset}"
+    for violation in violations do
+      IO.eprintln s!"    - {violation}"
+  | .json => pure ()
+
+/-- Emit worker loop error (interruption). -/
+def emitLoopError (format : OutputFormat) (errorMessage : String)
+    (stateRepr : String) : IO Unit := do
+  match format with
+  | .jsonLines =>
+    emitJsonLine (jsonLineEvent "error"
+      [("message", Json.str errorMessage)])
+  | .json =>
+    let errorJson := Json.mkObj [
+      ("error", Json.str errorMessage),
+      ("state", Json.str stateRepr)
+    ]
+    IO.println (errorJson.pretty 2)
+  | .text =>
+    IO.eprintln s!"\n{ansiRed}error:{ansiReset} {errorMessage}"
+    IO.eprintln s!"  state at interruption: {stateRepr}"
+
+/-- Emit worker loop final result. -/
+def emitLoopResult (format : OutputFormat) (specName : String)
+    (state : LoopState) (stuckThreshold : Nat)
+    (allExecutions : List (String × CriterionExecution)) : IO Unit := do
+  let stateString := match state with
+    | .passed iterations => s!"passed after {iterations} iterations"
+    | .stuck iterations _ => s!"stuck after {iterations} iterations"
+    | .maxIterationsReached iterations => s!"max iterations reached ({iterations})"
+    | .escalated reason => s!"escalated: {reason}"
+    | .integrityViolation reason => s!"integrity violation: {reason}"
+    | _ => "unknown"
+  match format with
+  | .jsonLines =>
+    let passed := match state with | .passed _ => true | _ => false
+    emitJsonLine (jsonLineEvent "loop_done"
+      [("spec", Json.str specName),
+       ("state", Json.str stateString),
+       ("passed", Json.bool passed)])
+  | .json =>
+    let resultJson := workerExecutionsToJson specName stateString allExecutions
+    IO.println (resultJson.pretty 2)
+  | .text =>
+    IO.println ""
+    match state with
+    | .passed iterations =>
+      IO.println s!"{ansiGreen}All criteria passed after {iterations} iteration(s).{ansiReset}"
+    | .stuck iterations failures =>
+      IO.eprintln s!"{ansiRed}Stuck after {iterations} iteration(s). Same failures for {stuckThreshold} consecutive iterations:{ansiReset}"
+      for failure in failures do
+        IO.eprintln s!"  - {failure}"
+    | .maxIterationsReached iterations =>
+      IO.eprintln s!"{ansiRed}Reached maximum iterations ({iterations}).{ansiReset}"
+    | .escalated reason =>
+      IO.eprintln s!"{ansiRed}Escalated: {reason}{ansiReset}"
+    | .integrityViolation reason =>
+      IO.eprintln s!"{ansiRed}Integrity violation: {reason}{ansiReset}"
+    | _ => pure ()
 
 end Qed.Output

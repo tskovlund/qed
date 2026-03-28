@@ -24,21 +24,10 @@ def filterBySchedule (criteria : List AcceptanceCriterion) (context : RunContext
   | .extended => criteria.filter fun c => c.schedule != .manual
   | .auto => criteria.filter fun c => c.schedule == .always
 
-/-- Report a structured error, using JSON format when --json is active. -/
-private def reportError (error : ErrorInfo) (jsonOutput : Bool) : IO Unit := do
-  if jsonOutput then
-    IO.println (Error.formatErrorJson error |>.pretty 2)
-  else
-    IO.eprintln (Error.formatError error)
-
-/-- Report a plain error message (convenience wrapper). -/
-private def reportErrorMsg (message : String) (jsonOutput : Bool) : IO Unit :=
-  reportError { message } jsonOutput
-
-/-- Run single-pass verification and return the result as JSON with exit code.
-    Used by both single-spec and multi-spec JSON output paths.
+/-- Run single-pass verification, collecting results for the caller.
+    Used by JSON mode (single-spec print) and multi-spec JSON wrapper.
     Returns exit code 2 on integrity violation (with error JSON). -/
-private def verifySpecJson (pinnedSpec : Spec.Pinned) (context : RunContext := .full)
+private def verifySpecCollect (pinnedSpec : Spec.Pinned) (context : RunContext := .full)
     (pinned : Bool := false) : IO (UInt32 × Lean.Json) := do
   let spec := pinnedSpec.spec
   match ← Integrity.verify pinnedSpec pinned with
@@ -55,59 +44,48 @@ private def verifySpecJson (pinnedSpec : Spec.Pinned) (context : RunContext := .
   let json := Output.executionsToJson spec.name executions
   return (if passed then 0 else 1, json)
 
-/-- Run single-pass verification on an already-loaded spec.
-    In text mode, results are streamed (displayed as each criterion completes)
-    so human criteria prompts appear inline. -/
-def verifySpec (pinnedSpec : Spec.Pinned) (jsonOutput : Bool) (context : RunContext := .full)
-    (pinned : Bool := false) : IO UInt32 := do
-  if jsonOutput then
-    let (exitCode, json) ← verifySpecJson pinnedSpec context pinned
-    IO.println (json.pretty 2)
-    return exitCode
+/-- Run single-pass verification in streaming mode (text or JSON Lines).
+    Results are emitted as each criterion completes. -/
+private def verifySpecStream (pinnedSpec : Spec.Pinned) (format : OutputFormat)
+    (context : RunContext := .full) (pinned : Bool := false) : IO UInt32 := do
   let spec := pinnedSpec.spec
-  -- Integrity check: before verification (hash + optional git pin)
   match ← Integrity.verify pinnedSpec pinned with
   | .error reason =>
-    reportErrorMsg s!"integrity violation: {reason}" jsonOutput
+    Error.reportError format { message := s!"integrity violation: {reason}" }
     return 2
   | .ok () => pure ()
   let criteria := filterBySchedule spec.criteria context
-  let termWidth ← Output.getTerminalWidth
-  IO.println s!"{Output.ansiBold}Verifying: {spec.name}{Output.ansiReset}"
-  IO.println ""
-  if criteria.isEmpty then
+  Output.emitVerifyHeader format spec.name criteria.length
+  if format == .text && criteria.isEmpty then
     IO.println s!"  {Output.ansiDim}No criteria to verify in this context.{Output.ansiReset}"
     return 0
   let mut anyFailed := false
-  let mut total : Nat := 0
   let mut failedCount : Nat := 0
   let mut skippedCount : Nat := 0
   for criterion in criteria do
     let execution ← Verifier.verifyCriterion criterion
-    total := total + 1
-    if execution.isFailed then
-      anyFailed := true
-      failedCount := failedCount + 1
-    if execution.isSkipped then
-      skippedCount := skippedCount + 1
-    Output.printResultLine 2 criterion.description execution.result termWidth
+    if execution.isFailed then anyFailed := true; failedCount := failedCount + 1
+    if execution.isSkipped then skippedCount := skippedCount + 1
+    Output.emitCriterionResult format 2 criterion.description execution
   -- Integrity check: after verification (catches verifier tampering)
   match ← Integrity.verify pinnedSpec pinned with
   | .error reason =>
-    IO.eprintln ""
-    reportErrorMsg s!"integrity violation: {reason}" jsonOutput
+    Error.reportError format { message := s!"integrity violation: {reason}" }
     return 2
   | .ok () => pure ()
-  IO.println ""
-  if failedCount == 0 then
-    if skippedCount == total then
-      IO.println s!"{Output.ansiYellow}All {total} criteria skipped.{Output.ansiReset}"
-    else
-      let skippedNote := if skippedCount > 0 then s!" ({skippedCount} skipped)" else ""
-      IO.println s!"{Output.ansiGreen}All {total - skippedCount} criteria passed.{Output.ansiReset}{skippedNote}"
-  else
-    IO.eprintln s!"{Output.ansiRed}{failedCount} of {total} criteria failed.{Output.ansiReset}"
+  Output.emitVerifyDone format spec.name anyFailed failedCount skippedCount criteria.length
   return if anyFailed then 1 else 0
+
+/-- Run single-pass verification on an already-loaded spec.
+    Dispatches to the appropriate output path based on format. -/
+def verifySpec (pinnedSpec : Spec.Pinned) (format : OutputFormat)
+    (context : RunContext := .full) (pinned : Bool := false) : IO UInt32 := do
+  match format with
+  | .json =>
+    let (exitCode, json) ← verifySpecCollect pinnedSpec context pinned
+    IO.println (json.pretty 2)
+    return exitCode
+  | _ => verifySpecStream pinnedSpec format context pinned
 
 /-- Load a spec file, handling IO exceptions with human-readable messages. -/
 def loadSpecSafe (path : String) : IO (Except ErrorInfo Spec.Pinned) := do
@@ -122,36 +100,37 @@ def loadSpecSafe (path : String) : IO (Except ErrorInfo Spec.Pinned) := do
     return .error { message := s!"cannot read '{path}': {error}", file := some path }
 
 /-- Load a spec and run single-pass verification. -/
-def runVerify (path : String) (jsonOutput : Bool) (context : RunContext := .full)
+def runVerify (path : String) (format : OutputFormat) (context : RunContext := .full)
     (pinned : Bool := false) : IO UInt32 := do
   match ← loadSpecSafe path with
   | .error info =>
-    reportError info jsonOutput
+    Error.reportError format info
     return 2
-  | .ok pinnedSpec => verifySpec pinnedSpec jsonOutput context pinned
+  | .ok pinnedSpec => verifySpec pinnedSpec format context pinned
 
 /-- Verify all specs in a directory. Returns 0 if all pass, 1 if any fail, 2 on error. -/
-def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext := .full)
-    (pinned : Bool := false) : IO UInt32 := do
+def runVerifyAll (directory : String) (format : OutputFormat)
+    (context : RunContext := .full) (pinned : Bool := false) : IO UInt32 := do
   match ← SpecLoader.listAllSpecs directory with
   | .error message =>
-    reportErrorMsg message jsonOutput
+    Error.reportError format { message }
     return 2
   | .ok specs =>
     if specs.isEmpty then
-      reportErrorMsg s!"no spec files found in '{directory}'" jsonOutput
+      Error.reportError format { message := s!"no spec files found in '{directory}'" }
       return 2
-    if jsonOutput then
-      -- JSON mode: collect all results into a single JSON object
+    match format with
+    | .json =>
+      -- JSON mode: collect all results into a single JSON wrapper
       let mut specResults : Array Lean.Json := #[]
       let mut anyFailed := false
       for specPath in specs do
         match ← loadSpecSafe specPath.toString with
         | .error info =>
-          reportError info jsonOutput
+          Error.reportError format info
           return 2
         | .ok pinnedSpec =>
-          let (exitCode, json) ← verifySpecJson pinnedSpec context pinned
+          let (exitCode, json) ← verifySpecCollect pinnedSpec context pinned
           if exitCode == 2 then
             IO.println (json.pretty 2)
             return 2
@@ -162,17 +141,17 @@ def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext 
         ("passed", Lean.Json.bool !anyFailed)
       ] |>.pretty 2)
       return if anyFailed then 1 else 0
-    else
-      -- Text mode: stream results as each spec completes
+    | _ =>
+      -- Text and JSON Lines: stream results per spec
       let mut passedSpecs : Nat := 0
       let mut failedSpecs : Nat := 0
       for specPath in specs do
-        let result ← runVerify specPath.toString jsonOutput context pinned
+        let result ← runVerify specPath.toString format context pinned
         if result == 1 then failedSpecs := failedSpecs + 1
         else if result == 0 then passedSpecs := passedSpecs + 1
         if result == 2 then return 2
-        IO.println ""
-      if specs.length > 1 then
+        if format == .text then IO.println ""
+      if format == .text && specs.length > 1 then
         let total := passedSpecs + failedSpecs
         if failedSpecs == 0 then
           IO.println s!"{Output.ansiBold}{Output.ansiGreen}All {total} specs passed.{Output.ansiReset}"
@@ -181,85 +160,87 @@ def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext 
       return if failedSpecs > 0 then 1 else 0
 
 /-- Parse and validate a spec file, printing the parsed result. -/
-def runParse (path : String) (jsonOutput : Bool) : IO UInt32 := do
+def runParse (path : String) (format : OutputFormat) : IO UInt32 := do
   match ← loadSpecSafe path with
   | .error info =>
-    reportError info jsonOutput
+    Error.reportError format info
     return 2
   | .ok pinnedSpec =>
     let spec := pinnedSpec.spec
-    if jsonOutput then
-      IO.println (Serializer.specToJson spec |>.pretty 2)
-    else
+    match format with
+    | .text =>
       IO.println s!"Spec: {spec.name}"
       IO.println s!"Mode: {repr spec.mode}"
       IO.println s!"Criteria: {spec.criteria.length}"
       for criterion in spec.criteria do
         IO.println s!"  - {criterion.description}"
+    | .json => IO.println (Serializer.specToJson spec |>.pretty 2)
+    | .jsonLines => Output.emitJsonLine (Serializer.specToJson spec)
     return 0
 
 /-- Generate or update the lock file from all specs in a directory. -/
-def runLock (directory : String) (jsonOutput : Bool) : IO UInt32 := do
+def runLock (directory : String) (format : OutputFormat) : IO UInt32 := do
   match ← SpecLoader.listAllSpecs directory with
   | .error message =>
-    reportErrorMsg message jsonOutput
+    Error.reportError format { message }
     return 2
   | .ok specPaths =>
     if specPaths.isEmpty then
-      reportErrorMsg s!"no spec files found in '{directory}'" jsonOutput
+      Error.reportError format { message := s!"no spec files found in '{directory}'" }
       return 2
     -- Load all specs
     let mut specs : List (String × Spec) := []
     for specPath in specPaths do
       match ← loadSpecSafe specPath.toString with
       | .error info =>
-        reportError info jsonOutput
+        Error.reportError format info
         return 2
       | .ok pinnedSpec =>
         specs := specs ++ [(specPath.toString, pinnedSpec.spec)]
     -- Generate lock file
     match ← ContractLock.generateLockFile specs with
     | .error info =>
-      reportError info jsonOutput
+      Error.reportError format info
       return 2
     | .ok lockFile =>
       ContractLock.writeLockFile lockFile
       let artifactCount := lockFile.specs.foldl (init := 0) fun count specLock =>
         count + specLock.criteria.foldl (init := 0) fun c criterionLock =>
           c + criterionLock.artifacts.length
-      if jsonOutput then
-        IO.println (ContractLock.lockFileToJson lockFile |>.pretty 2)
-      else
+      match format with
+      | .text =>
         if artifactCount == 0 then
           IO.println "No lockable artifacts found."
         else
           IO.println s!"Locked {artifactCount} artifact(s) across {lockFile.specs.length} spec(s)."
           IO.println s!"Lock file written to {ContractLock.lockFilePath}"
+      | .json => IO.println (ContractLock.lockFileToJson lockFile |>.pretty 2)
+      | .jsonLines => Output.emitJsonLine (ContractLock.lockFileToJson lockFile)
       return 0
 
 /-- Promote a worker loop spec to verify mode (strip worker section). -/
 def runPromote (path : String) (output : Option String) (archive : Bool)
-    (jsonOutput : Bool) : IO UInt32 := do
+    (format : OutputFormat) : IO UInt32 := do
   match ← loadSpecSafe path with
   | .error info =>
-    reportError info jsonOutput
+    Error.reportError format info
     return 2
   | .ok pinnedSpec =>
     let spec := pinnedSpec.spec
     match spec.mode with
     | .verify =>
-      reportErrorMsg s!"'{path}' is already in verify mode" jsonOutput
+      Error.reportError format { message := s!"'{path}' is already in verify mode" }
       return 2
     | .workerLoop _ _ =>
       if spec.criteria.isEmpty then
-        reportErrorMsg s!"'{path}' has no criteria to promote" jsonOutput
+        Error.reportError format { message := s!"'{path}' has no criteria to promote" }
         return 2
       let promoted : Spec := { spec with mode := .verify }
       let promotedJson := (Serializer.specToJson promoted).pretty 2
       match output with
       | some outputPath =>
         IO.FS.writeFile outputPath (promotedJson ++ "\n")
-        if !jsonOutput then
+        if format == .text then
           IO.println s!"Promoted '{spec.name}' to verify mode → {outputPath}"
       | none =>
         IO.println promotedJson
@@ -269,7 +250,7 @@ def runPromote (path : String) (output : Option String) (archive : Bool)
         let archivePath := archiveDir / ((System.FilePath.mk path).fileName.getD "spec")
         IO.FS.createDirAll archiveDir
         IO.FS.rename path archivePath
-        if !jsonOutput then
+        if format == .text then
           IO.println s!"Archived original → {archivePath}"
       return 0
 
@@ -288,6 +269,7 @@ def printHelp : IO Unit := do
   IO.println ""
   IO.println "Options:"
   IO.println "  --json                    Output results as JSON"
+  IO.println "  --json-lines              Stream results as JSON Lines (one event per line)"
   IO.println "  --auto                    Skip heavy and manual criteria (auto-detected when CI=true)"
   IO.println "  --extended                Include heavy criteria, skip manual (for thorough CI runs)"
   IO.println "  --full                    Run all criteria including manual (overrides CI auto-detection)"
@@ -303,7 +285,7 @@ def printHelp : IO Unit := do
 
 /-- Parsed CLI flags. -/
 structure CliFlags where
-  jsonOutput : Bool
+  format : OutputFormat
   context : Option RunContext
   pinned : Bool
   noLock : Bool
@@ -325,28 +307,35 @@ private def extractOutput (args : List String) : Option String × List String :=
     Returns an error if conflicting mode flags are provided. -/
 private def extractFlags (args : List String) : Except String CliFlags :=
   let jsonFlag := args.any (· == "--json")
+  let jsonLinesFlag := args.any (· == "--json-lines")
   let pinFlag := args.any (· == "--pin")
   let noLockFlag := args.any (· == "--no-lock")
   let archiveFlag := args.any (· == "--archive")
   let hasAuto := args.any (· == "--auto")
   let hasExtended := args.any (· == "--extended")
   let hasFull := args.any (· == "--full")
-  let modeCount := (if hasAuto then 1 else 0) + (if hasExtended then 1 else 0) +
-    (if hasFull then 1 else 0)
-  if modeCount > 1 then
-    .error "conflicting flags: use only one of --auto, --extended, or --full"
+  if jsonFlag && jsonLinesFlag then
+    .error "conflicting flags: use --json or --json-lines, not both"
   else
-    let context := if hasAuto then some RunContext.auto
-      else if hasExtended then some RunContext.extended
-      else if hasFull then some RunContext.full
-      else none
-    let filtered := args.filter fun a =>
-      a != "--json" && a != "--auto" && a != "--extended" && a != "--full" &&
-      a != "--pin" && a != "--no-lock" && a != "--archive"
-    let (outputPath, remaining) := extractOutput filtered
-    .ok { jsonOutput := jsonFlag, context, pinned := pinFlag,
-          noLock := noLockFlag, archive := archiveFlag,
-          output := outputPath, cleanArgs := remaining }
+    let modeCount := (if hasAuto then 1 else 0) + (if hasExtended then 1 else 0) +
+      (if hasFull then 1 else 0)
+    if modeCount > 1 then
+      .error "conflicting flags: use only one of --auto, --extended, or --full"
+    else
+      let context := if hasAuto then some RunContext.auto
+        else if hasExtended then some RunContext.extended
+        else if hasFull then some RunContext.full
+        else none
+      let format := if jsonLinesFlag then OutputFormat.jsonLines
+        else if jsonFlag then OutputFormat.json
+        else OutputFormat.text
+      let filtered := args.filter fun a =>
+        a != "--json" && a != "--json-lines" && a != "--auto" && a != "--extended" &&
+        a != "--full" && a != "--pin" && a != "--no-lock" && a != "--archive"
+      let (outputPath, remaining) := extractOutput filtered
+      .ok { format, context, pinned := pinFlag,
+            noLock := noLockFlag, archive := archiveFlag,
+            output := outputPath, cleanArgs := remaining }
 
 /-- Resolve the execution context: explicit flag > CI env var > full. -/
 private def resolveContext (explicit : Option RunContext) : IO RunContext := do
@@ -371,33 +360,33 @@ def main (args : List String) : IO UInt32 := do
     printHelp
     return 0
   | ["lock"] =>
-    runLock "." flags.jsonOutput
+    runLock "." flags.format
   | ["lock", directory] =>
-    runLock directory flags.jsonOutput
+    runLock directory flags.format
   | ["promote", path] =>
-    runPromote path flags.output flags.archive flags.jsonOutput
+    runPromote path flags.output flags.archive flags.format
   | ["verify"] =>
-    runVerifyAll "." flags.jsonOutput context flags.pinned
+    runVerifyAll "." flags.format context flags.pinned
   | ["verify", path] =>
     let isDir ← (path : System.FilePath).isDir
-    if isDir then runVerifyAll path flags.jsonOutput context flags.pinned
-    else runVerify path flags.jsonOutput context flags.pinned
+    if isDir then runVerifyAll path flags.format context flags.pinned
+    else runVerify path flags.format context flags.pinned
   | ["run", path] =>
     match ← loadSpecSafe path with
     | .error info =>
-      reportError info flags.jsonOutput
+      Error.reportError flags.format info
       return 2
     | .ok pinnedSpec =>
       match pinnedSpec.spec.mode with
-      | .verify => verifySpec pinnedSpec flags.jsonOutput context flags.pinned
+      | .verify => verifySpec pinnedSpec flags.format context flags.pinned
       | .workerLoop worker loopConfig =>
-        WorkerLoop.run pinnedSpec worker loopConfig flags.jsonOutput flags.pinned flags.noLock
+        WorkerLoop.run pinnedSpec worker loopConfig flags.format flags.pinned flags.noLock
   | ["parse", path] =>
-    runParse path flags.jsonOutput
+    runParse path flags.format
   | [] =>
     printHelp
     return 0
   | _ =>
-    reportError { message := s!"unknown command '{String.intercalate " " flags.cleanArgs}'",
-                  hint := some "run 'qed help' for usage information" } flags.jsonOutput
+    let message := s!"unknown command '{String.intercalate " " flags.cleanArgs}'"
+    Error.reportError flags.format { message, hint := some "run 'qed help' for usage information" }
     return 2
