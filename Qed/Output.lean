@@ -1,6 +1,8 @@
 import Lean.Data.Json
 import Qed.Types
 
+set_option autoImplicit false
+
 namespace Qed.Output
 
 open Lean Qed
@@ -66,12 +68,12 @@ def getTerminalWidth : IO Nat := do
     }
     let parts := result.stdout.trimAscii.toString.splitOn " "
     match parts with
-    | [_, cols] => pure (cols.toNat?.getD 0)
+    | [_, columns] => pure (columns.toNat?.getD 0)
     | _ => pure 0
   catch _ => pure 0
   if width > 0 then return width
   match ← IO.getEnv "COLUMNS" with
-  | some val => return val.toNat?.getD 80
+  | some value => return value.toNat?.getD 80
   | none => return 80
 
 /-- Print a line with word-wrapping. The first line starts with `firstPrefix`,

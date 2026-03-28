@@ -20,7 +20,7 @@ theorem setNested_no_duplicate_at_leaf (pairs : List (String × TomlValue))
 theorem setNested_rejects_duplicate (pairs : List (String × TomlValue))
     (key : String) (value : TomlValue)
     (h_dup : pairs.any (fun (k, _) => k == key) = true) :
-    ∃ e, setNested pairs [key] value = .error e := by
+    ∃ error, setNested pairs [key] value = .error error := by
   unfold setNested
   simp [h_dup]
 
@@ -28,7 +28,7 @@ theorem setNested_rejects_duplicate (pairs : List (String × TomlValue))
 
 /-- An empty key path is always rejected. -/
 theorem setNested_empty_keys (pairs : List (String × TomlValue)) (value : TomlValue) :
-    ∃ e, setNested pairs [] value = .error e := by
+    ∃ error, setNested pairs [] value = .error error := by
   unfold setNested
   exact ⟨_, rfl⟩
 
@@ -36,7 +36,7 @@ theorem setNested_empty_keys (pairs : List (String × TomlValue)) (value : TomlV
 
 /-- appendArray on an empty key path always errors. -/
 theorem appendArray_empty_keys (pairs : List (String × TomlValue)) :
-    ∃ e, appendArray pairs [] = .error e := by
+    ∃ error, appendArray pairs [] = .error error := by
   unfold appendArray
   exact ⟨_, rfl⟩
 

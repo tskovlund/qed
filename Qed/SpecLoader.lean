@@ -5,6 +5,8 @@ import Qed.Integrity
 import Qed.Ignore
 import Qed.Error
 
+set_option autoImplicit false
+
 namespace Qed.SpecLoader
 
 open Qed
@@ -14,8 +16,8 @@ open Qed
 def loadSpec (path : System.FilePath) : IO (Except ErrorInfo Spec.Pinned) := do
   let contents ← IO.FS.readFile path
   let contentHash ← Integrity.hashContents contents
-  let pathStr := path.toString
-  let specResult : Except ErrorInfo Spec := if pathStr.endsWith ".toml" then
+  let pathString := path.toString
+  let specResult : Except ErrorInfo Spec := if pathString.endsWith ".toml" then
     match TomlConverter.tomlToJson contents with
     | .error errorInfo => .error errorInfo
     | .ok json => Parser.parseJson json
@@ -24,7 +26,7 @@ def loadSpec (path : System.FilePath) : IO (Except ErrorInfo Spec.Pinned) := do
   match specResult with
   | .error info =>
     -- For JSON files, enrich parse errors with code frame info
-    let enriched := if !pathStr.endsWith ".toml" && info.line.isNone then
+    let enriched := if !pathString.endsWith ".toml" && info.line.isNone then
       match Error.extractJsonOffset info.message with
       | some (offset, cleanMessage) =>
         let (lineNumber, column, lineText) := Error.sourceContext contents offset
@@ -33,7 +35,7 @@ def loadSpec (path : System.FilePath) : IO (Except ErrorInfo Spec.Pinned) := do
           sourceLineText := some lineText }
       | none => info
     else info
-    return .error { enriched with file := some pathStr }
+    return .error { enriched with file := some pathString }
   | .ok spec => return .ok { spec, path, contentHash }
 
 /-- List all spec files in a directory matching the given extension. -/

@@ -1,5 +1,7 @@
 import Qed
 
+set_option autoImplicit false
+
 /-- Relative path to the built qed binary. -/
 private def qedBinaryRelative : String := ".lake/build/bin/qed"
 

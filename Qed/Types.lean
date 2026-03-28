@@ -1,3 +1,5 @@
+set_option autoImplicit false
+
 namespace Qed
 
 /-- Default timeout for command verification (seconds). -/

@@ -1,5 +1,7 @@
 import Qed.Types
 
+set_option autoImplicit false
+
 namespace Qed.StateMachine
 
 open Qed

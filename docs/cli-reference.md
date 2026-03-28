@@ -58,6 +58,35 @@ Schedule defaults: `always` for command/property/proof, `heavy` for agent, `manu
 | 1    | Verification failure — one or more criteria failed                                             |
 | 2    | Configuration or usage error — bad spec, missing file, unknown command, or integrity violation |
 
+## Error output
+
+Parse errors and usage errors include structured context when available:
+
+```
+error: expected '=' after key
+ --> spec.toml:3:5
+  |
+3 | naem = "my-spec"
+  |     ^
+hint: check for typos in key names
+```
+
+Components (all optional except the error line):
+- **`error: <message>`** — always present, always to stderr
+- **` --> file:line:col`** — when a source location is known
+- **Code frame** — numbered source line with caret pointer (TOML and JSON parse errors)
+- **`hint: <suggestion>`** — actionable next step
+
+With `--json`, errors produce a structured object:
+
+```json
+{
+  "error": "expected '=' after key",
+  "location": { "file": "spec.toml", "line": 3, "col": 5 },
+  "hint": "check for typos in key names"
+}
+```
+
 ## Configuration
 
 All meaningful parameters are configurable at the spec level — defaults are sensible but overridable:

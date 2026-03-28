@@ -9,6 +9,8 @@ import Qed.Error
 import Qed.Integrity
 import Qed.ContractLock
 
+set_option autoImplicit false
+
 namespace Qed.WorkerLoop
 
 open Qed
@@ -215,14 +217,14 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
     return (1 : UInt32)
   -- Output final result
   if jsonOutput then
-    let stateStr := match state with
+    let stateString := match state with
       | .passed iterations => s!"passed after {iterations} iterations"
       | .stuck iterations _ => s!"stuck after {iterations} iterations"
       | .maxIterationsReached iterations => s!"max iterations reached ({iterations})"
       | .escalated reason => s!"escalated: {reason}"
       | .integrityViolation reason => s!"integrity violation: {reason}"
       | _ => "unknown"
-    let resultJson := Output.workerResultsToJson spec.name stateStr allResults
+    let resultJson := Output.workerResultsToJson spec.name stateString allResults
     IO.println (resultJson.pretty 2)
   else
     IO.println ""

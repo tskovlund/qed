@@ -1,5 +1,7 @@
 import Qed
 
+set_option autoImplicit false
+
 open Qed
 
 def testIsValidGlobPatternAcceptsSimplePatterns : IO Bool := do

@@ -1,6 +1,8 @@
 import Lean.Data.Json
 import Qed.Types
 
+set_option autoImplicit false
+
 namespace Qed.Parser
 
 open Lean Qed
@@ -153,7 +155,7 @@ def parseFromJson (json : Json) : Except ErrorInfo Spec := do
 
 /-- Parse a Spec from a JSON string. -/
 def parseJson (input : String) : Except ErrorInfo Spec := do
-  let json ← (Json.parse input).mapError fun e => ({ message := e } : ErrorInfo)
+  let json ← (Json.parse input).mapError fun error => ({ message := error } : ErrorInfo)
   parseFromJson json
 
 end Qed.Parser

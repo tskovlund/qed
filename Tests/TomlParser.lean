@@ -1,5 +1,7 @@
 import Qed.TomlParser
 
+set_option autoImplicit false
+
 open Qed.TomlParser
 
 /-- Helper: parse TOML and return JSON string or panic. -/

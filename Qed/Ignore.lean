@@ -1,3 +1,5 @@
+set_option autoImplicit false
+
 namespace Qed.Ignore
 
 /-- Path to the ignore file (relative to project root). -/
@@ -33,11 +35,11 @@ private def matchBracket (patternChars : List Char) (character : Char)
     advancing `str` by one, so termination is O(p×n) but not structurally
     decreasing. Marked partial since this is runtime-only code. -/
 private partial def fnmatchGo (pat : List Char) (str : List Char)
-    (starPat : Option (List Char)) (starStr : Option (List Char)) : Bool :=
+    (starPat : Option (List Char)) (starString : Option (List Char)) : Bool :=
   match pat, str with
   | [], [] => true
   | [], _ =>
-    match starPat, starStr with
+    match starPat, starString with
     | some sp, some ss =>
       match ss with
       | [] => false
@@ -47,19 +49,19 @@ private partial def fnmatchGo (pat : List Char) (str : List Char)
     fnmatchGo patRest str (some patRest) (some str)
   | '?' :: patRest, c :: strRest =>
     if c == '/' then
-      match starPat, starStr with
+      match starPat, starString with
       | some sp, some ss =>
         match ss with
         | [] => false
         | _ :: rest => fnmatchGo sp rest (some sp) (some rest)
       | _, _ => false
     else
-      fnmatchGo patRest strRest starPat starStr
+      fnmatchGo patRest strRest starPat starString
   | '[' :: patRest, c :: strRest =>
     match matchBracket patRest c with
-    | some (true, remaining) => fnmatchGo remaining strRest starPat starStr
+    | some (true, remaining) => fnmatchGo remaining strRest starPat starString
     | _ =>
-      match starPat, starStr with
+      match starPat, starString with
       | some sp, some ss =>
         match ss with
         | [] => false
@@ -67,16 +69,16 @@ private partial def fnmatchGo (pat : List Char) (str : List Char)
       | _, _ => false
   | p :: patRest, c :: strRest =>
     if p == c then
-      fnmatchGo patRest strRest starPat starStr
+      fnmatchGo patRest strRest starPat starString
     else
-      match starPat, starStr with
+      match starPat, starString with
       | some sp, some ss =>
         match ss with
         | [] => false
         | _ :: rest => fnmatchGo sp rest (some sp) (some rest)
       | _, _ => false
   | _ :: _, [] =>
-    match starPat, starStr with
+    match starPat, starString with
     | some sp, some ss =>
       match ss with
       | [] => false

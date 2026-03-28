@@ -1,6 +1,8 @@
 import Qed.Types
 import Qed.Shell
 
+set_option autoImplicit false
+
 namespace Qed.Agent
 
 open Qed

@@ -1,6 +1,8 @@
 import Qed
 import Qed.Verifier
 
+set_option autoImplicit false
+
 open Qed
 open Qed.Verifier
 

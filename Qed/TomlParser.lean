@@ -120,14 +120,14 @@ def parseKey (s : String) (i : Nat) : Except ErrorInfo (String × Nat) :=
 /-- Parse a dotted key like `criteria.verify`. -/
 partial def parseDottedKey (s : String) (i : Nat) : Except ErrorInfo (List String × Nat) :=
   match parseKey s i with
-  | .error e => .error e
+  | .error errorInfo => .error errorInfo
   | .ok (first, j) =>
     let rec go (j : Nat) (acc : List String) : Except ErrorInfo (List String × Nat) :=
       let j := skipWs s j
       if j < s.utf8ByteSize && String.Pos.Raw.get s ⟨j⟩ == '.' then
         let j := skipWs s (j + 1)
         match parseKey s j with
-        | .error e => .error e
+        | .error errorInfo => .error errorInfo
         | .ok (key, j) => go j (acc ++ [key])
       else .ok (acc, j)
     go j [first]
@@ -155,9 +155,9 @@ partial def parseInteger (s : String) (i : Nat) : Except ErrorInfo (Int × Nat) 
 
 /-- A TOML value. -/
 inductive TomlValue where
-  | str (val : String)
-  | int (val : Int)
-  | bool (val : Bool)
+  | str (value : String)
+  | int (value : Int)
+  | bool (value : Bool)
   | table (pairs : List (String × TomlValue))
   | array (items : List TomlValue)
 
@@ -169,7 +169,7 @@ partial def parseValue (s : String) (i : Nat) : Except ErrorInfo (TomlValue × N
     if c == '"' then
       match parseString s i with
       | .ok (v, j) => .ok (.str v, j)
-      | .error e => .error e
+      | .error errorInfo => .error errorInfo
     else if c == '[' then
       parseInlineArray s (i + 1) []
     else if c == 't' && i + 3 < s.utf8ByteSize &&
@@ -181,7 +181,7 @@ partial def parseValue (s : String) (i : Nat) : Except ErrorInfo (TomlValue × N
     else if c.isDigit || c == '+' || c == '-' then
       match parseInteger s i with
       | .ok (n, j) => .ok (.int n, j)
-      | .error e => .error e
+      | .error errorInfo => .error errorInfo
     else .error (makeParseError s i s!"unexpected character '{c}'")
 where
   /-- Parse the contents of an inline array `[v1, v2, ...]`. -/
@@ -195,7 +195,7 @@ where
       else
         -- Allow trailing comma before `]`
         match parseValue s j with
-        | .error e => .error e
+        | .error errorInfo => .error errorInfo
         | .ok (value, k) =>
           let k := skipWsNl s k
           if k >= s.utf8ByteSize then .error (makeParseError s i "unterminated inline array")
@@ -232,12 +232,12 @@ def setNested (pairs : List (String × TomlValue)) (keys : List String) (value :
       match setNested inner rest value with
       | .ok newInner => .ok (pairs.map fun (k, v) =>
           if k == key then (k, .table newInner) else (k, v))
-      | .error e => .error e
+      | .error errorInfo => .error errorInfo
     | some _ => .error { message := s!"key '{key}' already exists and is not a table" }
     | none =>
       match setNested [] rest value with
       | .ok newInner => .ok (pairs ++ [(key, .table newInner)])
-      | .error e => .error e
+      | .error errorInfo => .error errorInfo
 
 /-- Append a new empty table to an array-of-tables at the given path. -/
 def appendArray (pairs : List (String × TomlValue)) (keys : List String)
@@ -257,12 +257,12 @@ def appendArray (pairs : List (String × TomlValue)) (keys : List String)
       match appendArray inner rest with
       | .ok newInner => .ok (pairs.map fun (k, v) =>
           if k == key then (k, .table newInner) else (k, v))
-      | .error e => .error e
+      | .error errorInfo => .error errorInfo
     | some _ => .error { message := s!"key '{key}' is not a table" }
     | none =>
       match appendArray [] rest with
       | .ok newInner => .ok (pairs ++ [(key, .table newInner)])
-      | .error e => .error e
+      | .error errorInfo => .error errorInfo
 
 /-- Set a value in the last table of an array-of-tables. -/
 def setInLastArray (pairs : List (String × TomlValue)) (arrayKeys : List String)
@@ -281,7 +281,7 @@ def setInLastArray (pairs : List (String × TomlValue)) (arrayKeys : List String
           let newItems := rest.reverse ++ [.table newPairs]
           .ok (pairs.map fun (k, v) =>
             if k == key then (k, .array newItems) else (k, v))
-        | .error e => .error e
+        | .error errorInfo => .error errorInfo
       | _ :: _ => .error { message := "last array item is not a table" }
     | _ => .error { message := s!"'{key}' is not an array of tables" }
   | key :: rest =>
@@ -290,7 +290,7 @@ def setInLastArray (pairs : List (String × TomlValue)) (arrayKeys : List String
       match setInLastArray inner rest valueKeys value with
       | .ok newInner => .ok (pairs.map fun (k, v) =>
           if k == key then (k, .table newInner) else (k, v))
-      | .error e => .error e
+      | .error errorInfo => .error errorInfo
     | _ => .error { message := s!"'{key}' is not a table" }
 
 /-- Table context for key-value routing.
@@ -313,27 +313,27 @@ partial def parseDoc (s : String) : Except ErrorInfo (List (String × TomlValue)
         -- [[array.of.tables]]
         let j := skipWs s (i + 2)
         match parseDottedKey s j with
-        | .error e => .error e
+        | .error errorInfo => .error errorInfo
         | .ok (keys, j) =>
           let j := skipWs s j
           if j + 1 < s.utf8ByteSize && String.Pos.Raw.get s ⟨j⟩ == ']' && String.Pos.Raw.get s ⟨j + 1⟩ == ']' then
             match skipToEol s (j + 2) with
-            | .error e => .error e
+            | .error errorInfo => .error errorInfo
             | .ok j =>
               match appendArray pairs keys with
-              | .error e => .error e
+              | .error errorInfo => .error errorInfo
               | .ok p => go j p (.arr keys [])
           else .error (makeParseError s j "expected ']]'")
       else
         -- [table.header]
         let j := skipWs s (i + 1)
         match parseDottedKey s j with
-        | .error e => .error e
+        | .error errorInfo => .error errorInfo
         | .ok (keys, j) =>
           let j := skipWs s j
           if j < s.utf8ByteSize && String.Pos.Raw.get s ⟨j⟩ == ']' then
             match skipToEol s (j + 1) with
-            | .error e => .error e
+            | .error errorInfo => .error errorInfo
             | .ok j =>
               -- Check if this table is a sub-table of the current array context.
               -- e.g., [criteria.verify] after [[criteria]] means we're setting
@@ -357,23 +357,23 @@ partial def parseDoc (s : String) : Except ErrorInfo (List (String × TomlValue)
     else
       -- key = value
       match parseDottedKey s i with
-      | .error e => .error e
+      | .error errorInfo => .error errorInfo
       | .ok (keys, j) =>
         let j := skipWs s j
         if j < s.utf8ByteSize && String.Pos.Raw.get s ⟨j⟩ == '=' then
           let j := skipWs s (j + 1)
           match parseValue s j with
-          | .error e => .error e
+          | .error errorInfo => .error errorInfo
           | .ok (value, j) =>
             match skipToEol s j with
-            | .error e => .error e
+            | .error errorInfo => .error errorInfo
             | .ok j =>
               let result := match context with
                 | .root => setNested pairs keys value
                 | .tbl tableKeys => setNested pairs (tableKeys ++ keys) value
                 | .arr arrayKeys subKeys => setInLastArray pairs arrayKeys (subKeys ++ keys) value
               match result with
-              | .error e => .error e
+              | .error errorInfo => .error errorInfo
               | .ok p => go j p context
         else .error (makeParseError s j "expected '='")
   go 0 [] .root
@@ -382,19 +382,19 @@ mutual
 /-- Convert a TomlValue to Lean.Json. Uses mutual recursion to prove
 termination through the nested inductive (List inside TomlValue). -/
 def toJson : TomlValue → Json
-  | .str v => Json.str v
-  | .int v => Json.num v
-  | .bool v => Json.bool v
+  | .str value => Json.str value
+  | .int value => Json.num value
+  | .bool value => Json.bool value
   | .table pairs => Json.mkObj (toJsonPairs pairs)
   | .array items => Json.arr (toJsonList items).toArray
 
 def toJsonPairs : List (String × TomlValue) → List (String × Json)
   | [] => []
-  | (k, v) :: rest => (k, toJson v) :: toJsonPairs rest
+  | (key, value) :: rest => (key, toJson value) :: toJsonPairs rest
 
 def toJsonList : List TomlValue → List Json
   | [] => []
-  | v :: rest => toJson v :: toJsonList rest
+  | value :: rest => toJson value :: toJsonList rest
 end
 
 /-- Parse TOML and return JSON string. Pure Lean — no external dependencies. -/

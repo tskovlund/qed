@@ -119,7 +119,7 @@ The verification type determines both **what runs** and **what guarantee you get
 Specs are files in the repo — version-controlled, schema-validated, colocated with the code they specify. `SpecLoader` reads and lists spec files from disk:
 
 ```lean
-def loadSpec (path : System.FilePath) : IO (Except String Spec.Pinned)
+def loadSpec (path : System.FilePath) : IO (Except ErrorInfo Spec.Pinned)
 def listSpecs (directory : System.FilePath) (extension : String) : IO (Except String (List System.FilePath))
 def listAllSpecs (directory : System.FilePath) : IO (Except String (List System.FilePath))  -- recursive
 ```
@@ -134,7 +134,7 @@ The architecture follows a strict separation:
 
 | Layer         | IO? | What lives here                                                                           |
 | ------------- | --- | ----------------------------------------------------------------------------------------- |
-| **Pure core** | No  | Types, Agent, StateMachine, Parser, TomlParser, TomlConverter, Output, Serializer, Proofs |
+| **Pure core** | No  | Types, Agent, StateMachine, Parser, TomlParser, TomlConverter, Output, Error, Serializer, Proofs |
 | **IO shell**  | Yes | Shell, Integrity, WorkerLoop, Verifier, SpecLoader, CLI                                   |
 
 The pure core is where all proofs live. It has no side effects, no process spawning, no file access. The IO shell wraps the pure core with real-world effects — parsing files, running commands, reporting results.
@@ -152,6 +152,35 @@ qed content-addresses spec files to detect tampering during execution. At load t
 If the hash doesn't match, a `LoopEvent.integrityViolation` transitions the state machine to a terminal `integrityViolation` state. Formally proven: this event always produces a terminal state (no results accepted).
 
 The `--pin` flag adds a `git diff --exit-code` check — the spec must match its committed version. This answers a stronger question: not just "the spec didn't change during this run" but "the spec matches what's in version control."
+
+## Error handling
+
+All functions that can fail return `Except ErrorInfo`, where `ErrorInfo` carries structured data:
+
+```lean
+structure ErrorInfo where
+  message : String
+  file : Option String := none
+  line : Option Nat := none
+  column : Option Nat := none
+  sourceLineText : Option String := none
+  hint : Option String := none
+```
+
+**Error enrichment pipeline:** Parsers create errors with message only. The TOML parser adds line/column via `Error.sourceContext`. `SpecLoader` attaches the file path. The CLI formats via `Error.formatError` (terminal) or `Error.formatErrorJson` (--json mode).
+
+Terminal errors include a code frame when source context is available:
+
+```
+error: expected '=' after key
+ --> spec.toml:3:5
+  |
+3 | naem = "my-spec"
+  |     ^
+hint: check for typos in key names
+```
+
+`Error.lean` is a pure module (no IO) — it formats `ErrorInfo` into display strings. `Output.lean` handles verification result formatting. Both are imported by the IO shell.
 
 ## Further reading
 

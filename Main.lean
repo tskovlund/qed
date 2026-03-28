@@ -1,5 +1,7 @@
 import Qed
 
+set_option autoImplicit false
+
 open Qed
 
 def version : String := "0.1.0-dev"
@@ -153,12 +155,12 @@ def runParse (path : String) (jsonOutput : Bool) : IO UInt32 := do
   | .ok pinnedSpec =>
     let spec := pinnedSpec.spec
     if jsonOutput then
-      let modeStr := match spec.mode with
+      let modeString := match spec.mode with
         | .verify => "verify"
         | .workerLoop _ _ => "workerLoop"
       IO.println (Lean.Json.mkObj [
         ("name", Lean.Json.str spec.name),
-        ("mode", Lean.Json.str modeStr),
+        ("mode", Lean.Json.str modeString),
         ("criteriaCount", Lean.Json.num spec.criteria.length)
       ] |>.pretty 2)
     else

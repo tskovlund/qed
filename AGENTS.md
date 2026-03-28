@@ -9,7 +9,7 @@ Follow the code standards in [CONVENTIONS.md](CONVENTIONS.md).
 ```
 Main.lean              CLI entry point (qed run, qed verify, qed lock, qed promote, qed parse, qed version, qed help)
 Qed/
-  Types.lean           Core types (VerifyType, SpecMode, Spec, Spec.Pinned, LoopState)
+  Types.lean           Core types (VerifyType, SpecMode, Spec, Spec.Pinned, LoopState, ErrorInfo)
   Shell.lean           Shell command execution and quoting utilities
   Agent.lean           Shared agent invocation (env var constants, default commands)
   Integrity.lean       Content-addressed spec integrity (SHA-256 hashing, git checks)
@@ -22,7 +22,8 @@ Qed/
   StateMachine.lean    Pure transition function (proven core)
   Verifier.lean        Verification dispatch (command, agent, property, proof)
   WorkerLoop.lean      Worker loop execution (spawn worker, verify, feed failures, repeat)
-  Output.lean          JSON result serialization (--json flag support)
+  Output.lean          Result display formatting and JSON serialization (--json flag support)
+  Error.lean           Structured error formatting (code frames, location, hints)
   Serializer.lean      Spec → JSON serialization (roundtrip-proven against Parser)
 Qed/Proofs/
   Termination.lean     Loop termination, progress, and fuel decrease
