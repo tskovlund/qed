@@ -155,7 +155,7 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
         let (s, c) := step loopConfig state context .workerDone
         state := s
         context := c
-      | .verifying _ =>
+      | .verifying iteration =>
         -- Integrity check: before running verifiers
         match ← Integrity.verify pinnedSpec pinned with
         | .error reason =>
@@ -179,6 +179,9 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
         if !jsonOutput then
           IO.println "  Verifying criteria..."
         let executions ← Verifier.verifyAll spec.criteria
+        -- Stamp iteration number on each execution
+        let executions := executions.map fun (description, execution) =>
+          (description, { execution with iteration := some iteration })
         allExecutions := executions
         let results := Output.extractResults executions
         let failed := results.filter fun (_, result) => result.isFailed

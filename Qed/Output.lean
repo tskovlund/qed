@@ -154,7 +154,10 @@ def executionToJson (description : String) (execution : CriterionExecution) : Js
   let withElapsed := match execution.elapsedMs with
     | some ms => withExitCode ++ [("elapsedMs", Json.num ms)]
     | none => withExitCode
-  Json.mkObj withElapsed
+  let withIteration := match execution.iteration with
+    | some n => withElapsed ++ [("iteration", Json.num n)]
+    | none => withElapsed
+  Json.mkObj withIteration
 
 /-- Whether all executions passed (no failures). -/
 def allExecutionsPassed (executions : List (String × CriterionExecution)) : Bool :=

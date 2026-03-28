@@ -52,4 +52,49 @@ theorem workerResultsToJson_has_required_fields (specName : String)
   unfold workerResultsToJson
   exact ⟨_, _, _, _, rfl⟩
 
+-- 4. allExecutionsPassed iff no failures (mirrors allPassed for CriterionExecution)
+
+/-- `allExecutionsPassed` returns true if and only if no execution in the list
+has a failed underlying result. This is the enriched-output equivalent of
+`allPassed_iff_no_failures`. -/
+theorem allExecutionsPassed_iff_no_failures
+    (executions : List (String × CriterionExecution)) :
+    allExecutionsPassed executions = true ↔
+      ∀ (pair : String × CriterionExecution), pair ∈ executions →
+        pair.2.isFailed = false := by
+  unfold allExecutionsPassed CriterionExecution.isFailed
+  simp [List.all_eq_true]
+
+-- 5. executionsToJson always contains required fields
+
+/-- The enriched JSON output always contains "spec", "passed", and "criteria"
+fields. Mirrors `resultsToJson_has_required_fields` for the production path. -/
+theorem executionsToJson_has_required_fields (specName : String)
+    (executions : List (String × CriterionExecution)) :
+    ∃ (specVal passedVal criteriaVal : Lean.Json),
+      executionsToJson specName executions = Lean.Json.mkObj [
+        ("spec", specVal),
+        ("passed", passedVal),
+        ("criteria", criteriaVal)
+      ] := by
+  unfold executionsToJson
+  exact ⟨_, _, _, rfl⟩
+
+-- 6. workerExecutionsToJson always contains required fields
+
+/-- The enriched worker loop JSON always contains "spec", "state", "passed",
+and "criteria" fields. Mirrors `workerResultsToJson_has_required_fields`. -/
+theorem workerExecutionsToJson_has_required_fields (specName : String)
+    (stateDescription : String)
+    (executions : List (String × CriterionExecution)) :
+    ∃ (specVal stateVal passedVal criteriaVal : Lean.Json),
+      workerExecutionsToJson specName stateDescription executions = Lean.Json.mkObj [
+        ("spec", specVal),
+        ("state", stateVal),
+        ("passed", passedVal),
+        ("criteria", criteriaVal)
+      ] := by
+  unfold workerExecutionsToJson
+  exact ⟨_, _, _, _, rfl⟩
+
 end Qed.Proofs.OutputCorrectness
