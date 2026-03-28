@@ -300,20 +300,6 @@ def testPromoteWithArchiveMovesOriginal : IO Bool := do
   let archiveExists ← (dir / "archive" / "test.spec.json").pathExists
   return exitCode == 0 && !originalExists && archiveExists
 
-def testVerifyDirectorySkipsIgnoredDir : IO Bool := do
-  -- Arrange: .qedignore excludes "archive"
-  let dir ← freshTempDir "skip-archive"
-  IO.FS.writeFile (dir / ".qedignore") "archive\n"
-  IO.FS.createDirAll (dir / "archive")
-  IO.FS.writeFile (dir / "main.spec.json")
-    "{\"name\": \"main\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
-  IO.FS.writeFile (dir / "archive" / "old.spec.json")
-    "{\"name\": \"archived\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
-  -- Act
-  let (exitCode, stdout, _) ← runQed ["verify", dir.toString]
-  -- Assert: main spec found, archived spec skipped
-  return exitCode == 0 && stdout.contains "main" && !stdout.contains "archived"
-
 def testVerifyDirectoryRespectsQedignore : IO Bool := do
   -- Arrange: .qedignore excludes "ignored" but not "included"
   let dir ← freshTempDir "qedignore"
@@ -366,6 +352,5 @@ def cliTests : List (String × IO Bool) := [
   ("testPromoteRejectsVerifyMode", testPromoteRejectsVerifyMode),
   ("testPromoteWithOutputWritesToFile", testPromoteWithOutputWritesToFile),
   ("testPromoteWithArchiveMovesOriginal", testPromoteWithArchiveMovesOriginal),
-  ("testVerifyDirectorySkipsIgnoredDir", testVerifyDirectorySkipsIgnoredDir),
   ("testVerifyDirectoryRespectsQedignore", testVerifyDirectoryRespectsQedignore)
 ]
