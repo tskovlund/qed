@@ -3,6 +3,8 @@ import Tests.Parser
 import Tests.TomlParser
 import Tests.Integration
 import Tests.Verifier
+import Tests.ContractLock
+import Tests.Ignore
 import Tests.Cli
 
 /-- Run a named test, print result, return whether it passed. -/
@@ -16,7 +18,7 @@ def runTest (name : String) (test : IO Bool) : IO Bool := do
 
 def main : IO UInt32 := do
   let tests : List (String × IO Bool) :=
-    typeTests ++ parserTests ++ tomlParserTests ++ integrationTests ++ verifierTests ++ cliTests
+    typeTests ++ parserTests ++ tomlParserTests ++ integrationTests ++ verifierTests ++ contractLockTests ++ ignoreTests ++ cliTests
 
   let mut failedCount : Nat := 0
   for (name, test) in tests do

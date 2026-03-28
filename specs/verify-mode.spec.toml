@@ -13,6 +13,7 @@ description = "SpecMode has exactly two constructors: workerLoop and verify"
 [criteria.verify]
 type = "command"
 run = "grep -cE '\\| workerLoop |\\| verify$' Qed/Types.lean | grep -q '^2$'"
+lock = ["Qed/Types.lean"]
 
 [[criteria]]
 description = "JSON Schema enforces at least one criterion when no worker is present"
@@ -20,6 +21,7 @@ description = "JSON Schema enforces at least one criterion when no worker is pre
 [criteria.verify]
 type = "command"
 run = "grep -q 'minItems' docs/spec.schema.json"
+lock = ["DocGen/Schema.lean"]
 
 # --- Proof criteria ---
 

@@ -1,0 +1,7 @@
+# Directories to exclude from recursive spec discovery.
+# Patterns: fnmatch-style globs (*, ?, [abc], [!abc]).
+# Prefix with ! to negate (un-ignore). Last matching pattern wins.
+.lake
+.git
+archive
+wip

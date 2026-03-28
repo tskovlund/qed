@@ -57,11 +57,12 @@ Five verification strategies, from lightweight to mathematical:
 
 Run a shell command and check the exit code.
 
-| Field     | Type        | Required | Default | Description               |
-| --------- | ----------- | -------- | ------- | ------------------------- |
-| `run`     | string      | yes      | —       | Shell command to execute. |
-| `timeout` | integer     | no       | 300     | Timeout in seconds.       |
-| `type`    | `"command"` | yes      | —       |                           |
+| Field     | Type        | Required | Default | Description                                                                                          |
+| --------- | ----------- | -------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| `lock`    | array       | no       | —       | Glob patterns for files to hash into qed.lock. Workers cannot modify locked files without detection. |
+| `run`     | string      | yes      | —       | Shell command to execute.                                                                            |
+| `timeout` | integer     | no       | 300     | Timeout in seconds.                                                                                  |
+| `type`    | `"command"` | yes      | —       |                                                                                                      |
 
 ### `agent`
 
@@ -79,11 +80,12 @@ Spawn an independent LLM agent to review against a prompt.
 
 Run property-based tests.
 
-| Field     | Type         | Required | Default | Description                          |
-| --------- | ------------ | -------- | ------- | ------------------------------------ |
-| `run`     | string       | yes      | —       | Shell command to run property tests. |
-| `timeout` | integer      | no       | 600     | Timeout in seconds.                  |
-| `type`    | `"property"` | yes      | —       |                                      |
+| Field     | Type         | Required | Default | Description                                                                                          |
+| --------- | ------------ | -------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| `lock`    | array        | no       | —       | Glob patterns for files to hash into qed.lock. Workers cannot modify locked files without detection. |
+| `run`     | string       | yes      | —       | Shell command to run property tests.                                                                 |
+| `timeout` | integer      | no       | 600     | Timeout in seconds.                                                                                  |
+| `type`    | `"property"` | yes      | —       |                                                                                                      |
 
 ### `proof`
 

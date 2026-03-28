@@ -8,6 +8,8 @@
 qed run <spec-file>       Run verification (verify mode) or worker loop
 qed verify [spec-or-dir]  Verify a spec file, or all specs in a directory (recursive)
                           Defaults to current directory if omitted
+qed lock [directory]      Generate or update qed.lock from specs (defaults to current dir)
+qed promote <spec-file>   Promote a worker loop spec to verify mode (strip worker section)
 qed parse <spec-file>     Parse and validate a spec file
 qed version               Print version
 qed help                  Show this help
@@ -22,6 +24,9 @@ qed help                  Show this help
 | `--extended` | Include heavy criteria, skip manual (for thorough CI runs)                     |
 | `--full`     | Run all criteria including manual (overrides CI auto-detection)                |
 | `--pin`      | Require spec files to match their git-committed version (position-independent) |
+| `--no-lock`  | Skip contract lock verification during worker loop                             |
+| `--output`   | Output file path for `promote` command                                         |
+| `--archive`  | Move original spec to `archive/` directory after promoting                     |
 
 ## Schedule filtering
 
@@ -91,6 +96,30 @@ All meaningful parameters are configurable at the spec level — defaults are se
 | ---------------------------- | -------------------------------------------------------------------- |
 | `QED_VERIFIER_PROMPT`        | The criterion's review prompt                                        |
 | `QED_VERIFIER_SYSTEM_PROMPT` | Verdict format instructions (JSON block with `{"pass": true/false}`) |
+
+## `.qedignore`
+
+Controls which directories are excluded from recursive spec discovery (`qed verify <dir>`, `qed lock`). Format follows `.gitignore`/`.prettierignore` conventions:
+
+- One pattern per line
+- `#` for comments, blank lines ignored
+- fnmatch-style globs: `*` (any sequence), `?` (any single char), `[abc]` (class), `[!abc]` (negated class), `[a-z]` (range)
+- Prefix a pattern with `!` to negate (un-ignore) — last matching pattern wins
+
+When no `.qedignore` file exists, no directories are excluded.
+
+Example:
+
+```
+# Directories to exclude from spec discovery
+.lake
+.git
+archive
+wip
+scratch
+*.draft
+!important.draft
+```
 
 ## Named constants
 

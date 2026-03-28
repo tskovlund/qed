@@ -124,7 +124,7 @@ def testParseJsonPreservesMultipleCriteria : IO Bool := do
   | .ok spec =>
     if spec.criteria.length != 3 then return false
     let types := spec.criteria.map fun c => match c.verify with
-      | .command _ _ => "command"
+      | .command _ _ _ => "command"
       | .proof _ _ => "proof"
       | .agent _ _ _ _ => "agent"
       | _ => "other"

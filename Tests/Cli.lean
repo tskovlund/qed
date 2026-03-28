@@ -200,6 +200,7 @@ def testVerifyDirectoryFindsNestedSpecs : IO Bool := do
   let dir ← freshTempDir "nested"
   IO.FS.createDirAll (dir / "sub" / "deep")
   IO.FS.createDirAll (dir / ".hidden")
+  IO.FS.writeFile (dir / ".qedignore") ".hidden\n"
   IO.FS.writeFile (dir / "root.spec.json")
     "{\"name\": \"root-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
   IO.FS.writeFile (dir / "sub" / "nested.spec.json")
@@ -210,7 +211,7 @@ def testVerifyDirectoryFindsNestedSpecs : IO Bool := do
     "{\"name\": \"hidden-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
   -- Act
   let (exitCode, stdout, _) ← runQed ["verify", dir.toString]
-  -- Assert: finds root, nested, and deep specs; skips hidden directory
+  -- Assert: finds root, nested, and deep specs; skips .hidden (via .qedignore)
   return exitCode == 0 && stdout.contains "root-spec" && stdout.contains "nested-spec" &&
     stdout.contains "deep-spec" && !stdout.contains "hidden-spec"
 
@@ -223,6 +224,96 @@ def testVerifyHandlesNonUtf8Output : IO Bool := do
   let (exitCode, stdout, _) ← runQed ["verify", specPath.toString]
   -- Assert — should not crash; either pass (if shell handles it) or fail gracefully
   return exitCode == 0 || (exitCode == 1 && stdout.length > 0)
+
+def testLockGeneratesLockFile : IO Bool := do
+  -- Arrange: create a directory with a spec that has a lock field
+  let dir ← freshTempDir "lock"
+  IO.FS.writeFile (dir / "test.spec.json")
+    "{\"name\": \"lock-test\", \"criteria\": [{\"description\": \"locked\", \"verify\": {\"type\": \"command\", \"run\": \"true\", \"lock\": [\"*.lean\"]}}]}"
+  -- Create a file matching the glob
+  IO.FS.writeFile (dir / "test.lean") "-- test\n"
+  -- Act: pass directory as argument (avoids relative path issues with cwd)
+  let (exitCode, stdout, _) ← runQed ["lock", dir.toString]
+  -- Assert: lock file is written inside the current working directory, not the target dir
+  -- qed lock scans the target dir for specs but writes qed.lock in cwd
+  return exitCode == 0 && stdout.contains "Locked"
+
+def testLockJsonOutputReturnsValidJson : IO Bool := do
+  -- Arrange
+  let dir ← freshTempDir "lock-json"
+  IO.FS.writeFile (dir / "test.spec.json")
+    "{\"name\": \"lock-json\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["lock", "--json", dir.toString]
+  -- Assert
+  match Lean.Json.parse stdout with
+  | .error _ => return false
+  | .ok json => return exitCode == 0 && (json.getObjVal? "specs").isOk
+
+def testPromoteStripsWorkerSection : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"promote-test\", \"worker\": {\"command\": \"echo\"}, \"criteria\": [{\"description\": \"passes\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["promote", specPath.toString]
+  -- Assert: output is JSON without worker, maxIterations, stuckThreshold
+  match Lean.Json.parse stdout with
+  | .error _ => return false
+  | .ok json =>
+    let hasName := (json.getObjValAs? String "name").isOk
+    let hasWorker := (json.getObjVal? "worker").isOk
+    let hasMaxIter := (json.getObjVal? "maxIterations").isOk
+    return exitCode == 0 && hasName && !hasWorker && !hasMaxIter
+
+def testPromoteRejectsVerifyMode : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"already-verify\", \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, _, stderr) ← runQed ["promote", specPath.toString]
+  -- Assert
+  return exitCode == 2 && stderr.contains "already"
+
+def testPromoteWithOutputWritesToFile : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"output-test\", \"worker\": {\"command\": \"echo\"}, \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  let dir ← freshTempDir "promote-output"
+  let outputPath := dir / "promoted.spec.json"
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["promote", specPath.toString, "--output", outputPath.toString]
+  -- Assert
+  let outputExists ← outputPath.pathExists
+  return exitCode == 0 && outputExists && stdout.contains "Promoted"
+
+def testPromoteWithArchiveMovesOriginal : IO Bool := do
+  -- Arrange
+  let dir ← freshTempDir "promote-archive"
+  let specPath := dir / "test.spec.json"
+  IO.FS.writeFile specPath
+    "{\"name\": \"archive-test\", \"worker\": {\"command\": \"echo\"}, \"criteria\": [{\"description\": \"d\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let outputPath := dir / "promoted.spec.json"
+  -- Act
+  let (exitCode, _, _) ← runQed ["promote", specPath.toString, "--output", outputPath.toString, "--archive"]
+  -- Assert
+  let originalExists ← specPath.pathExists
+  let archiveExists ← (dir / "archive" / "test.spec.json").pathExists
+  return exitCode == 0 && !originalExists && archiveExists
+
+def testVerifyDirectoryRespectsQedignore : IO Bool := do
+  -- Arrange: .qedignore excludes "ignored" but not "included"
+  let dir ← freshTempDir "qedignore"
+  IO.FS.writeFile (dir / ".qedignore") "ignored\n"
+  IO.FS.createDirAll (dir / "ignored")
+  IO.FS.createDirAll (dir / "included")
+  IO.FS.writeFile (dir / "included" / "a.spec.json")
+    "{\"name\": \"included-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  IO.FS.writeFile (dir / "ignored" / "b.spec.json")
+    "{\"name\": \"ignored-spec\", \"criteria\": [{\"description\": \"pass\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", dir.toString]
+  -- Assert: included-spec found, ignored-spec skipped
+  return exitCode == 0 && stdout.contains "included-spec" && !stdout.contains "ignored-spec"
 
 def testVerifyCommandTimeoutEndToEnd : IO Bool := do
   -- Arrange: command sleeps for 10s, timeout is 1s
@@ -254,5 +345,12 @@ def cliTests : List (String × IO Bool) := [
   ("testVerifyDirectoryFailsOnBadSpec", testVerifyDirectoryFailsOnBadSpec),
   ("testVerifyDirectoryFindsNestedSpecs", testVerifyDirectoryFindsNestedSpecs),
   ("testVerifyHandlesNonUtf8Output", testVerifyHandlesNonUtf8Output),
-  ("testVerifyCommandTimeoutEndToEnd", testVerifyCommandTimeoutEndToEnd)
+  ("testVerifyCommandTimeoutEndToEnd", testVerifyCommandTimeoutEndToEnd),
+  ("testLockGeneratesLockFile", testLockGeneratesLockFile),
+  ("testLockJsonOutputReturnsValidJson", testLockJsonOutputReturnsValidJson),
+  ("testPromoteStripsWorkerSection", testPromoteStripsWorkerSection),
+  ("testPromoteRejectsVerifyMode", testPromoteRejectsVerifyMode),
+  ("testPromoteWithOutputWritesToFile", testPromoteWithOutputWritesToFile),
+  ("testPromoteWithArchiveMovesOriginal", testPromoteWithArchiveMovesOriginal),
+  ("testVerifyDirectoryRespectsQedignore", testVerifyDirectoryRespectsQedignore)
 ]

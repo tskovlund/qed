@@ -13,12 +13,19 @@ def scheduleToString : Schedule → String
   | .heavy => "heavy"
   | .manual => "manual"
 
+/-- Serialize a list of strings to a JSON array. -/
+def stringListToJson (strings : List String) : Json :=
+  Json.arr (strings.map Json.str).toArray
+
 /-- Serialize a VerifyType to JSON. -/
 def verifyTypeToJson : VerifyType → Json
-  | .command run timeout => Json.mkObj [
-      ("type", Json.str "command"),
-      ("run", Json.str run),
-      ("timeout", Lean.toJson timeout)]
+  | .command run timeout lock => Json.mkObj <|
+      [("type", Json.str "command"),
+       ("run", Json.str run),
+       ("timeout", Lean.toJson timeout)] ++
+      (match lock with
+      | some patterns => [("lock", stringListToJson patterns)]
+      | none => [])
   | .agent prompt model command timeout => Json.mkObj <|
       [("type", Json.str "agent"),
        ("prompt", Json.str prompt),
@@ -27,10 +34,13 @@ def verifyTypeToJson : VerifyType → Json
       | some cmd => [("command", Json.str cmd)]
       | none => []) ++
       [("timeout", Lean.toJson timeout)]
-  | .property run timeout => Json.mkObj [
-      ("type", Json.str "property"),
-      ("run", Json.str run),
-      ("timeout", Lean.toJson timeout)]
+  | .property run timeout lock => Json.mkObj <|
+      [("type", Json.str "property"),
+       ("run", Json.str run),
+       ("timeout", Lean.toJson timeout)] ++
+      (match lock with
+      | some patterns => [("lock", stringListToJson patterns)]
+      | none => [])
   | .proof prover target => Json.mkObj [
       ("type", Json.str "proof"),
       ("prover", Json.str prover),

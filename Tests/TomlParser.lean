@@ -174,6 +174,30 @@ def testParseEmptyDocument : IO Bool := do
   -- Assert
   return json.contains "{" && json.contains "}"
 
+def testParseInlineArray : IO Bool := do
+  -- Arrange
+  let toml := "lock = [\"*.lean\", \"Tests/**/*.lean\"]"
+  -- Act
+  let json ← parseOrFail toml
+  -- Assert: JSON should contain an array with both strings
+  return json.contains "*.lean" && json.contains "Tests/**/*.lean"
+
+def testParseInlineArrayEmpty : IO Bool := do
+  -- Arrange
+  let toml := "items = []"
+  -- Act
+  let json ← parseOrFail toml
+  -- Assert
+  return json.contains "[]"
+
+def testParseInlineArrayTrailingComma : IO Bool := do
+  -- Arrange
+  let toml := "items = [\"a\", \"b\",]"
+  -- Act
+  let json ← parseOrFail toml
+  -- Assert
+  return json.contains "a" && json.contains "b"
+
 def tomlParserTests : List (String × IO Bool) := [
   ("testParseBareKeyValuePair", testParseBareKeyValuePair),
   ("testParseIntegerValue", testParseIntegerValue),
@@ -194,5 +218,8 @@ def tomlParserTests : List (String × IO Bool) := [
   ("testParseErrorOnInvalidTableHeader", testParseErrorOnInvalidTableHeader),
   ("testParseIntegerWithUnderscores", testParseIntegerWithUnderscores),
   ("testParseErrorOnDuplicateKey", testParseErrorOnDuplicateKey),
-  ("testParseEmptyDocument", testParseEmptyDocument)
+  ("testParseEmptyDocument", testParseEmptyDocument),
+  ("testParseInlineArray", testParseInlineArray),
+  ("testParseInlineArrayEmpty", testParseInlineArrayEmpty),
+  ("testParseInlineArrayTrailingComma", testParseInlineArrayTrailingComma)
 ]

@@ -2,6 +2,7 @@ import Qed.Types
 import Qed.Parser
 import Qed.TomlConverter
 import Qed.Integrity
+import Qed.Ignore
 
 namespace Qed.SpecLoader
 
@@ -38,6 +39,7 @@ def listAllSpecs (directory : System.FilePath)
     : IO (Except String (List System.FilePath)) := do
   -- Read the initial directory eagerly so errors (e.g., not found) propagate
   let _ ← directory.readDir
+  let ignorePatterns ← Ignore.readIgnorePatterns directory
   let mut specFiles : List System.FilePath := []
   let mut queue : List System.FilePath := [directory]
   while !queue.isEmpty do
@@ -56,8 +58,7 @@ def listAllSpecs (directory : System.FilePath)
           specFiles := specFiles ++ [path]
         else
           let isDir ← path.isDir
-          -- Skip hidden directories (includes .lake, .git, etc.)
-          if isDir && !entry.fileName.startsWith "." then
+          if isDir && !Ignore.shouldIgnore ignorePatterns entry.fileName then
             queue := queue ++ [path]
   return .ok specFiles
 
