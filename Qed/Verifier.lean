@@ -29,17 +29,16 @@ private def formatOutput (stdout stderr : String) : String :=
   let combined := stdoutString ++ (if stderrString.isEmpty then "" else "\nSTDERR:\n" ++ stderrString)
   truncate combined maxOutputLength
 
-private def verifyCommand (command : String) (timeout : Nat) : IO VerificationResult := do
+private def verifyCommand (command : String) (timeout : Nat) : IO CriterionExecution := do
   let result ← Shell.runShellCommandWithTimeout command timeout
   match result with
-  | .timedOut stdout stderr =>
-    return .fail s!"timed out after {timeout}s\n{formatOutput stdout stderr}"
-  | .completed exitCode stdout stderr =>
+  | .timedOut stdout stderr elapsedMs =>
+    return { result := .fail s!"timed out after {timeout}s\n{formatOutput stdout stderr}", elapsedMs := some elapsedMs }
+  | .completed exitCode stdout stderr elapsedMs =>
     let details := formatOutput stdout stderr
-    if exitCode == 0 then
-      return .pass details
-    else
-      return .fail s!"exit code {exitCode}\n{details}"
+    let verificationResult := if exitCode == 0 then .pass details
+      else .fail s!"exit code {exitCode}\n{details}"
+    return { result := verificationResult, exitCode := some exitCode, elapsedMs := some elapsedMs }
 
 /-- The system prompt instructs the agent to produce a structured JSON verdict. -/
 private def agentSystemPrompt : String :=
@@ -92,26 +91,28 @@ def parseAgentVerdict (response : String) : Except String Bool := do
     and the verdict format instructions via `$QED_VERIFIER_SYSTEM_PROMPT`.
     If no command is specified, defaults to Claude CLI. -/
 private def verifyAgent (prompt : String) (model : String) (command : Option String)
-    (timeout : Nat) : IO VerificationResult := do
+    (timeout : Nat) : IO CriterionExecution := do
   let agentCmd := command.getD (Agent.defaultVerifierCommand model)
   let envVars := [(Agent.verifierPromptVar, prompt), (Agent.verifierSystemPromptVar, agentSystemPrompt)]
   let shellCommand := Shell.buildShellCommand envVars agentCmd
   let result ← Shell.runShellCommandWithTimeout shellCommand timeout
   match result with
-  | .timedOut stdout stderr =>
-    return .fail s!"agent timed out after {timeout}s\n{formatOutput stdout stderr}"
-  | .completed exitCode stdout stderr =>
+  | .timedOut stdout stderr elapsedMs =>
+    return { result := .fail s!"agent timed out after {timeout}s\n{formatOutput stdout stderr}", elapsedMs := some elapsedMs }
+  | .completed exitCode stdout stderr elapsedMs =>
     if exitCode != 0 then
       let stderrString := stderr.trimAscii.toString
-      if Agent.isUnavailable exitCode stderrString then
-        return .fail s!"agent unavailable: {truncate stderrString maxOutputLength}"
+      let verificationResult := if Agent.isUnavailable exitCode stderrString then
+        .fail s!"agent unavailable: {truncate stderrString maxOutputLength}"
       else
-        return .fail s!"agent exited with code {exitCode}\n{truncate stderrString maxOutputLength}"
+        .fail s!"agent exited with code {exitCode}\n{truncate stderrString maxOutputLength}"
+      return { result := verificationResult, exitCode := some exitCode, elapsedMs := some elapsedMs }
     let response := stdout.trimAscii.toString
-    match parseAgentVerdict response with
-    | .ok true => return .pass (truncate response maxOutputLength)
-    | .ok false => return .fail (truncate response maxOutputLength)
-    | .error verdictError => return .fail s!"could not parse agent verdict: {verdictError}\n{truncate response maxOutputLength}"
+    let verificationResult := match parseAgentVerdict response with
+      | .ok true => .pass (truncate response maxOutputLength)
+      | .ok false => .fail (truncate response maxOutputLength)
+      | .error verdictError => .fail s!"could not parse agent verdict: {verdictError}\n{truncate response maxOutputLength}"
+    return { result := verificationResult, exitCode := some exitCode, elapsedMs := some elapsedMs }
 
 /-- Prompt a human to verify a criterion interactively. Prints the instruction
     to stderr and reads a y/n response from stdin. Retries on invalid input.
@@ -195,17 +196,17 @@ def containsSorry (contents : String) : Bool :=
 
 /-- Verify a formal proof by checking that the target's module compiles
     and contains no sorry. Currently supports Lean 4 only. -/
-private def verifyProof (prover : String) (target : String) : IO VerificationResult := do
+private def verifyProof (prover : String) (target : String) : IO CriterionExecution := do
   if prover ∉ supportedProvers then
-    return .fail s!"unsupported prover: '{prover}' (supported: {", ".intercalate supportedProvers})"
+    return { result := .fail s!"unsupported prover: '{prover}' (supported: {", ".intercalate supportedProvers})" }
   match targetToModule target with
-  | none => return .fail s!"invalid target: '{target}' (expected fully qualified name like Module.theorem)"
+  | none => return { result := .fail s!"invalid target: '{target}' (expected fully qualified name like Module.theorem)" }
   | some module =>
     if !isValidModuleName module then
-      return .fail s!"invalid module name: '{module}' (expected dot-separated identifiers)"
+      return { result := .fail s!"invalid module name: '{module}' (expected dot-separated identifiers)" }
     let sourcePath := moduleToPath module
     if !(← System.FilePath.pathExists sourcePath) then
-      return .fail s!"source file not found: {sourcePath}"
+      return { result := .fail s!"source file not found: {sourcePath}" }
     -- Build the module to verify the proof typechecks
     -- Sorry detection relies on Lean's compiler warnings ("uses 'sorry'")
     -- checked after the build — this catches sorry in the target file AND
@@ -213,23 +214,23 @@ private def verifyProof (prover : String) (target : String) : IO VerificationRes
     -- literals or comments that mention sorry.
     let buildResult ← Shell.runShellCommandWithTimeout s!"lake build {module}" defaultCommandTimeout
     match buildResult with
-    | .timedOut stdout stderr =>
-      return .fail s!"proof build timed out after {defaultCommandTimeout}s\n{formatOutput stdout stderr}"
-    | .completed exitCode stdout stderr =>
+    | .timedOut stdout stderr elapsedMs =>
+      return { result := .fail s!"proof build timed out after {defaultCommandTimeout}s\n{formatOutput stdout stderr}", elapsedMs := some elapsedMs }
+    | .completed exitCode stdout stderr elapsedMs =>
       if exitCode != 0 then
-        return .fail s!"proof build failed (exit code {exitCode})\n{formatOutput stdout stderr}"
+        return { result := .fail s!"proof build failed (exit code {exitCode})\n{formatOutput stdout stderr}", exitCode := some exitCode, elapsedMs := some elapsedMs }
       -- Lean emits "declaration uses 'sorry'" warnings for any sorry in the
       -- dependency graph. Catch transitive sorry even when the build succeeds.
       let stderrString := stderr.trimAscii.toString
       if (stderrString.splitOn "uses 'sorry'").length > 1 then
-        return .fail s!"sorry detected in dependency graph\n{formatOutput stdout stderr}"
-      return .pass s!"theorem {target} verified (module {module} builds, no sorry)"
+        return { result := .fail s!"sorry detected in dependency graph\n{formatOutput stdout stderr}", exitCode := some exitCode, elapsedMs := some elapsedMs }
+      return { result := .pass s!"theorem {target} verified (module {module} builds, no sorry)", exitCode := some exitCode, elapsedMs := some elapsedMs }
 
 /-- Verify a single acceptance criterion. Skipped criteria return immediately
     without dispatching to any verifier. -/
-def verifyCriterion (criterion : AcceptanceCriterion) : IO VerificationResult := do
+def verifyCriterion (criterion : AcceptanceCriterion) : IO CriterionExecution := do
   match criterion.skip with
-  | some reason => return .skipped reason
+  | some reason => return { result := .skipped reason }
   | none =>
     match criterion.verify with
     | .command run timeout _ => verifyCommand run timeout
@@ -237,12 +238,13 @@ def verifyCriterion (criterion : AcceptanceCriterion) : IO VerificationResult :=
     | .property run timeout _ => verifyCommand run timeout
     | .proof prover target => verifyProof prover target
     | .human instruction =>
-      verifyHuman criterion.description instruction
+      let result ← verifyHuman criterion.description instruction
+      return { result }
 
-/-- Verify all criteria in a spec, returning results paired with descriptions. -/
-def verifyAll (criteria : List AcceptanceCriterion) : IO (List (String × VerificationResult)) := do
+/-- Verify all criteria in a spec, returning executions paired with descriptions. -/
+def verifyAll (criteria : List AcceptanceCriterion) : IO (List (String × CriterionExecution)) := do
   criteria.mapM fun criterion => do
-    let result ← verifyCriterion criterion
-    return (criterion.description, result)
+    let execution ← verifyCriterion criterion
+    return (criterion.description, execution)
 
 end Qed.Verifier

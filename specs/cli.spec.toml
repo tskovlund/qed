@@ -13,12 +13,12 @@ prover = "lean4"
 target = "Qed.Proofs.TypeProperties.result_complete_partition"
 
 [[criteria]]
-description = "Pass/fail decision is correct: allPassed returns true iff no result is .fail"
+description = "Pass/fail decision is correct: allExecutionsPassed returns true iff no execution is .fail"
 
 [criteria.verify]
 type = "proof"
 prover = "lean4"
-target = "Qed.Proofs.OutputCorrectness.allPassed_iff_no_failures"
+target = "Qed.Proofs.OutputCorrectness.allExecutionsPassed_iff_no_failures"
 
 [[criteria]]
 description = "Verify-mode JSON output always contains 'spec', 'passed', and 'criteria' fields"
@@ -26,7 +26,7 @@ description = "Verify-mode JSON output always contains 'spec', 'passed', and 'cr
 [criteria.verify]
 type = "proof"
 prover = "lean4"
-target = "Qed.Proofs.OutputCorrectness.resultsToJson_has_required_fields"
+target = "Qed.Proofs.OutputCorrectness.executionsToJson_has_required_fields"
 
 [[criteria]]
 description = "Worker-loop JSON output always contains 'spec', 'state', 'passed', and 'criteria' fields"
@@ -34,7 +34,7 @@ description = "Worker-loop JSON output always contains 'spec', 'state', 'passed'
 [criteria.verify]
 type = "proof"
 prover = "lean4"
-target = "Qed.Proofs.OutputCorrectness.workerResultsToJson_has_required_fields"
+target = "Qed.Proofs.OutputCorrectness.workerExecutionsToJson_has_required_fields"
 
 # --- Agent review ---
 

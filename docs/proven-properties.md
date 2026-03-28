@@ -57,18 +57,18 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 
 ## Types and output
 
-| File                     | Theorem                                   | Property                                                                                 |
-| ------------------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `TypeProperties.lean`    | `isTerminal_iff`                          | isTerminal returns true iff state is one of the five terminal states                     |
-| `TypeProperties.lean`    | `isPassed_iff_pass`                       | `isPassed` returns true iff the result is `.pass`                                        |
-| `TypeProperties.lean`    | `isFailed_iff_fail`                       | `isFailed` returns true iff the result is `.fail`                                        |
-| `TypeProperties.lean`    | `isSkipped_iff_skipped`                   | `isSkipped` returns true iff the result is `.skipped`                                    |
-| `TypeProperties.lean`    | `predicates_mutually_exclusive`           | isPassed, isFailed, isSkipped are pairwise mutually exclusive                            |
-| `TypeProperties.lean`    | `result_exhaustive`                       | Every VerificationResult is exactly one of pass, fail, needsHuman, or skipped            |
-| `TypeProperties.lean`    | `result_complete_partition`               | **[spec]** Complete partition — every result is exactly one variant; predicates agree    |
-| `OutputCorrectness.lean` | `allPassed_iff_no_failures`               | **[spec]** Pass/fail decision is correct: true iff no result is `.fail`                  |
-| `OutputCorrectness.lean` | `resultsToJson_has_required_fields`       | **[spec]** JSON output always contains "spec", "passed", "criteria" fields               |
-| `OutputCorrectness.lean` | `workerResultsToJson_has_required_fields` | **[spec]** Worker loop JSON always contains "spec", "state", "passed", "criteria" fields |
+| File                     | Theorem                                      | Property                                                                                 |
+| ------------------------ | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `TypeProperties.lean`    | `isTerminal_iff`                             | isTerminal returns true iff state is one of the five terminal states                     |
+| `TypeProperties.lean`    | `isPassed_iff_pass`                          | `isPassed` returns true iff the result is `.pass`                                        |
+| `TypeProperties.lean`    | `isFailed_iff_fail`                          | `isFailed` returns true iff the result is `.fail`                                        |
+| `TypeProperties.lean`    | `isSkipped_iff_skipped`                      | `isSkipped` returns true iff the result is `.skipped`                                    |
+| `TypeProperties.lean`    | `predicates_mutually_exclusive`              | isPassed, isFailed, isSkipped are pairwise mutually exclusive                            |
+| `TypeProperties.lean`    | `result_exhaustive`                          | Every VerificationResult is exactly one of pass, fail, needsHuman, or skipped            |
+| `TypeProperties.lean`    | `result_complete_partition`                  | **[spec]** Complete partition — every result is exactly one variant; predicates agree    |
+| `OutputCorrectness.lean` | `allExecutionsPassed_iff_no_failures`        | **[spec]** Pass/fail decision is correct: true iff no execution is `.fail`               |
+| `OutputCorrectness.lean` | `executionsToJson_has_required_fields`       | **[spec]** JSON output always contains "spec", "passed", "criteria" fields               |
+| `OutputCorrectness.lean` | `workerExecutionsToJson_has_required_fields` | **[spec]** Worker loop JSON always contains "spec", "state", "passed", "criteria" fields |
 
 ## Verifier
 

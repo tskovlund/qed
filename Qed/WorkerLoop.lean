@@ -111,7 +111,7 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
   let mut state : LoopState := .ready
   let mut context : StateMachine.LoopContext := StateMachine.LoopContext.initial
   let mut lastFailures : List (String × VerificationResult) := []
-  let mut allResults : List (String × VerificationResult) := []
+  let mut allExecutions : List (String × CriterionExecution) := []
   -- Transition from ready to workerRunning. The event is irrelevant here:
   -- the state machine treats ready as a catch-all (| .ready, _ =>), so any
   -- event triggers the transition. We use .workerDone as a convention.
@@ -140,11 +140,11 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
         let workerResult ← spawnWorker worker lastFailures iteration
         if !jsonOutput then
           match workerResult with
-          | .timedOut _ stderr =>
+          | .timedOut _ stderr _ =>
             IO.println s!"  {Output.ansiRed}Worker timed out after {worker.timeout}s{Output.ansiReset}"
             if !stderr.isEmpty then
               IO.println s!"  Worker stderr: {stderr.trimAscii.take stderrPreviewLength}"
-          | .completed exitCode stdout stderr =>
+          | .completed exitCode stdout stderr _ =>
             if exitCode != 0 then
               IO.println s!"  {Output.ansiRed}Worker exited with code {exitCode}{Output.ansiReset}"
             else
@@ -155,7 +155,7 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
         let (s, c) := step loopConfig state context .workerDone
         state := s
         context := c
-      | .verifying _ =>
+      | .verifying iteration =>
         -- Integrity check: before running verifiers
         match ← Integrity.verify pinnedSpec pinned with
         | .error reason =>
@@ -178,8 +178,12 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
         | none => pure ()
         if !jsonOutput then
           IO.println "  Verifying criteria..."
-        let results ← Verifier.verifyAll spec.criteria
-        allResults := results
+        let executions ← Verifier.verifyAll spec.criteria
+        -- Stamp iteration number on each execution
+        let executions := executions.map fun (description, execution) =>
+          (description, { execution with iteration := some iteration })
+        allExecutions := executions
+        let results := Output.extractResults executions
         let failed := results.filter fun (_, result) => result.isFailed
         if !jsonOutput then
           let termWidth ← Output.getTerminalWidth
@@ -224,7 +228,7 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
       | .escalated reason => s!"escalated: {reason}"
       | .integrityViolation reason => s!"integrity violation: {reason}"
       | _ => "unknown"
-    let resultJson := Output.workerResultsToJson spec.name stateString allResults
+    let resultJson := Output.workerExecutionsToJson spec.name stateString allExecutions
     IO.println (resultJson.pretty 2)
   else
     IO.println ""

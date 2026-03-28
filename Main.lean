@@ -46,13 +46,13 @@ private def verifySpecJson (pinnedSpec : Spec.Pinned) (context : RunContext := .
     return (2, Error.formatErrorJson { message := s!"integrity violation: {reason}" })
   | .ok () => pure ()
   let criteria := filterBySchedule spec.criteria context
-  let results ← Verifier.verifyAll criteria
+  let executions ← Verifier.verifyAll criteria
   match ← Integrity.verify pinnedSpec pinned with
   | .error reason =>
     return (2, Error.formatErrorJson { message := s!"integrity violation: {reason}" })
   | .ok () => pure ()
-  let passed := Output.allPassed results
-  let json := Output.resultsToJson spec.name results
+  let passed := Output.allExecutionsPassed executions
+  let json := Output.executionsToJson spec.name executions
   return (if passed then 0 else 1, json)
 
 /-- Run single-pass verification on an already-loaded spec.
@@ -83,14 +83,14 @@ def verifySpec (pinnedSpec : Spec.Pinned) (jsonOutput : Bool) (context : RunCont
   let mut failedCount : Nat := 0
   let mut skippedCount : Nat := 0
   for criterion in criteria do
-    let result ← Verifier.verifyCriterion criterion
+    let execution ← Verifier.verifyCriterion criterion
     total := total + 1
-    if result.isFailed then
+    if execution.isFailed then
       anyFailed := true
       failedCount := failedCount + 1
-    if result.isSkipped then
+    if execution.isSkipped then
       skippedCount := skippedCount + 1
-    Output.printResultLine 2 criterion.description result termWidth
+    Output.printResultLine 2 criterion.description execution.result termWidth
   -- Integrity check: after verification (catches verifier tampering)
   match ← Integrity.verify pinnedSpec pinned with
   | .error reason =>
