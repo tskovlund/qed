@@ -170,7 +170,11 @@ def runVerifyAll (directory : String) (jsonOutput : Bool) (context : RunContext 
     (pinned : Bool := false) (jsonLines : Bool := false) : IO UInt32 := do
   match ← SpecLoader.listAllSpecs directory with
   | .error message =>
-    reportErrorMsg message jsonOutput
+    if jsonLines then
+      Output.emitJsonLine (Output.jsonLineEvent "error"
+        [("message", Lean.Json.str message)])
+    else
+      reportErrorMsg message jsonOutput
     return 2
   | .ok specs =>
     if specs.isEmpty then

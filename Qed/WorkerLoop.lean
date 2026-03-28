@@ -195,7 +195,7 @@ def run (pinnedSpec : Spec.Pinned) (worker : WorkerConfig) (loopConfig : LoopCon
             let reason := "contract lock violation: " ++ String.intercalate "; " violations
             let (s, c) := step loopConfig state context (.integrityViolation reason)
             state := s; context := c
-            if !jsonOutput then
+            if !jsonOutput && !jsonLines then
               IO.eprintln s!"  {Output.ansiRed}contract lock violated:{Output.ansiReset}"
               for violation in violations do
                 IO.eprintln s!"    - {violation}"
