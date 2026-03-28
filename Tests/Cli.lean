@@ -400,6 +400,87 @@ def testVerifyDirectoryJsonOutputReturnsWrappedObject : IO Bool := do
       | .ok true => true | _ => false
     return exitCode == 0 && hasSpecs && hasPassed
 
+def testVerifyJsonOutputContainsExitCode : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"exit-code-test\", \"criteria\": [{\"description\": \"passes\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", "--json", specPath.toString]
+  -- Assert: JSON criteria should contain exitCode field
+  match Lean.Json.parse stdout with
+  | .error _ => return false
+  | .ok json =>
+    match json.getObjVal? "criteria" with
+    | .ok (Lean.Json.arr arr) =>
+      match arr[0]? with
+      | some criterion =>
+        let hasExitCode := match criterion.getObjValAs? Nat "exitCode" with
+          | .ok 0 => true | _ => false
+        return exitCode == 0 && hasExitCode
+      | none => return false
+    | _ => return false
+
+def testVerifyJsonOutputContainsElapsedMs : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"elapsed-test\", \"criteria\": [{\"description\": \"passes\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", "--json", specPath.toString]
+  -- Assert: JSON criteria should contain elapsedMs field
+  match Lean.Json.parse stdout with
+  | .error _ => return false
+  | .ok json =>
+    match json.getObjVal? "criteria" with
+    | .ok (Lean.Json.arr arr) =>
+      match arr[0]? with
+      | some criterion =>
+        let hasElapsedMs := (criterion.getObjValAs? Nat "elapsedMs").isOk
+        return exitCode == 0 && hasElapsedMs
+      | none => return false
+    | _ => return false
+
+def testVerifyJsonOutputSkippedHasNoMetadata : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"skip-meta-test\", \"criteria\": [{\"description\": \"skipped\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}, \"skip\": \"not ready\"}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["verify", "--json", specPath.toString]
+  -- Assert: skipped criteria should not contain exitCode or elapsedMs
+  match Lean.Json.parse stdout with
+  | .error _ => return false
+  | .ok json =>
+    match json.getObjVal? "criteria" with
+    | .ok (Lean.Json.arr arr) =>
+      match arr[0]? with
+      | some criterion =>
+        let noExitCode := !(criterion.getObjValAs? Nat "exitCode").isOk
+        let noElapsedMs := !(criterion.getObjValAs? Nat "elapsedMs").isOk
+        let isSkipped := match criterion.getObjValAs? String "result" with
+          | .ok "skipped" => true | _ => false
+        return exitCode == 0 && noExitCode && noElapsedMs && isSkipped
+      | none => return false
+    | _ => return false
+
+def testRunWorkerLoopJsonOutputContainsExitCode : IO Bool := do
+  -- Arrange
+  let specContent := "{\"name\": \"loop-exit-code\", \"worker\": {\"command\": \"true\"}, \"criteria\": [{\"description\": \"passes\", \"verify\": {\"type\": \"command\", \"run\": \"true\"}}]}"
+  let specPath ← writeTempSpec specContent
+  -- Act
+  let (exitCode, stdout, _) ← runQed ["run", "--json", specPath.toString]
+  -- Assert: worker loop JSON criteria should contain exitCode
+  match Lean.Json.parse stdout with
+  | .error _ => return false
+  | .ok json =>
+    match json.getObjVal? "criteria" with
+    | .ok (Lean.Json.arr arr) =>
+      match arr[0]? with
+      | some criterion =>
+        let hasExitCode := match criterion.getObjValAs? Nat "exitCode" with
+          | .ok 0 => true | _ => false
+        return exitCode == 0 && hasExitCode
+      | none => return false
+    | _ => return false
+
 def cliTests : List (String × IO Bool) := [
   ("testVersionPrintsVersionString", testVersionPrintsVersionString),
   ("testHelpPrintsUsageInfo", testHelpPrintsUsageInfo),
@@ -431,5 +512,9 @@ def cliTests : List (String × IO Bool) := [
   ("testVerifyDirectoryRespectsQedignore", testVerifyDirectoryRespectsQedignore),
   ("testParseJsonOutputReturnsFullSpec", testParseJsonOutputReturnsFullSpec),
   ("testLockJsonOutputReturnsFullLockFile", testLockJsonOutputReturnsFullLockFile),
-  ("testVerifyDirectoryJsonOutputReturnsWrappedObject", testVerifyDirectoryJsonOutputReturnsWrappedObject)
+  ("testVerifyDirectoryJsonOutputReturnsWrappedObject", testVerifyDirectoryJsonOutputReturnsWrappedObject),
+  ("testVerifyJsonOutputContainsExitCode", testVerifyJsonOutputContainsExitCode),
+  ("testVerifyJsonOutputContainsElapsedMs", testVerifyJsonOutputContainsElapsedMs),
+  ("testVerifyJsonOutputSkippedHasNoMetadata", testVerifyJsonOutputSkippedHasNoMetadata),
+  ("testRunWorkerLoopJsonOutputContainsExitCode", testRunWorkerLoopJsonOutputContainsExitCode)
 ]

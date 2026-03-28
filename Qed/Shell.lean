@@ -7,8 +7,8 @@ namespace Qed.Shell
     avoiding sentinel exit codes (e.g. 124) that could collide
     with real process exit codes. -/
 inductive TimeoutResult where
-  | completed (exitCode : UInt32) (stdout : String) (stderr : String)
-  | timedOut (stdout : String) (stderr : String)
+  | completed (exitCode : UInt32) (stdout : String) (stderr : String) (elapsedMs : Nat)
+  | timedOut (stdout : String) (stderr : String) (elapsedMs : Nat)
 
 /-- The shell command and argument used to execute commands on this platform.
     Unix (macOS, Linux, NixOS) uses `/bin/sh -c`, Windows uses `cmd /c`. -/
@@ -85,15 +85,15 @@ def runShellCommandWithTimeout (command : String) (timeoutSeconds : Nat)
     | some exitCode =>
       let stdout ← IO.ofExcept stdoutTask.get
       let stderr ← IO.ofExcept stderrTask.get
-      return .completed exitCode stdout stderr
+      return .completed exitCode stdout stderr elapsed
     | none =>
       -- Timeout: kill the process and collect partial output
       child.kill
       let _ ← child.wait
       let stdout ← IO.ofExcept stdoutTask.get
       let stderr ← IO.ofExcept stderrTask.get
-      return .timedOut stdout stderr
+      return .timedOut stdout stderr elapsed
   catch error =>
-    return .completed (1 : UInt32) "" s!"process error: {error}"
+    return .completed (1 : UInt32) "" s!"process error: {error}" 0
 
 end Qed.Shell

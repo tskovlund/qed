@@ -35,9 +35,9 @@ def testVerifyCommandCapturesStdout : IO Bool := do
     verify := .command "echo hello"
   }
   -- Act
-  let result ← verifyCriterion criterion
+  let execution ← verifyCriterion criterion
   -- Assert
-  match result with
+  match execution.result with
   | .pass details => return details.contains "hello"
   | _ => return false
 
@@ -48,9 +48,9 @@ def testVerifyCommandCapturesStderr : IO Bool := do
     verify := .command "echo error >&2"
   }
   -- Act
-  let result ← verifyCriterion criterion
+  let execution ← verifyCriterion criterion
   -- Assert
-  match result with
+  match execution.result with
   | .pass details => return details.contains "error" && details.contains "STDERR"
   | _ => return false
 
@@ -83,9 +83,9 @@ def testVerifyHumanFailsInNonInteractiveContext : IO Bool := do
     verify := .human "Please verify the UI looks correct"
   }
   -- Act
-  let result ← verifyCriterion criterion
+  let execution ← verifyCriterion criterion
   -- Assert: human criteria fail with "non-interactive context" when stdin is piped
-  match result with
+  match execution.result with
   | .fail details => return details == "non-interactive context"
   | _ => return false
 
@@ -97,9 +97,9 @@ def testVerifySkipReturnsSkippedWithReason : IO Bool := do
     skip := some "not yet implemented"
   }
   -- Act
-  let result ← verifyCriterion criterion
+  let execution ← verifyCriterion criterion
   -- Assert: skip field produces .skipped with the reason string
-  match result with
+  match execution.result with
   | .skipped reason => return reason == "not yet implemented"
   | _ => return false
 
@@ -111,18 +111,18 @@ def testVerifyAllReturnsResultsForAllCriteria : IO Bool := do
     { description := "manual", verify := .human "check it" }
   ]
   -- Act
-  let results ← verifyAll criteria
+  let executions ← verifyAll criteria
   -- Assert
-  if results.length != 3 then return false
-  let descriptions := results.map (·.1)
-  let firstPassed := match results[0]? with
-    | some (_, r) => r.isPassed
+  if executions.length != 3 then return false
+  let descriptions := executions.map (·.1)
+  let firstPassed := match executions[0]? with
+    | some (_, e) => e.isPassed
     | none => false
-  let secondFailed := match results[1]? with
-    | some (_, r) => r.isFailed
+  let secondFailed := match executions[1]? with
+    | some (_, e) => e.isFailed
     | none => false
-  let thirdNonInteractive := match results[2]? with
-    | some (_, r) => match r with
+  let thirdNonInteractive := match executions[2]? with
+    | some (_, e) => match e.result with
       | .fail details => details == "non-interactive context"
       | _ => false
     | none => false
@@ -192,9 +192,9 @@ def testVerifyCommandTimesOutSlowProcess : IO Bool := do
     verify := .command "sleep 10" (timeout := 1)
   }
   -- Act
-  let result ← verifyCriterion criterion
+  let execution ← verifyCriterion criterion
   -- Assert: should fail with timeout message
-  match result with
+  match execution.result with
   | .fail details => return details.contains "timed out"
   | _ => return false
 
@@ -205,9 +205,9 @@ def testVerifyCommandCompletesBeforeTimeout : IO Bool := do
     verify := .command "echo done" (timeout := 60)
   }
   -- Act
-  let result ← verifyCriterion criterion
+  let execution ← verifyCriterion criterion
   -- Assert: should pass normally
-  match result with
+  match execution.result with
   | .pass details => return details.contains "done"
   | _ => return false
 
@@ -218,11 +218,56 @@ def testVerifyCommandTimeoutCapturesPartialOutput : IO Bool := do
     verify := .command "echo partial-output-before-timeout && sleep 10" (timeout := 1)
   }
   -- Act
-  let result ← verifyCriterion criterion
+  let execution ← verifyCriterion criterion
   -- Assert: should fail with timeout but include partial stdout
-  match result with
+  match execution.result with
   | .fail details => return details.contains "timed out" && details.contains "partial-output-before-timeout"
   | _ => return false
+
+def testVerifyCommandReturnsExitCodeZeroOnPass : IO Bool := do
+  -- Arrange
+  let criterion : AcceptanceCriterion := {
+    description := "returns exit code"
+    verify := .command "true"
+  }
+  -- Act
+  let execution ← verifyCriterion criterion
+  -- Assert: exit code 0 for successful command
+  return execution.exitCode == some 0
+
+def testVerifyCommandReturnsNonZeroExitCode : IO Bool := do
+  -- Arrange
+  let criterion : AcceptanceCriterion := {
+    description := "returns exit code"
+    verify := .command "exit 42"
+  }
+  -- Act
+  let execution ← verifyCriterion criterion
+  -- Assert: exit code 42 for failed command
+  return execution.exitCode == some 42
+
+def testVerifyCommandReturnsElapsedTime : IO Bool := do
+  -- Arrange
+  let criterion : AcceptanceCriterion := {
+    description := "returns timing"
+    verify := .command "true"
+  }
+  -- Act
+  let execution ← verifyCriterion criterion
+  -- Assert: elapsedMs is present
+  return execution.elapsedMs.isSome
+
+def testVerifySkipReturnsNoMetadata : IO Bool := do
+  -- Arrange
+  let criterion : AcceptanceCriterion := {
+    description := "skipped"
+    verify := .command "true"
+    skip := some "reason"
+  }
+  -- Act
+  let execution ← verifyCriterion criterion
+  -- Assert: skipped criteria have no exit code or timing
+  return execution.exitCode.isNone && execution.elapsedMs.isNone
 
 def verifierTests : List (String × IO Bool) := [
   ("testVerifyCommandReturnsPassOnExitZero", testVerifyCommandReturnsPassOnExitZero),
@@ -244,4 +289,8 @@ def verifierTests : List (String × IO Bool) := [
   ("testVerifyCommandTimesOutSlowProcess", testVerifyCommandTimesOutSlowProcess),
   ("testVerifyCommandCompletesBeforeTimeout", testVerifyCommandCompletesBeforeTimeout),
   ("testVerifyCommandTimeoutCapturesPartialOutput", testVerifyCommandTimeoutCapturesPartialOutput),
+  ("testVerifyCommandReturnsExitCodeZeroOnPass", testVerifyCommandReturnsExitCodeZeroOnPass),
+  ("testVerifyCommandReturnsNonZeroExitCode", testVerifyCommandReturnsNonZeroExitCode),
+  ("testVerifyCommandReturnsElapsedTime", testVerifyCommandReturnsElapsedTime),
+  ("testVerifySkipReturnsNoMetadata", testVerifySkipReturnsNoMetadata),
 ]

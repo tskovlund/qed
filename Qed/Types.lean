@@ -150,6 +150,28 @@ def VerificationResult.isSkipped : VerificationResult → Bool
   | .skipped _ => true
   | _ => false
 
+/-- A single criterion execution: the verification result plus execution metadata.
+    Wraps `VerificationResult` without modifying it — all proofs reason about
+    `VerificationResult` directly. Metadata fields are populated by the IO layer. -/
+structure CriterionExecution where
+  result : VerificationResult
+  exitCode : Option UInt32 := none
+  elapsedMs : Option Nat := none
+  iteration : Option Nat := none
+  deriving Repr, BEq
+
+/-- Whether the execution's underlying result represents a pass. -/
+def CriterionExecution.isPassed (execution : CriterionExecution) : Bool :=
+  execution.result.isPassed
+
+/-- Whether the execution's underlying result represents a failure. -/
+def CriterionExecution.isFailed (execution : CriterionExecution) : Bool :=
+  execution.result.isFailed
+
+/-- Whether the execution's underlying result was skipped. -/
+def CriterionExecution.isSkipped (execution : CriterionExecution) : Bool :=
+  execution.result.isSkipped
+
 /-- The state of the orchestration loop. -/
 inductive LoopState where
   /-- Initial state, ready to start. -/

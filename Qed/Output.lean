@@ -140,6 +140,53 @@ def workerResultsToJson (specName : String) (stateDescription : String)
     ("criteria", Json.arr criteriaJson.toArray)
   ]
 
+/-- Serialize a single criterion execution to JSON with optional metadata fields.
+    Includes `exitCode` and `elapsedMs` when present. -/
+def executionToJson (description : String) (execution : CriterionExecution) : Json :=
+  let base := [
+    ("description", Json.str description),
+    ("result", Json.str (resultStatus execution.result)),
+    ("details", Json.str (resultDetails execution.result))
+  ]
+  let withExitCode := match execution.exitCode with
+    | some code => base ++ [("exitCode", Json.num code.toNat)]
+    | none => base
+  let withElapsed := match execution.elapsedMs with
+    | some ms => withExitCode ++ [("elapsedMs", Json.num ms)]
+    | none => withExitCode
+  Json.mkObj withElapsed
+
+/-- Whether all executions passed (no failures). -/
+def allExecutionsPassed (executions : List (String × CriterionExecution)) : Bool :=
+  executions.all fun (_, execution) => !execution.isFailed
+
+/-- Serialize all criterion executions with spec name and overall pass/fail. -/
+def executionsToJson (specName : String) (executions : List (String × CriterionExecution)) : Json :=
+  let criteriaJson := executions.map fun (description, execution) =>
+    executionToJson description execution
+  Json.mkObj [
+    ("spec", Json.str specName),
+    ("passed", Json.bool (allExecutionsPassed executions)),
+    ("criteria", Json.arr criteriaJson.toArray)
+  ]
+
+/-- Serialize worker loop executions with spec name, state, and iteration history. -/
+def workerExecutionsToJson (specName : String) (stateDescription : String)
+    (executions : List (String × CriterionExecution)) : Json :=
+  let criteriaJson := executions.map fun (description, execution) =>
+    executionToJson description execution
+  Json.mkObj [
+    ("spec", Json.str specName),
+    ("state", Json.str stateDescription),
+    ("passed", Json.bool (allExecutionsPassed executions)),
+    ("criteria", Json.arr criteriaJson.toArray)
+  ]
+
+/-- Extract `VerificationResult` from executions for use with existing functions
+    that take `List (String × VerificationResult)` (e.g., text-mode display). -/
+def extractResults (executions : List (String × CriterionExecution)) : List (String × VerificationResult) :=
+  executions.map fun (description, execution) => (description, execution.result)
+
 /-- Visible width of the status prefix `[STATUS] ` for a given result.
     Accounts for varying indicator lengths (PASS=4, NEEDS-HUMAN=11, etc.). -/
 private def statusPrefixWidth (result : VerificationResult) : Nat :=
