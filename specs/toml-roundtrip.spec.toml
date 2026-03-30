@@ -19,7 +19,9 @@ to replace every `sorry` with a real implementation or proof.
 1. **Qed/TomlSerializer.lean** — implement all `sorry` function bodies
 2. **Qed/Proofs/TomlRoundtrip.lean** — prove all `sorry` theorems
 
-Do NOT modify any other files. The skeleton compiles with sorry warnings.
+Do NOT modify any other files. The skeleton does NOT compile because
+`warningAsError` is true at the package level, making sorry a compile error.
+You must replace every sorry with a real implementation or proof to build.
 
 ## What to implement
 
@@ -47,10 +49,10 @@ For optional fields, follow the JSON serializer exactly:
 
 **Layer 2 (tested):** `renderToml` and `renderValue` — string rendering.
 Produce valid TOML that `parseDoc` can parse back. Use:
-- `"""..."""` for multi-line strings (containing newlines)
-- `"..."` for single-line strings (escape backslash and quote)
-- `[[section]]` for array-of-tables (criteria)
-- `[section]` for table sections (worker, criteria.verify)
+- Triple-quoted strings for multi-line strings (containing newlines)
+- Double-quoted strings for single-line strings (escape backslash and quote)
+- Double-bracket headers for array-of-tables (criteria)
+- Single-bracket headers for table sections (worker, criteria.verify)
 
 ### TomlRoundtrip.lean
 

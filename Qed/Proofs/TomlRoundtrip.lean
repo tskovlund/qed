@@ -35,12 +35,30 @@ same key-value pairs (as `TomlValue`s) that the JSON serializer constructs
 (as `Json` values), and `toJson` maps between them faithfully. -/
 
 -- ═══════════════════════════════════════════════════════════════════
+-- Helpers
+-- ═══════════════════════════════════════════════════════════════════
+
+/-- Converting a list of TomlValue.str back through toJsonList yields Json.str. -/
+private theorem toJsonList_map_str (strings : List String) :
+    TomlParser.toJsonList (strings.map TomlValue.str) = strings.map Json.str := by
+  induction strings with
+  | nil => rfl
+  | cons head tail ih =>
+    simp only [List.map, TomlParser.toJsonList, TomlParser.toJson, ih]
+
+/-- `Lean.toJson` for `Nat` reduces to `Json.num`. Needed because `simp`
+    cannot reduce the typeclass application. -/
+private theorem lean_toJson_nat (n : Nat) :
+    Lean.toJson n = Json.num (JsonNumber.fromInt (Int.ofNat n)) := rfl
+
+-- ═══════════════════════════════════════════════════════════════════
 -- Level 1: Schedule — TOML and JSON serializers produce the same string
 -- ═══════════════════════════════════════════════════════════════════
 
 /-- The TOML and JSON schedule serializers are identical. -/
 theorem schedule_toml_eq_json (schedule : Schedule) :
-    scheduleToTomlString schedule = Serializer.scheduleToString schedule := sorry
+    scheduleToTomlString schedule = Serializer.scheduleToString schedule := by
+  cases schedule <;> rfl
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Level 2: VerifyType — TOML pairs convert to the same JSON
@@ -50,7 +68,28 @@ theorem schedule_toml_eq_json (schedule : Schedule) :
     as the JSON serializer. -/
 theorem verifyType_toml_json_eq (verifyType : VerifyType) :
     TomlParser.toJson (.table (verifyTypeToTomlPairs verifyType)) =
-    Serializer.verifyTypeToJson verifyType := sorry
+    Serializer.verifyTypeToJson verifyType := by
+  cases verifyType with
+  | command run timeout lock =>
+    cases lock with
+    | none => rfl
+    | some patterns =>
+      unfold verifyTypeToTomlPairs Serializer.verifyTypeToJson Serializer.stringListToJson
+      simp only [List.cons_append, List.nil_append,
+                  TomlParser.toJson, TomlParser.toJsonPairs,
+                  toJsonList_map_str, lean_toJson_nat]
+  | agent prompt model command timeout =>
+    cases command <;> rfl
+  | property run timeout lock =>
+    cases lock with
+    | none => rfl
+    | some patterns =>
+      unfold verifyTypeToTomlPairs Serializer.verifyTypeToJson Serializer.stringListToJson
+      simp only [List.cons_append, List.nil_append,
+                  TomlParser.toJson, TomlParser.toJsonPairs,
+                  toJsonList_map_str, lean_toJson_nat]
+  | proof prover target => rfl
+  | human instruction => rfl
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Level 3: AcceptanceCriterion — TOML pairs convert to the same JSON
@@ -60,12 +99,29 @@ theorem verifyType_toml_json_eq (verifyType : VerifyType) :
     as the JSON serializer. -/
 theorem criterion_toml_json_eq (criterion : AcceptanceCriterion) :
     TomlParser.toJson (.table (criterionToTomlPairs criterion)) =
-    Serializer.criterionToJson criterion := sorry
+    Serializer.criterionToJson criterion := by
+  cases criterion with
+  | mk description verify schedule skip =>
+    have hvt : Json.mkObj (TomlParser.toJsonPairs (verifyTypeToTomlPairs verify)) =
+        Serializer.verifyTypeToJson verify := verifyType_toml_json_eq verify
+    have hsc := schedule_toml_eq_json schedule
+    cases skip with
+    | none =>
+      simp only [criterionToTomlPairs, Serializer.criterionToJson,
+                  TomlParser.toJson, TomlParser.toJsonPairs, hvt, hsc]
+    | some reason =>
+      unfold criterionToTomlPairs Serializer.criterionToJson
+      simp only [List.cons_append, List.nil_append,
+                  TomlParser.toJson, TomlParser.toJsonPairs, hvt, hsc]
 
 /-- Lift element-wise criterion equivalence to lists (for the criteria array). -/
 theorem criteria_list_toml_json_eq (criteria : List AcceptanceCriterion) :
     TomlParser.toJsonList (criteria.map fun c => .table (criterionToTomlPairs c)) =
-    criteria.map Serializer.criterionToJson := sorry
+    criteria.map Serializer.criterionToJson := by
+  induction criteria with
+  | nil => rfl
+  | cons head tail ih =>
+    simp only [List.map, TomlParser.toJsonList, criterion_toml_json_eq, ih]
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Level 4: WorkerConfig — TOML pairs convert to the same JSON
@@ -75,7 +131,10 @@ theorem criteria_list_toml_json_eq (criteria : List AcceptanceCriterion) :
     as the JSON serializer. -/
 theorem workerConfig_toml_json_eq (worker : WorkerConfig) :
     TomlParser.toJson (.table (workerConfigToTomlPairs worker)) =
-    Serializer.workerConfigToJson worker := sorry
+    Serializer.workerConfigToJson worker := by
+  cases worker with
+  | mk command prompt model workdir timeout =>
+    cases command <;> cases prompt <;> rfl
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Level 5: Full Spec — the bridge theorem
@@ -85,7 +144,22 @@ theorem workerConfig_toml_json_eq (worker : WorkerConfig) :
     JSON serializer. This is the core equivalence that enables the roundtrip. -/
 theorem spec_toml_json_eq (spec : Spec) :
     TomlParser.toJson (.table (specToTomlPairs spec)) =
-    Serializer.specToJson spec := sorry
+    Serializer.specToJson spec := by
+  cases spec with
+  | mk name mode criteria =>
+    have hcr := criteria_list_toml_json_eq criteria
+    cases mode with
+    | verify =>
+      simp only [specToTomlPairs, Serializer.specToJson,
+                  TomlParser.toJson, TomlParser.toJsonPairs, hcr]
+    | workerLoop worker loopConfig =>
+      -- hwc at the reduced form (toJson (.table x) ≡ Json.mkObj (toJsonPairs x))
+      have hwc : Json.mkObj (TomlParser.toJsonPairs (workerConfigToTomlPairs worker)) =
+          Serializer.workerConfigToJson worker := workerConfig_toml_json_eq worker
+      unfold specToTomlPairs Serializer.specToJson
+      simp only [List.cons_append, List.nil_append,
+                  TomlParser.toJson, TomlParser.toJsonPairs, hcr, hwc,
+                  lean_toJson_nat]
 
 /-- **Main roundtrip theorem:** parsing the TOML-serialized spec (via JSON
     intermediary) recovers the original spec. Composes `spec_toml_json_eq`
