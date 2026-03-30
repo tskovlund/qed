@@ -114,3 +114,10 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `TomlJsonValidity.lean` | `toJson_array`                            | Arrays map to JSON arrays via toJsonList                          |
 | `TomlJsonValidity.lean` | `toJson_empty_table`                      | Empty table produces empty JSON object                            |
 | `TomlJsonValidity.lean` | `toJson_empty_array`                      | Empty array produces empty JSON array                             |
+| `TomlRoundtrip.lean`    | `schedule_toml_eq_json`                    | TOML and JSON schedule serializers produce the same string        |
+| `TomlRoundtrip.lean`    | `verifyType_toml_json_eq`                  | TOML verify-type pairs convert to the same JSON as the serializer |
+| `TomlRoundtrip.lean`    | `criterion_toml_json_eq`                   | TOML criterion pairs convert to the same JSON as the serializer   |
+| `TomlRoundtrip.lean`    | `criteria_list_toml_json_eq`               | Element-wise criterion equivalence lifts to lists                 |
+| `TomlRoundtrip.lean`    | `workerConfig_toml_json_eq`                | TOML worker config pairs convert to the same JSON as the serializer |
+| `TomlRoundtrip.lean`    | `spec_toml_json_eq`                        | **[spec]** TOML serializer produces the same JSON as the JSON serializer |
+| `TomlRoundtrip.lean`    | `toml_spec_roundtrip`                      | **[spec]** Parsing TOML-serialized spec recovers the original spec |

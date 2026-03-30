@@ -114,7 +114,9 @@ def renderValue : TomlValue → String
   | .str s =>
     if s.any (· == '\n') then
       "\"\"\"\n" ++ s.foldl (fun acc c =>
-        if c == '\\' then acc ++ "\\\\" else acc.push c) "" ++ "\"\"\""
+        if c == '\\' then acc ++ "\\\\"
+        else if c == '"' then acc ++ "\\\""
+        else acc.push c) "" ++ "\"\"\""
     else
       "\"" ++ s.foldl (fun acc c =>
         if c == '\\' then acc ++ "\\\\"
@@ -123,6 +125,7 @@ def renderValue : TomlValue → String
   | .int n => toString n
   | .bool b => if b then "true" else "false"
   | .array items => "[" ++ ", ".intercalate (renderArray items) ++ "]"
+  -- Tables are rendered via renderTableSection/renderArrayOfTables, never inline
   | .table _ => ""
 where
   renderArray : List TomlValue → List String
@@ -146,33 +149,23 @@ def renderToml (pairs : List (String × TomlValue)) : String :=
     | _ => acc) ""
   scalarText ++ tableText ++ arrayText
 where
-  renderTableSection (key : String) (inner : List (String × TomlValue)) : String :=
+  renderTableBody (parentKey : String) (inner : List (String × TomlValue)) : String :=
     let scalars := inner.filter fun (_, v) => match v with | .table _ => false | _ => true
     let subTables := inner.filter fun (_, v) => match v with | .table _ => true | _ => false
     let body := scalars.foldl (fun acc (k, v) => acc ++ k ++ " = " ++ renderValue v ++ "\n") ""
     let subBody := subTables.foldl (fun acc (k, v) =>
       match v with
       | .table subInner =>
-        acc ++ "\n[" ++ key ++ "." ++ k ++ "]\n" ++
+        acc ++ "\n[" ++ parentKey ++ "." ++ k ++ "]\n" ++
         subInner.foldl (fun acc2 (sk, sv) => acc2 ++ sk ++ " = " ++ renderValue sv ++ "\n") ""
       | _ => acc) ""
-    "\n[" ++ key ++ "]\n" ++ body ++ subBody
+    body ++ subBody
+  renderTableSection (key : String) (inner : List (String × TomlValue)) : String :=
+    "\n[" ++ key ++ "]\n" ++ renderTableBody key inner
   renderArrayOfTables (key : String) (items : List TomlValue) : String :=
     items.foldl (fun acc item =>
       match item with
-      | .table inner =>
-        let scalars := inner.filter fun (_, v) => match v with | .table _ => false | _ => true
-        let subTables := inner.filter fun (_, v) => match v with | .table _ => true | _ => false
-        let body := scalars.foldl (fun acc2 (k, v) =>
-          acc2 ++ k ++ " = " ++ renderValue v ++ "\n") ""
-        let subBody := subTables.foldl (fun acc2 (k, v) =>
-          match v with
-          | .table subInner =>
-            acc2 ++ "\n[" ++ key ++ "." ++ k ++ "]\n" ++
-            subInner.foldl (fun acc3 (sk, sv) =>
-              acc3 ++ sk ++ " = " ++ renderValue sv ++ "\n") ""
-          | _ => acc2) ""
-        acc ++ "\n[[" ++ key ++ "]]\n" ++ body ++ subBody
+      | .table inner => acc ++ "\n[[" ++ key ++ "]]\n" ++ renderTableBody key inner
       | _ => acc) ""
 
 /-- Serialize a Spec to a TOML document string.

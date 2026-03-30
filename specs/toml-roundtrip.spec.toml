@@ -1,0 +1,108 @@
+#:schema ../docs/spec.schema.json
+
+# TOML serializer and roundtrip proof — implement the skeleton in
+# Qed/TomlSerializer.lean and Qed/Proofs/TomlRoundtrip.lean.
+#
+# The skeleton defines function signatures and theorem statements with
+# `sorry` placeholders. The worker fills in all implementations and proofs.
+
+name = "toml-roundtrip"
+
+[worker]
+prompt = """
+You are implementing a TOML serializer and its roundtrip proof for the qed
+project (Lean 4, v4.28.0). The skeleton is already in place — your job is
+to replace every `sorry` with a real implementation or proof.
+
+## Files to modify
+
+1. **Qed/TomlSerializer.lean** — implement all `sorry` function bodies
+2. **Qed/Proofs/TomlRoundtrip.lean** — prove all `sorry` theorems
+
+Do NOT modify any other files. The skeleton does NOT compile because
+`warningAsError` is true at the package level, making sorry a compile error.
+You must replace every sorry with a real implementation or proof to build.
+
+## What to implement
+
+### TomlSerializer.lean
+
+The serializer has two layers:
+
+**Layer 1 (proven):** `Spec → List (String × TomlValue)` functions.
+These must satisfy: `toJson (.table (specToTomlPairs spec)) = specToJson spec`
+where `toJson` is `Qed.TomlParser.toJson` and `specToJson` is `Qed.Serializer.specToJson`.
+
+Study `Qed/Serializer.lean` to see the exact JSON structure each function produces.
+Your TOML pairs must produce the SAME JSON when passed through `toJson`.
+
+Key mappings:
+- `Json.str s` ↔ `TomlValue.str s` (toJson maps str→str)
+- `Lean.toJson (n : Nat)` ↔ `TomlValue.int (Int.ofNat n)` (toJson maps int→num)
+- `Json.bool b` ↔ `TomlValue.bool b`
+- `Json.mkObj pairs` ↔ `TomlValue.table pairs` (toJson maps table→mkObj via toJsonPairs)
+- `Json.arr items.toArray` ↔ `TomlValue.array items` (toJson maps array→arr via toJsonList)
+
+For optional fields, follow the JSON serializer exactly:
+- If the JSON serializer omits a field when None, your TOML pairs must also omit it
+- If the JSON serializer always includes a field, your TOML pairs must too
+
+**Layer 2 (tested):** `renderToml` and `renderValue` — string rendering.
+Produce valid TOML that `parseDoc` can parse back. Use:
+- Triple-quoted strings for multi-line strings (containing newlines)
+- Double-quoted strings for single-line strings (escape backslash and quote)
+- Double-bracket headers for array-of-tables (criteria)
+- Single-bracket headers for table sections (worker, criteria.verify)
+
+### TomlRoundtrip.lean
+
+Prove each theorem by showing the TOML serializer constructs TomlValues
+that `toJson` maps to the same JSON as the JSON serializer.
+
+**Proof strategy** (follow the pattern in `Qed/Proofs/Roundtrip.lean`):
+- Level 1 (`schedule_toml_eq_json`): Case-split on Schedule, close with `rfl`
+- Level 2 (`verifyType_toml_json_eq`): Case-split on VerifyType, then optional
+  fields. Use `unfold` on both serializers, close with `rfl`
+- Levels 3-4: Use lower-level theorems + `rfl`
+- Level 5 (`spec_toml_json_eq`): Case-split on SpecMode, use all lower levels
+
+The main theorem `toml_spec_roundtrip` is already proven — it just rewrites
+with `spec_toml_json_eq` and applies the existing `spec_roundtrip`.
+
+**Important Lean 4 notes:**
+- `set_option autoImplicit false` is on — declare all variables explicitly
+- TreeMap-backed JSON objects reduce via `rfl` (kernel reduction), not `simp`
+- Use `unfold` to expose function definitions, then `rfl` for concrete cases
+- For mutual recursion (`toJson`/`toJsonPairs`/`toJsonList`), unfold step by step
+
+## Reference files
+
+- `Qed/Serializer.lean` — JSON serializer (your TOML pairs must produce matching JSON)
+- `Qed/Proofs/Roundtrip.lean` — JSON roundtrip proofs (follow this pattern exactly)
+- `Qed/TomlParser.lean` — `TomlValue` type, `toJson`/`toJsonPairs`/`toJsonList` definitions
+- `Qed/Types.lean` — all type definitions (Spec, VerifyType, Schedule, etc.)
+- `Qed/Parser.lean` — `parseFromJson` (the parser the roundtrip must invert)
+"""
+
+[[criteria]]
+description = "Project builds successfully (all 68+ jobs including proofs)"
+
+[criteria.verify]
+type = "command"
+run = "lake build"
+timeout = 600
+
+[[criteria]]
+description = "No sorry or warningAsError overrides in new files"
+
+[criteria.verify]
+type = "command"
+run = "! grep -rqE 'sorry|warningAsError false' Qed/TomlSerializer.lean Qed/Proofs/TomlRoundtrip.lean"
+
+[[criteria]]
+description = "All tests pass (143+ tests, no regressions)"
+
+[criteria.verify]
+type = "command"
+run = "lake test"
+timeout = 600

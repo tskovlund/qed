@@ -6,6 +6,7 @@ import Qed.Parser
 import Qed.Serializer
 import Qed.TomlParser
 import Qed.TomlConverter
+import Qed.TomlSerializer
 import Qed.Integrity
 import Qed.Ignore
 import Qed.ContractLock
@@ -31,4 +32,3 @@ import Qed.Proofs.TomlProperties
 import Qed.Proofs.TomlJsonValidity
 import Qed.Proofs.TomlRoundtrip
 import Qed.Proofs.VerifierProperties
-import Qed.TomlSerializer
