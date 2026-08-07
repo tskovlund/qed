@@ -1,51 +1,19 @@
 {
   "lockfile_version": "1",
   "packages": {
-    "elan@latest": {
-      "last_modified": "2026-02-26T05:06:13Z",
-      "resolved": "github:NixOS/nixpkgs/26eaeac4e409d7b5a6bf6f90a2a2dc223c78d915#elan",
+    "elan@0.11.0": {
+      "last_modified": "2021-04-25T18:34:42Z",
+      "resolved": "github:NixOS/nixpkgs/79cb2cb9869d7bb8a1fac800977d3864212fd97d#elan",
       "source": "devbox-search",
-      "version": "4.2.0",
+      "version": "0.11.0",
       "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/iiqf8ra9z4va8zfxa38af31rphmppfk8-elan-4.2.0",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/iiqf8ra9z4va8zfxa38af31rphmppfk8-elan-4.2.0"
-        },
-        "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/wq7za70vyqby5y15mdr2fh5w3l2ndq6p-elan-4.2.0",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/wq7za70vyqby5y15mdr2fh5w3l2ndq6p-elan-4.2.0"
-        },
-        "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/9kv4sxm41ka4hxjbny6d4zwj57nnsjar-elan-4.2.0",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/9kv4sxm41ka4hxjbny6d4zwj57nnsjar-elan-4.2.0"
-        },
         "x86_64-linux": {
           "outputs": [
             {
-              "name": "out",
-              "path": "/nix/store/85f50k58wf74c08walfrycrpkyy2hsiv-elan-4.2.0",
+              "path": "/tmp/containerbase/cache/nix/store/p173dm2ws9fnasphlcisair546zxk4zq-elan-0.11.0",
               "default": true
             }
-          ],
-          "store_path": "/nix/store/85f50k58wf74c08walfrycrpkyy2hsiv-elan-4.2.0"
+          ]
         }
       }
     },
@@ -55,7 +23,7 @@
     },
     "nodejs@22": {
       "last_modified": "2026-02-23T15:40:43Z",
-      "plugin_version": "0.0.2",
+      "plugin_version": "0.0.4",
       "resolved": "github:NixOS/nixpkgs/80d901ec0377e19ac3f7bb8c035201e2e098cc97#nodejs_22",
       "source": "devbox-search",
       "version": "22.22.0",
