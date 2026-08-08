@@ -19,6 +19,7 @@ Qed/
   Parser.lean          JSON spec parser (Lean.Json → Spec, parseFromJson for roundtrip proofs)
   TomlParser.lean      Pure Lean TOML parser (no external dependencies)
   TomlConverter.lean   TOML → JSON conversion (thin wrapper around TomlParser)
+  TomlSerializer.lean  Spec → TOML serialization (roundtrip-proven layer + tested renderer)
   StateMachine.lean    Pure transition function (proven core)
   Verifier.lean        Verification dispatch (command, agent, property, proof)
   WorkerLoop.lean      Worker loop execution (spawn worker, verify, feed failures, repeat)
@@ -38,6 +39,7 @@ Qed/Proofs/
   ParserProperties.lean   parseSchedule completeness and rejection
   TomlProperties.lean     setNested/appendArray structural integrity
   TomlJsonValidity.lean   TOML→JSON pipeline totality and error propagation
+  TomlRoundtrip.lean      TOML serializer↔parser roundtrip (toJson ∘ specToTomlPairs = specToJson)
   Roundtrip.lean          Serializer↔parser roundtrip (parseFromJson ∘ specToJson = ok)
   IntegrityProperties.lean  Spec integrity: violation → terminal, absorbing, not passed
   WorkerLoopProperties.lean  step=transition, buildPrompt, shellQuote proofs
@@ -46,6 +48,7 @@ Tests/
   Types.lean           isTerminal behavior tests
   Parser.lean          JSON parser tests (all verify types, error cases)
   TomlParser.lean      TOML parser unit tests (values, tables, arrays, multi-line, non-ASCII)
+  TomlSerializer.lean  TOML serializer tests (render values, render→parse roundtrips)
   Integration.lean     TOML converter and SpecLoader end-to-end tests
   Verifier.lean        Command verifier tests (shell execution, exit codes, output capture)
   ContractLock.lean    Contract lock tests (glob validation, theorem extraction, lock roundtrip)
