@@ -30,7 +30,6 @@ target = "Qed.Proofs.Roundtrip.spec_roundtrip"
 
 [[criteria]]
 description = "TOML→JSON conversion is total: always returns ok or error, never diverges"
-skip = "ambiguous toJson name — needs qualified references (TSK-173)"
 
 [criteria.verify]
 type = "proof"
@@ -39,7 +38,6 @@ target = "Qed.Proofs.TomlJsonValidity.tomlToJson_total"
 
 [[criteria]]
 description = "Successful TOML→JSON conversion implies the input was valid TOML"
-skip = "ambiguous toJson name — needs qualified references (TSK-173)"
 
 [criteria.verify]
 type = "proof"
@@ -48,12 +46,19 @@ target = "Qed.Proofs.TomlJsonValidity.tomlToJson_ok_implies_parseDoc_ok"
 
 [[criteria]]
 description = "TOML parse errors propagate to the conversion result (never swallowed)"
-skip = "ambiguous toJson name — needs qualified references (TSK-173)"
 
 [criteria.verify]
 type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.TomlJsonValidity.parseDoc_error_implies_tomlToJson_error"
+
+[[criteria]]
+description = "TOML serializer→parser roundtrip: TOML-serialized specs produce the same JSON as the JSON serializer"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.TomlRoundtrip.toml_spec_roundtrip"
 
 [[criteria]]
 description = "TOML parser rejects duplicate keys at the leaf level"

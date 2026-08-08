@@ -20,7 +20,7 @@ lean_exe «qed» where
   root := `Main
 
 lean_lib «TestLib» where
-  roots := #[`Tests.Types, `Tests.Parser, `Tests.TomlParser, `Tests.Integration, `Tests.Verifier, `Tests.ContractLock, `Tests.Ignore, `Tests.Cli]
+  roots := #[`Tests.Types, `Tests.Parser, `Tests.TomlParser, `Tests.Integration, `Tests.Verifier, `Tests.ContractLock, `Tests.Ignore, `Tests.TomlSerializer, `Tests.Cli]
 
 @[test_driver]
 lean_exe «tests» where

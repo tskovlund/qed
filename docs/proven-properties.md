@@ -97,20 +97,27 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 
 ## TOML parser
 
-| File                    | Theorem                                   | Property                                                          |
-| ----------------------- | ----------------------------------------- | ----------------------------------------------------------------- |
-| `TomlProperties.lean`   | `setNested_no_duplicate_at_leaf`          | setNested inserts without duplicates when key is absent           |
-| `TomlProperties.lean`   | `setNested_rejects_duplicate`             | **[spec]** setNested returns error when key already exists        |
-| `TomlProperties.lean`   | `setNested_empty_keys`                    | Empty key path is always rejected                                 |
-| `TomlProperties.lean`   | `appendArray_empty_keys`                  | Empty key path is always rejected                                 |
-| `TomlProperties.lean`   | `appendArray_creates_new`                 | Absent key creates new single-element array                       |
-| `TomlJsonValidity.lean` | `tomlToJson_total`                        | **[spec]** tomlToJson always returns Ok or Error (never diverges) |
-| `TomlJsonValidity.lean` | `tomlToJson_ok_implies_parseDoc_ok`       | **[spec]** Successful conversion implies successful parse         |
-| `TomlJsonValidity.lean` | `parseDoc_error_implies_tomlToJson_error` | **[spec]** Parse failure propagates to conversion failure         |
-| `TomlJsonValidity.lean` | `toJson_str`                              | String values map to JSON strings                                 |
-| `TomlJsonValidity.lean` | `toJson_int`                              | Integer values map to JSON numbers                                |
-| `TomlJsonValidity.lean` | `toJson_bool`                             | Boolean values map to JSON booleans                               |
-| `TomlJsonValidity.lean` | `toJson_table`                            | Tables map to JSON objects via toJsonPairs                        |
-| `TomlJsonValidity.lean` | `toJson_array`                            | Arrays map to JSON arrays via toJsonList                          |
-| `TomlJsonValidity.lean` | `toJson_empty_table`                      | Empty table produces empty JSON object                            |
-| `TomlJsonValidity.lean` | `toJson_empty_array`                      | Empty array produces empty JSON array                             |
+| File                    | Theorem                                   | Property                                                                 |
+| ----------------------- | ----------------------------------------- | ------------------------------------------------------------------------ |
+| `TomlProperties.lean`   | `setNested_no_duplicate_at_leaf`          | setNested inserts without duplicates when key is absent                  |
+| `TomlProperties.lean`   | `setNested_rejects_duplicate`             | **[spec]** setNested returns error when key already exists               |
+| `TomlProperties.lean`   | `setNested_empty_keys`                    | Empty key path is always rejected                                        |
+| `TomlProperties.lean`   | `appendArray_empty_keys`                  | Empty key path is always rejected                                        |
+| `TomlProperties.lean`   | `appendArray_creates_new`                 | Absent key creates new single-element array                              |
+| `TomlJsonValidity.lean` | `tomlToJson_total`                        | **[spec]** tomlToJson always returns Ok or Error (never diverges)        |
+| `TomlJsonValidity.lean` | `tomlToJson_ok_implies_parseDoc_ok`       | **[spec]** Successful conversion implies successful parse                |
+| `TomlJsonValidity.lean` | `parseDoc_error_implies_tomlToJson_error` | **[spec]** Parse failure propagates to conversion failure                |
+| `TomlJsonValidity.lean` | `toJson_str`                              | String values map to JSON strings                                        |
+| `TomlJsonValidity.lean` | `toJson_int`                              | Integer values map to JSON numbers                                       |
+| `TomlJsonValidity.lean` | `toJson_bool`                             | Boolean values map to JSON booleans                                      |
+| `TomlJsonValidity.lean` | `toJson_table`                            | Tables map to JSON objects via toJsonPairs                               |
+| `TomlJsonValidity.lean` | `toJson_array`                            | Arrays map to JSON arrays via toJsonList                                 |
+| `TomlJsonValidity.lean` | `toJson_empty_table`                      | Empty table produces empty JSON object                                   |
+| `TomlJsonValidity.lean` | `toJson_empty_array`                      | Empty array produces empty JSON array                                    |
+| `TomlRoundtrip.lean`    | `schedule_toml_eq_json`                   | TOML and JSON schedule serializers produce the same string               |
+| `TomlRoundtrip.lean`    | `verifyType_toml_json_eq`                 | TOML verify-type pairs convert to the same JSON as the serializer        |
+| `TomlRoundtrip.lean`    | `criterion_toml_json_eq`                  | TOML criterion pairs convert to the same JSON as the serializer          |
+| `TomlRoundtrip.lean`    | `criteria_list_toml_json_eq`              | Element-wise criterion equivalence lifts to lists                        |
+| `TomlRoundtrip.lean`    | `workerConfig_toml_json_eq`               | TOML worker config pairs convert to the same JSON as the serializer      |
+| `TomlRoundtrip.lean`    | `spec_toml_json_eq`                       | **[spec]** TOML serializer produces the same JSON as the JSON serializer |
+| `TomlRoundtrip.lean`    | `toml_spec_roundtrip`                     | **[spec]** Parsing TOML-serialized spec recovers the original spec       |

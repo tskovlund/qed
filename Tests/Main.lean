@@ -6,6 +6,7 @@ import Tests.Verifier
 import Tests.ContractLock
 import Tests.Ignore
 import Tests.Cli
+import Tests.TomlSerializer
 
 set_option autoImplicit false
 
@@ -20,7 +21,7 @@ def runTest (name : String) (test : IO Bool) : IO Bool := do
 
 def main : IO UInt32 := do
   let tests : List (String × IO Bool) :=
-    typeTests ++ parserTests ++ tomlParserTests ++ integrationTests ++ verifierTests ++ contractLockTests ++ ignoreTests ++ cliTests
+    typeTests ++ parserTests ++ tomlParserTests ++ integrationTests ++ verifierTests ++ contractLockTests ++ ignoreTests ++ tomlSerializerTests ++ cliTests
 
   let mut failedCount : Nat := 0
   for (name, test) in tests do
