@@ -1,4 +1,5 @@
 import Qed.TomlParser
+import Qed.TomlConverter
 
 set_option autoImplicit false
 
@@ -50,5 +51,16 @@ theorem appendArray_creates_new (pairs : List (String × TomlValue))
     appendArray pairs [key] = .ok (pairs ++ [(key, .array [.table []])]) := by
   unfold appendArray
   simp [h_absent]
+
+-- ============================================================
+-- 5. TomlConverter is an unguarded re-export of TomlParser
+-- ============================================================
+
+/-- `TomlConverter.tomlToJson` is exactly `TomlParser.tomlToJson`. The converter
+is a thin shim, so this ties the two together the way
+`ShellProperties.shellQuote_shim_eq` does for `shellQuote` — if the shim ever
+grows behaviour of its own, the TOML coverage stops silently applying to it. -/
+theorem tomlConverter_shim_eq (contents : String) :
+    Qed.TomlConverter.tomlToJson contents = tomlToJson contents := rfl
 
 end Qed.Proofs.TomlProperties

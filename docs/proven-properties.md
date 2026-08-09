@@ -4,6 +4,8 @@
 
 The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. All proofs are complete — no `sorry`, no gaps. Theorems marked with **[spec]** are verified as acceptance criteria in `specs/`.
 
+One exception to "kernel": `WorkerLoopProperties.shellQuote_empty` closes by `native_decide`, which trusts the compiler's evaluator rather than the kernel. It is the only such proof in the repo. `String.Slice.replace` is defined by well-founded recursion with no upstream reduction lemma, so `rfl`, `decide`, and `simp [String.replace]` all fail on it.
+
 ## State machine (worker loop)
 
 | File                  | Theorem                                      | Property                                                                                                              |
@@ -95,6 +97,19 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 
 **Known gap:** quoting is proven for the zero-, one-, and two-variable cases plus the structural "command is last" property for arbitrary lists, but _not_ "every value in an arbitrary-length list is quoted". That statement requires induction over `String.intercalate`'s accumulator helper, which Lean 4.28.0 does not expose as an accessible constant.
 
+## Glob pattern safety
+
+`ContractLock.expandGlob` splices a caller-supplied pattern into `bash -c 'shopt -s globstar nullglob; for f in {pattern}; ...'`, which is itself handed to `/bin/sh -c`. The pattern crosses two shell layers and `isValidGlobPattern` is the only barrier in front of it, so the character policy is kernel-checked rather than trusted to a code comment.
+
+| File                  | Theorem                                 | Property                                                                                                                                   |
+| --------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GlobProperties.lean` | `isGlobSafeChar_rejects_metacharacters` | Every shell metacharacter is rejected: quotes, `$`, backtick, `;`, `&`, `\|`, parens, redirections, whitespace, `\`, braces, `!`, `#`, `~` |
+| `GlobProperties.lean` | `isGlobSafeChar_accepts_glob_syntax`    | The characters glob expansion needs are accepted — the policy is not vacuously safe                                                        |
+| `GlobProperties.lean` | `isValidGlobPattern_empty`              | The empty pattern is rejected                                                                                                              |
+| `GlobProperties.lean` | `isValidGlobPattern_eq`                 | The validator is exactly "non-empty and every character satisfies the policy"                                                              |
+
+**Known gap:** the character policy is proven, but "a valid pattern contains no metacharacter" is _not_ — lifting the per-character property to whole strings requires reasoning through `String.all`, which is defined by well-founded recursion over UTF-8 byte positions and does not reduce definitionally. `decide` gets stuck on it. The same obstacle blocks concrete rejection theorems like `isValidGlobPattern "foo'; rm -rf /" = false`.
+
 ## Ignore file parsing and pattern precedence
 
 `.qedignore` decides which specs are skipped, so a wrong answer silently drops verification coverage.
@@ -151,6 +166,7 @@ The lock file (`qed.lock`) records content hashes for locked artifacts. Writer a
 | `TomlProperties.lean`   | `setNested_empty_keys`                    | Empty key path is always rejected                                        |
 | `TomlProperties.lean`   | `appendArray_empty_keys`                  | Empty key path is always rejected                                        |
 | `TomlProperties.lean`   | `appendArray_creates_new`                 | Absent key creates new single-element array                              |
+| `TomlProperties.lean`   | `tomlConverter_shim_eq`                   | `TomlConverter.tomlToJson` is exactly `TomlParser.tomlToJson` (shim tie) |
 | `TomlJsonValidity.lean` | `tomlToJson_total`                        | **[spec]** tomlToJson always returns Ok or Error (never diverges)        |
 | `TomlJsonValidity.lean` | `tomlToJson_ok_implies_parseDoc_ok`       | **[spec]** Successful conversion implies successful parse                |
 | `TomlJsonValidity.lean` | `parseDoc_error_implies_tomlToJson_error` | **[spec]** Parse failure propagates to conversion failure                |

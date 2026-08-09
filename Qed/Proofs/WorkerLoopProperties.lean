@@ -35,7 +35,13 @@ theorem shellQuote_wraps (s : String) :
     ∃ inner, WorkerLoop.shellQuote s = "'" ++ inner ++ "'" := by
   exact ⟨s.replace "'" "'\\''", rfl⟩
 
-/-- shellQuote of the empty string produces "''". -/
+/-- shellQuote of the empty string produces "''".
+
+    Closed by `native_decide`, not the kernel: `String.Slice.replace` is defined
+    by well-founded recursion and has no upstream reduction lemma, so `rfl`,
+    `decide`, and `simp [String.replace]` all fail here. This is the repo's only
+    proof that leans on the compiler rather than the kernel — see the note in
+    `docs/proven-properties.md`. -/
 theorem shellQuote_empty :
     WorkerLoop.shellQuote "" = "''" := by
   native_decide

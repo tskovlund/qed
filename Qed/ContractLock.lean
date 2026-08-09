@@ -48,13 +48,20 @@ def lockFilePath : System.FilePath := "qed.lock"
 -- Glob expansion
 -- ═══════════════════════════════════════════════════════════════════
 
-/-- Whether a glob pattern contains only safe characters for shell expansion.
+/-- Whether a single character is safe inside a glob pattern that will be
+    expanded by a shell.
     Allows: alphanumeric, *, ?, /, ., _, -, [, ]
-    Rejects: $, `, ;, &, |, (, ), {, }, <, >, space, etc. -/
+    Rejects: $, `, ;, &, |, (, ), {, }, <, >, quotes, space, etc.
+    `Proofs.GlobProperties.isGlobSafeChar_rejects_metacharacters` proves the
+    rejection half against the shell metacharacter set. -/
+def isGlobSafeChar (c : Char) : Bool :=
+  c.isAlpha || c.isDigit || c == '*' || c == '?' || c == '/' ||
+  c == '.' || c == '_' || c == '-' || c == '[' || c == ']'
+
+/-- Whether a glob pattern contains only safe characters for shell expansion.
+    Empty patterns are rejected. -/
 def isValidGlobPattern (pattern : String) : Bool :=
-  !pattern.isEmpty && pattern.all fun c =>
-    c.isAlpha || c.isDigit || c == '*' || c == '?' || c == '/' ||
-    c == '.' || c == '_' || c == '-' || c == '[' || c == ']'
+  !pattern.isEmpty && pattern.all isGlobSafeChar
 
 /-- Expand a glob pattern to a list of file paths.
     Uses bash globstar for `**` support. Returns empty list for no matches. -/
