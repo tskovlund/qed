@@ -32,9 +32,12 @@ structure SpecLock where
   criteria : List CriterionLock
   deriving Repr, BEq
 
+/-- The only lock file format version this build reads and writes. -/
+def supportedLockFileVersion : Nat := 1
+
 /-- The lock file structure. -/
 structure LockFile where
-  version : Nat := 1
+  version : Nat := supportedLockFileVersion
   specs : List SpecLock
   deriving Repr, BEq
 
@@ -227,7 +230,7 @@ def generateLockFile (specs : List (String × Spec)) : IO (Except ErrorInfo Lock
     | .ok lock =>
       if !lock.criteria.isEmpty then
         specLocks := specLocks ++ [lock]
-  return .ok { version := 1, specs := specLocks }
+  return .ok { version := supportedLockFileVersion, specs := specLocks }
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Lock verification
@@ -346,19 +349,25 @@ def parseSpecLock (json : Json) : Except ErrorInfo SpecLock := do
   let criteria ← criteriaArr.toList.mapM parseCriterionLock
   .ok { specPath, criteria }
 
-/-- Parse a LockFile from a JSON string. -/
-def parseLockFile (input : String) : Except ErrorInfo LockFile := do
-  let json ← (Json.parse input).mapError fun error => ({ message := error } : ErrorInfo)
+/-- Parse a LockFile from an already-decoded JSON value.
+    Split out from `parseLockFile` so the roundtrip proof can reason about the
+    pure `Json → LockFile` step, mirroring `Parser.parseFromJson`. -/
+def parseLockFileFromJson (json : Json) : Except ErrorInfo LockFile := do
   let version ← match json.getObjValAs? Nat "version" with
     | .ok value => .ok value
     | .error _ => .error { message := "lock file missing 'version'" }
-  if version != 1 then
-    .error { message := s!"unsupported lock file version: {version} (expected 1)" }
+  if version != supportedLockFileVersion then
+    .error { message := s!"unsupported lock file version: {version} (expected {supportedLockFileVersion})" }
   let specsArr ← match json.getObjVal? "specs" with
     | .ok (Json.arr items) => .ok items
     | _ => .error { message := "lock file missing 'specs' array" }
   let specs ← specsArr.toList.mapM parseSpecLock
   .ok { version, specs }
+
+/-- Parse a LockFile from a JSON string. -/
+def parseLockFile (input : String) : Except ErrorInfo LockFile := do
+  let json ← (Json.parse input).mapError fun error => ({ message := error } : ErrorInfo)
+  parseLockFileFromJson json
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Lock file I/O

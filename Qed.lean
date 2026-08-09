@@ -24,6 +24,7 @@ import Qed.Proofs.Invariants
 import Qed.Proofs.VerifyMode
 import Qed.Proofs.WorkerLoopProperties
 import Qed.Proofs.Roundtrip
+import Qed.Proofs.LockRoundtrip
 import Qed.Proofs.TypeProperties
 import Qed.Proofs.OutputCorrectness
 import Qed.Proofs.ParserProperties
@@ -32,3 +33,4 @@ import Qed.Proofs.TomlProperties
 import Qed.Proofs.TomlJsonValidity
 import Qed.Proofs.TomlRoundtrip
 import Qed.Proofs.VerifierProperties
+import Qed.Proofs.ShellProperties

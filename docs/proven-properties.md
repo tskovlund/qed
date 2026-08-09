@@ -81,6 +81,20 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `VerifierProperties.lean` | `isValidModuleName_iff`          | **[spec]** Valid iff all dot-separated parts are non-empty identifier-char-only segments |
 | `VerifierProperties.lean` | `containsSorry_iff`              | **[spec]** containsSorry detects exactly standalone sorry occurrences                    |
 
+## Shell command construction
+
+`buildShellCommand` splices environment variable values into a string handed to `/bin/sh -c`, so it is the shell-injection surface.
+
+| File                   | Theorem                        | Property                                                                       |
+| ---------------------- | ------------------------------ | ------------------------------------------------------------------------------ |
+| `ShellProperties.lean` | `shellQuote_shim_eq`           | The `WorkerLoop.shellQuote` re-export is exactly `Shell.shellQuote`             |
+| `ShellProperties.lean` | `buildShellCommand_empty_env`  | With no environment variables the command is passed through untouched          |
+| `ShellProperties.lean` | `buildShellCommand_single`     | One variable expands to one `export` with a shell-quoted value, command last   |
+| `ShellProperties.lean` | `buildShellCommand_pair`       | Two variables quote both values and still leave the command last               |
+| `ShellProperties.lean` | `buildShellCommand_command_last` | For any non-empty environment the command is the trailing segment after `"; "` |
+
+**Known gap:** quoting is proven for the zero-, one-, and two-variable cases plus the structural "command is last" property for arbitrary lists, but *not* "every value in an arbitrary-length list is quoted". That statement requires induction over `String.intercalate`'s accumulator helper, which Lean 4.28.0 does not expose as an accessible constant.
+
 ## Parser and serialization
 
 | File                    | Theorem                     | Property                                                                                       |
@@ -94,6 +108,23 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 | `Roundtrip.lean`        | `spec_verify_roundtrip`     | parseFromJson inverts specToJson for verify-mode specs                                         |
 | `Roundtrip.lean`        | `spec_workerLoop_roundtrip` | parseFromJson inverts specToJson for workerLoop-mode specs                                     |
 | `Roundtrip.lean`        | `spec_roundtrip`            | **[spec]** **Main theorem:** parseFromJson inverts specToJson for all well-formed specs        |
+
+## Contract lock file
+
+The lock file (`qed.lock`) records content hashes for locked artifacts. Writer and reader are proven to agree on every field.
+
+| File                 | Theorem                          | Property                                                                                   |
+| -------------------- | -------------------------------- | -------------------------------------------------------------------------------------------- |
+| `LockRoundtrip.lean` | `artifact_roundtrip`             | parseArtifact inverts artifactToJson                                                       |
+| `LockRoundtrip.lean` | `artifacts_list_roundtrip`       | Element-wise artifact roundtrip lifts to list-level mapM roundtrip                          |
+| `LockRoundtrip.lean` | `criterionLock_roundtrip`        | parseCriterionLock inverts criterionLockToJson                                             |
+| `LockRoundtrip.lean` | `criterionLocks_list_roundtrip`  | Element-wise criterion-lock roundtrip lifts to lists                                       |
+| `LockRoundtrip.lean` | `specLock_roundtrip`             | parseSpecLock inverts specLockToJson                                                       |
+| `LockRoundtrip.lean` | `specLocks_list_roundtrip`       | Element-wise spec-lock roundtrip lifts to lists                                            |
+| `LockRoundtrip.lean` | `lockFile_roundtrip`             | **Main theorem:** parseLockFileFromJson inverts lockFileToJson for the supported version   |
+| `LockRoundtrip.lean` | `generated_lockFile_roundtrip`   | The roundtrip holds unconditionally for lock files qed generates                            |
+
+**Scope:** these cover the `LockFile ↔ Json` layer. The outer string layer (`serializeLockFile` = `Json.pretty`, `parseLockFile` = `Json.parse` then the above) rests on `Json.parse ∘ Json.pretty = id` — a property of Lean's JSON library, not of qed — and is covered by `testLockFileRoundtrip` instead. This is the same boundary the spec roundtrip draws at `specToJson`/`parseFromJson`.
 
 ## TOML parser
 
