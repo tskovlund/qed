@@ -59,9 +59,15 @@ def isGlobSafeChar (c : Char) : Bool :=
   c == '.' || c == '_' || c == '-' || c == '[' || c == ']'
 
 /-- Whether a glob pattern contains only safe characters for shell expansion.
-    Empty patterns are rejected. -/
+    Empty patterns are rejected.
+
+    Iterates over `pattern.toList` rather than using `String.all`: the latter is
+    built on Lean 4.28.0's pattern/iterator machinery, which has no reduction
+    lemmas, so no property of it can be proven. Patterns are short and this runs
+    once per pattern at lock time, so materializing the list costs nothing and
+    buys `Proofs.GlobProperties.isValidGlobPattern_excludes_metacharacters`. -/
 def isValidGlobPattern (pattern : String) : Bool :=
-  !pattern.isEmpty && pattern.all isGlobSafeChar
+  !pattern.isEmpty && pattern.toList.all isGlobSafeChar
 
 /-- Expand a glob pattern to a list of file paths.
     Uses bash globstar for `**` support. Returns empty list for no matches. -/

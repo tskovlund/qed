@@ -4,7 +4,7 @@
 
 The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. All proofs are complete — no `sorry`, no gaps. Theorems marked with **[spec]** are verified as acceptance criteria in `specs/`.
 
-One exception to "kernel": `WorkerLoopProperties.shellQuote_empty` closes by `native_decide`, which trusts the compiler's evaluator rather than the kernel. It is the only such proof in the repo. `String.Slice.replace` is defined by well-founded recursion with no upstream reduction lemma, so `rfl`, `decide`, and `simp [String.replace]` all fail on it.
+One exception to "kernel": `WorkerLoopProperties.shellQuote_empty` closes by `native_decide`, which trusts the compiler's evaluator rather than the kernel. It is the only such proof in the repo. `String.Slice.replace` is built on Lean 4.28.0's searcher/fold iterator machinery, which ships no reduction lemmas (`Init/Data/String/Lemmas/Search.lean` contains two theorems, neither about `replace`), so `rfl`, `decide`, `decide +kernel`, and `simp [String.replace]` all get stuck. Removing this `native_decide` needs either upstream lemmas or a `replace`-free reformulation of `shellQuote`.
 
 ## State machine (worker loop)
 
@@ -39,6 +39,8 @@ One exception to "kernel": `WorkerLoopProperties.shellQuote_empty` closes by `na
 | `IntegrityProperties.lean` | `integrity_violation_terminal`   | **[spec]** integrityViolation event from any non-terminal state produces terminal integrityViolation |
 | `IntegrityProperties.lean` | `integrity_violation_absorbing`  | integrityViolation state is absorbing (no event transitions out)                                     |
 | `IntegrityProperties.lean` | `integrity_violation_not_passed` | **[spec]** integrityViolation from a non-terminal state can never produce passed                     |
+
+**Scope warning:** despite the file name, `IntegrityProperties.lean` proves nothing about `Qed/Integrity.lean` — it does not import it. These theorems are about how the state machine _responds_ to an `integrityViolation` event. The detection half (`hashFile`, `checkGitClean`, and the `verify` composition that decides whether a violation is raised) has no proof coverage: all six definitions in `Integrity.lean` are `IO`, so there is nothing pure to attach a theorem to as written. Read a green build as "violations are handled correctly", never as "integrity checking is verified".
 
 ## Verify mode
 
@@ -101,14 +103,20 @@ One exception to "kernel": `WorkerLoopProperties.shellQuote_empty` closes by `na
 
 `ContractLock.expandGlob` splices a caller-supplied pattern into `bash -c 'shopt -s globstar nullglob; for f in {pattern}; ...'`, which is itself handed to `/bin/sh -c`. The pattern crosses two shell layers and `isValidGlobPattern` is the only barrier in front of it, so the character policy is kernel-checked rather than trusted to a code comment.
 
-| File                  | Theorem                                 | Property                                                                                                                                   |
-| --------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GlobProperties.lean` | `isGlobSafeChar_rejects_metacharacters` | Every shell metacharacter is rejected: quotes, `$`, backtick, `;`, `&`, `\|`, parens, redirections, whitespace, `\`, braces, `!`, `#`, `~` |
-| `GlobProperties.lean` | `isGlobSafeChar_accepts_glob_syntax`    | The characters glob expansion needs are accepted — the policy is not vacuously safe                                                        |
-| `GlobProperties.lean` | `isValidGlobPattern_empty`              | The empty pattern is rejected                                                                                                              |
-| `GlobProperties.lean` | `isValidGlobPattern_eq`                 | The validator is exactly "non-empty and every character satisfies the policy"                                                              |
+| File                  | Theorem                                      | Property                                                                                                                                   |
+| --------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GlobProperties.lean` | `isGlobSafeChar_rejects_metacharacters`      | Every shell metacharacter is rejected: quotes, `$`, backtick, `;`, `&`, `\|`, parens, redirections, whitespace, `\`, braces, `!`, `#`, `~` |
+| `GlobProperties.lean` | `isGlobSafeChar_accepts_glob_syntax`         | The characters glob expansion needs are accepted — the policy is not vacuously safe                                                        |
+| `GlobProperties.lean` | `isValidGlobPattern_empty`                   | The empty pattern is rejected                                                                                                              |
+| `GlobProperties.lean` | `isValidGlobPattern_eq`                      | The validator is exactly "non-empty and every character satisfies the policy"                                                              |
+| `GlobProperties.lean` | `isValidGlobPattern_excludes_metacharacters` | **Main theorem:** no character of an accepted pattern is a shell metacharacter                                                             |
+| `GlobProperties.lean` | `isValidGlobPattern_nonempty`                | An accepted pattern is never empty                                                                                                         |
+| `GlobProperties.lean` | `rejects_quote_escape`                       | `foo'; rm -rf /` — closing the `bash -c` quote to append a command — is rejected                                                           |
+| `GlobProperties.lean` | `rejects_command_substitution`               | `$(whoami)` and `` `whoami` `` are rejected                                                                                                |
+| `GlobProperties.lean` | `rejects_separators`                         | `;`, `\|`, and `&` separators are rejected                                                                                                 |
+| `GlobProperties.lean` | `accepts_real_patterns`                      | The patterns qed's own specs use are accepted                                                                                              |
 
-**Known gap:** the character policy is proven, but "a valid pattern contains no metacharacter" is _not_ — lifting the per-character property to whole strings requires reasoning through `String.all`, which is defined by well-founded recursion over UTF-8 byte positions and does not reduce definitionally. `decide` gets stuck on it. The same obstacle blocks concrete rejection theorems like `isValidGlobPattern "foo'; rm -rf /" = false`.
+**Implementation note:** `isValidGlobPattern` iterates over `pattern.toList` rather than using `String.all`. `String.all` is built on Lean 4.28.0's pattern/iterator machinery, which ships no reduction lemmas — `rfl`, `decide`, `decide +kernel`, and `simp` all get stuck on it, so no property of it can be stated. `List.all` has `List.all_eq_true`, which is what makes the main theorem above provable. Patterns are short and validation runs once per pattern at lock time, so materializing the list costs nothing.
 
 ## Ignore file parsing and pattern precedence
 

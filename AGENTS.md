@@ -44,8 +44,8 @@ Qed/Proofs/
   LockRoundtrip.lean      Lock file writer↔reader roundtrip (parseLockFileFromJson ∘ lockFileToJson = ok)
   ShellProperties.lean    buildShellCommand quoting and command-last structure
   IgnoreProperties.lean   .qedignore parse output contract and pattern precedence
-  GlobProperties.lean     Glob pattern character policy rejects shell metacharacters
-  IntegrityProperties.lean  Spec integrity: violation → terminal, absorbing, not passed
+  GlobProperties.lean     Valid glob patterns contain no shell metacharacters
+  IntegrityProperties.lean  integrityViolation *event* handling (NOT Integrity.lean)
   WorkerLoopProperties.lean  step=transition, buildPrompt, shellQuote proofs
 Tests/
   Main.lean            Test runner (imports all test modules)
