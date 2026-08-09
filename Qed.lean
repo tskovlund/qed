@@ -34,3 +34,4 @@ import Qed.Proofs.TomlJsonValidity
 import Qed.Proofs.TomlRoundtrip
 import Qed.Proofs.VerifierProperties
 import Qed.Proofs.ShellProperties
+import Qed.Proofs.IgnoreProperties

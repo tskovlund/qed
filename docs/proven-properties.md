@@ -95,6 +95,22 @@ The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. 
 
 **Known gap:** quoting is proven for the zero-, one-, and two-variable cases plus the structural "command is last" property for arbitrary lists, but _not_ "every value in an arbitrary-length list is quoted". That statement requires induction over `String.intercalate`'s accumulator helper, which Lean 4.28.0 does not expose as an accessible constant.
 
+## Ignore file parsing and pattern precedence
+
+`.qedignore` decides which specs are skipped, so a wrong answer silently drops verification coverage.
+
+| File                    | Theorem                        | Property                                                                     |
+| ----------------------- | ------------------------------ | ---------------------------------------------------------------------------- |
+| `IgnoreProperties.lean` | `parseIgnoreFile_no_empty`     | Every parsed pattern is non-empty — blank lines are dropped                  |
+| `IgnoreProperties.lean` | `parseIgnoreFile_no_comments`  | No parsed pattern starts with `#` — comments are dropped                     |
+| `IgnoreProperties.lean` | `shouldIgnore_empty`           | With no patterns nothing is ignored — no built-in default set                |
+| `IgnoreProperties.lean` | `shouldIgnore_append_positive` | A trailing matching non-negated pattern forces "ignored", overriding earlier |
+| `IgnoreProperties.lean` | `shouldIgnore_append_negated`  | A trailing matching `!` pattern forces "not ignored", overriding earlier     |
+
+The two `shouldIgnore_append_*` theorems are the last-matching-pattern-wins rule in both directions. They treat `fnmatch` as an abstract predicate, so they hold however globbing itself behaves.
+
+**Known gap:** no property of `fnmatch` itself is proven. Its inner loop `fnmatchGo` is `partial` — star backtracking resets the pattern pointer while advancing the string pointer, so it is not structurally decreasing — and a `partial def` is opaque to the kernel, with no equational lemmas. Stating any `fnmatch` property first requires re-expressing it with a fuel parameter or a well-founded measure. Behaviour stays covered by `Tests/Ignore.lean`.
+
 ## Parser and serialization
 
 | File                    | Theorem                     | Property                                                                                       |
