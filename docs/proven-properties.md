@@ -175,10 +175,8 @@ A run passes exactly when no criterion failed. Every result is exactly one of pa
 
 ## Verification boundary
 
-The proofs cover qed's pure core. Three architectural facts define where that core ends.
+The proofs cover qed's pure core. Two architectural facts define where that core ends.
 
 **IO is tested, not proven.** Process spawning, file reading, git inspection, and terminal output live in `Main.lean`, `Verifier.lean`, `Integrity.lean` and the IO half of `WorkerLoop.lean`. `Tests/` covers them end to end, including the CLI itself. The proofs reason about the pure functions those layers call — which is why `step_eq_transition` and `buildShellCommand_single` matter: they pin the IO layer to the proven core.
 
 **Serialization proofs stop at the `Json` layer.** `Roundtrip.lean` and `LockRoundtrip.lean` prove `parse ∘ serialize = id` on `Lean.Json` values. The outer string layer rests on `Json.parse ∘ Json.pretty = id`, a property of Lean's JSON library rather than of qed, and is covered by tests.
-
-**`parseDoc` and `fnmatch` are `partial`.** The TOML document parser and the fnmatch inner loop are written with recursion Lean cannot see as terminating, so the kernel treats them as opaque and properties of them cannot be stated. The proofs above are built to be independent of both: TOML guarantees are stated at the `Except` level, and the ignore-precedence proofs treat `fnmatch` as an abstract predicate. Behaviour is covered by `Tests/TomlParser.lean` and `Tests/Ignore.lean`.
