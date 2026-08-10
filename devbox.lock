@@ -1,19 +1,51 @@
 {
   "lockfile_version": "1",
   "packages": {
-    "elan@0.11.0": {
-      "last_modified": "2021-04-25T18:34:42Z",
-      "resolved": "github:NixOS/nixpkgs/79cb2cb9869d7bb8a1fac800977d3864212fd97d#elan",
+    "elan@4.2.3": {
+      "last_modified": "2026-08-01T16:34:20Z",
+      "resolved": "github:NixOS/nixpkgs/a5cbcfe954791221bfffe2307f7d1a1bf61a871e#elan",
       "source": "devbox-search",
-      "version": "0.11.0",
+      "version": "4.2.3",
       "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/2jycxp905pxlaz4jpcqk189mw4b2k1gd-elan-4.2.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/2jycxp905pxlaz4jpcqk189mw4b2k1gd-elan-4.2.3"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/1pn52h2k54r6c2qdywdpbhzglcsvay5n-elan-4.2.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/1pn52h2k54r6c2qdywdpbhzglcsvay5n-elan-4.2.3"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/mrd0ag51rb6p9faqwr4f6bp3iyilc1kd-elan-4.2.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/mrd0ag51rb6p9faqwr4f6bp3iyilc1kd-elan-4.2.3"
+        },
         "x86_64-linux": {
           "outputs": [
             {
-              "path": "/tmp/containerbase/cache/nix/store/p173dm2ws9fnasphlcisair546zxk4zq-elan-0.11.0",
+              "name": "out",
+              "path": "/nix/store/15d86khz3qxgz92z5ib44cgx17saljc0-elan-4.2.3",
               "default": true
             }
-          ]
+          ],
+          "store_path": "/nix/store/15d86khz3qxgz92z5ib44cgx17saljc0-elan-4.2.3"
         }
       }
     },
