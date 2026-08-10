@@ -59,6 +59,50 @@ def testFnmatchBracketNegated : IO Bool := do
   -- Arrange / Act / Assert
   return fnmatch "[!0-9]" "a" && !fnmatch "[!0-9]" "5"
 
+-- fnmatch: backtracking
+
+def testFnmatchRepeatedStarsBacktrack : IO Bool := do
+  -- Arrange / Act / Assert
+  return fnmatch "*a*a*a*" "aaaa" && fnmatch "*a*b*c*" "xxaxxbxxcxx" &&
+    !fnmatch "*a*a*a*" "aa" && fnmatch "a**b" "ab" && fnmatch "*a" "aa"
+
+def testFnmatchStarWithTrailingWildcards : IO Bool := do
+  -- Arrange / Act / Assert
+  return fnmatch "*?" "ab" && fnmatch "?*" "ab" && fnmatch "*[ab]" "xb" &&
+    !fnmatch "*[ab]" "xc"
+
+-- fnmatch: path separators
+
+def testFnmatchStarCrossesSeparator : IO Bool := do
+  -- Arrange / Act / Assert
+  return fnmatch "*" "a/b" && fnmatch "a*b" "a/x/b" &&
+    fnmatch "*.log" "dir/x.log" && fnmatch "*/*" "a/b"
+
+def testFnmatchQuestionRejectsSeparator : IO Bool := do
+  -- Arrange / Act / Assert
+  return !fnmatch "?" "/" && !fnmatch "a?b" "a/b" && fnmatch "a?b" "axb"
+
+def testFnmatchBracketAcceptsSeparator : IO Bool := do
+  -- Arrange / Act / Assert
+  return fnmatch "[/]" "/" && fnmatch "[a/]" "/" && fnmatch "[a-c]*" "b/x"
+
+-- fnmatch: malformed bracket expressions
+
+def testFnmatchUnterminatedBracketNeverMatches : IO Bool := do
+  -- Arrange / Act / Assert
+  return !fnmatch "[" "[" && !fnmatch "[abc" "a" && !fnmatch "a[b" "a[b"
+
+def testFnmatchEmptyBracketClasses : IO Bool := do
+  -- Arrange / Act / Assert
+  return !fnmatch "[]" "]" && fnmatch "[!]" "]" && fnmatch "[a-]" "-"
+
+-- fnmatch: empty pattern and name
+
+def testFnmatchEmpty : IO Bool := do
+  -- Arrange / Act / Assert
+  return fnmatch "" "" && !fnmatch "" "a" && fnmatch "*" "" &&
+    !fnmatch "?" ""
+
 -- fnmatch: combined wildcards
 
 def testFnmatchCombined : IO Bool := do
@@ -105,6 +149,14 @@ def ignoreTests : List (String × IO Bool) := [
   ("testFnmatchBracketClass", testFnmatchBracketClass),
   ("testFnmatchBracketRange", testFnmatchBracketRange),
   ("testFnmatchBracketNegated", testFnmatchBracketNegated),
+  ("testFnmatchRepeatedStarsBacktrack", testFnmatchRepeatedStarsBacktrack),
+  ("testFnmatchStarWithTrailingWildcards", testFnmatchStarWithTrailingWildcards),
+  ("testFnmatchStarCrossesSeparator", testFnmatchStarCrossesSeparator),
+  ("testFnmatchQuestionRejectsSeparator", testFnmatchQuestionRejectsSeparator),
+  ("testFnmatchBracketAcceptsSeparator", testFnmatchBracketAcceptsSeparator),
+  ("testFnmatchUnterminatedBracketNeverMatches", testFnmatchUnterminatedBracketNeverMatches),
+  ("testFnmatchEmptyBracketClasses", testFnmatchEmptyBracketClasses),
+  ("testFnmatchEmpty", testFnmatchEmpty),
   ("testFnmatchCombined", testFnmatchCombined),
   ("testShouldIgnoreBasic", testShouldIgnoreBasic),
   ("testShouldIgnoreNegation", testShouldIgnoreNegation),

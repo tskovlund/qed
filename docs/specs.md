@@ -61,11 +61,15 @@ Four formal proofs verify output correctness: the result complete partition (eve
 
 Six formal proofs verify pure functions used in verification dispatch and shell execution: `targetToModule` returns the module prefix iff the target has at least two dot-separated parts, `isValidModuleName` accepts only shell-safe identifier segments, `containsSorry` detects exactly standalone sorry occurrences, `shellQuote` turns any string into exactly one shell word that decodes back to it (including the empty string), and the command is always the trailing segment of a built shell invocation. An agent review verifies the dispatch logic: exhaustive match on all VerifyType constructors, platform-aware shell execution, output truncation preserving the most recent output, and correct result mappings.
 
-### 8. Convention adherence (`conventions.spec.toml`)
+### 8. Ignore correctness (`ignore.spec.toml`)
+
+Seven formal proofs verify `.qedignore` handling: a leading `*` matches iff some suffix of the name matches the rest of the pattern, a bare `*` matches everything including nested paths, `?` matches exactly one character and never `/`, a wildcard-free pattern is an exact-match test, a literal prefix plus `*` matches every name with that prefix, comments never become patterns, and the last matching pattern decides. A structural assertion keeps the matcher total — `Qed/Ignore.lean` must contain no `partial`. An agent review checks pattern-form coverage and the honesty of the termination measure.
+
+### 9. Convention adherence (`conventions.spec.toml`)
 
 Agent reviews check naming conventions (full variable names, no abbreviations), DRY compliance (no duplicated logic, no dead code), and documentation accuracy (AGENTS.md and CONVENTIONS.md consistent with the actual codebase).
 
-### 9. Documentation accuracy (`docs.spec.toml`)
+### 10. Documentation accuracy (`docs.spec.toml`)
 
 Generated docs (schema, format reference) must be fresh. Hand-written docs (architecture, README) must be consistent with the actual codebase. Agent reviews cross-reference docs against source.
 
