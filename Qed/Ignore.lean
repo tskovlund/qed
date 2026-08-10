@@ -5,92 +5,77 @@ namespace Qed.Ignore
 /-- Path to the ignore file (relative to project root). -/
 def ignoreFileName : String := ".qedignore"
 
-/-- Match a single character against a bracket expression like `[abc]` or `[!abc]`.
-    Returns `(matched, remainingPattern)` where remainingPattern is after the `]`.
-    Returns `none` if the bracket expression is malformed (no closing `]`). -/
-private def matchBracket (patternChars : List Char) (character : Char)
-    : Option (Bool × List Char) :=
-  let (negate, rest) := match patternChars with
-    | '!' :: tail => (true, tail)
-    | chars => (false, chars)
-  let rec go (remaining : List Char) (matched : Bool) : Option (Bool × List Char) :=
-    match remaining with
-    | [] => none
-    | ']' :: tail =>
-      let result := if negate then !matched else matched
-      some (result, tail)
-    | low :: '-' :: high :: tail =>
-      if high == ']' then
-        let hit := character == low || character == '-'
-        let result := if negate then !(matched || hit) else (matched || hit)
-        some (result, tail)
-      else
-        go tail (matched || (low ≤ character && character ≤ high))
-    | c :: tail =>
-      go tail (matched || c == character)
-  go rest false
+/-- Scan the body of a bracket expression, after any leading `!`.
+    Returns whether `character` is in the set, and the pattern remaining after
+    the closing `]`. `none` when there is no closing `]`. -/
+def scanBracket (negate : Bool) (character : Char) :
+    List Char → Bool → Option (Bool × List Char)
+  | [], _ => none
+  | ']' :: tail, matched => some (if negate then !matched else matched, tail)
+  | low :: '-' :: high :: tail, matched =>
+    if high == ']' then
+      let hit := character == low || character == '-'
+      some (if negate then !(matched || hit) else matched || hit, tail)
+    else
+      scanBracket negate character tail
+        (matched || (low ≤ character && character ≤ high))
+  | c :: tail, matched => scanBracket negate character tail (matched || c == character)
 
-/-- Inner loop for fnmatch. Backtracking on `*` means structural recursion
-    cannot be proved — each backtrack resets `pat` to a saved position while
-    advancing `str` by one, so termination is O(p×n) but not structurally
-    decreasing. Marked partial since this is runtime-only code. -/
-private partial def fnmatchGo (pat : List Char) (str : List Char)
-    (starPat : Option (List Char)) (starString : Option (List Char)) : Bool :=
-  match pat, str with
-  | [], [] => true
-  | [], _ =>
-    match starPat, starString with
-    | some sp, some ss =>
-      match ss with
-      | [] => false
-      | _ :: rest => fnmatchGo sp rest (some sp) (some rest)
-    | _, _ => false
-  | '*' :: patRest, _ =>
-    fnmatchGo patRest str (some patRest) (some str)
-  | '?' :: patRest, c :: strRest =>
-    if c == '/' then
-      match starPat, starString with
-      | some sp, some ss =>
-        match ss with
-        | [] => false
-        | _ :: rest => fnmatchGo sp rest (some sp) (some rest)
-      | _, _ => false
-    else
-      fnmatchGo patRest strRest starPat starString
+/-- Match a single character against a bracket expression like `[abc]`,
+    `[!abc]`, or `[a-z]`. -/
+def matchBracket (patternChars : List Char) (character : Char) :
+    Option (Bool × List Char) :=
+  match patternChars with
+  | '!' :: tail => scanBracket true character tail false
+  | chars => scanBracket false character chars false
+
+/-- A bracket expression consumes at least its closing `]`, so what remains is
+    strictly shorter. This is what makes `matchGlob` terminate. -/
+theorem scanBracket_shrinks {negate : Bool} {character : Char}
+    {chars : List Char} {matched result : Bool} {rest : List Char}
+    (h : scanBracket negate character chars matched = some (result, rest)) :
+    rest.length < chars.length := by
+  fun_induction scanBracket negate character chars matched <;> simp_all <;> omega
+
+theorem matchBracket_shrinks {chars : List Char} {character : Char}
+    {result : Bool} {rest : List Char}
+    (h : matchBracket chars character = some (result, rest)) :
+    rest.length < chars.length := by
+  unfold matchBracket at h
+  split at h
+  · exact Nat.lt_succ_of_lt (scanBracket_shrinks h)
+  · exact scanBracket_shrinks h
+
+-- The `h` binder below is used only by `decreasing_by`, which the
+-- unused-variable linter does not scan.
+set_option linter.unusedVariables false in
+/-- Match a pattern against a name, character by character.
+    `*` consumes any run of characters, including `/`; `?` consumes exactly one
+    character that is not `/`; `[…]` consumes one character from the class. -/
+def matchGlob : List Char → List Char → Bool
+  | [], str => str.isEmpty
+  | '*' :: patRest, [] => matchGlob patRest []
+  | '*' :: patRest, c :: strRest =>
+    matchGlob patRest (c :: strRest) || matchGlob ('*' :: patRest) strRest
+  | _ :: _, [] => false
+  | '?' :: patRest, c :: strRest => c != '/' && matchGlob patRest strRest
   | '[' :: patRest, c :: strRest =>
-    match matchBracket patRest c with
-    | some (true, remaining) => fnmatchGo remaining strRest starPat starString
-    | _ =>
-      match starPat, starString with
-      | some sp, some ss =>
-        match ss with
-        | [] => false
-        | _ :: rest => fnmatchGo sp rest (some sp) (some rest)
-      | _, _ => false
-  | p :: patRest, c :: strRest =>
-    if p == c then
-      fnmatchGo patRest strRest starPat starString
-    else
-      match starPat, starString with
-      | some sp, some ss =>
-        match ss with
-        | [] => false
-        | _ :: rest => fnmatchGo sp rest (some sp) (some rest)
-      | _, _ => false
-  | _ :: _, [] =>
-    match starPat, starString with
-    | some sp, some ss =>
-      match ss with
-      | [] => false
-      | _ :: rest => fnmatchGo sp rest (some sp) (some rest)
-    | _, _ => false
+    match h : matchBracket patRest c with
+    | some (true, remaining) => matchGlob remaining strRest
+    | _ => false
+  | p :: patRest, c :: strRest => p == c && matchGlob patRest strRest
+termination_by pat str => pat.length + str.length
+decreasing_by
+  all_goals simp_all
+  all_goals try omega
+  all_goals (have := matchBracket_shrinks h; omega)
 
 /-- Match a name against a glob pattern (fnmatch-style).
-    Supports: `*` (any sequence), `?` (any single char),
-    `[abc]` (character class), `[!abc]` (negated class), `[a-z]` (range).
-    Uses the two-pointer backtracking algorithm (iterative, O(p×n) worst case). -/
+    Supports: `*` (any sequence, separators included), `?` (any single
+    character except `/`), `[abc]` (character class), `[!abc]` (negated class),
+    `[a-z]` (range). -/
 def fnmatch (pattern : String) (name : String) : Bool :=
-  fnmatchGo pattern.toList name.toList none none
+  matchGlob pattern.toList name.toList
 
 /-- Parse a .qedignore file into a list of patterns.
     Format: one pattern per line, `#` for comments, blank lines skipped. -/

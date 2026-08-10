@@ -13,7 +13,7 @@ Qed/
   Shell.lean           Shell command execution and quoting utilities
   Agent.lean           Shared agent invocation (env var constants, default commands)
   Integrity.lean       Content-addressed spec integrity (SHA-256 hashing, git checks)
-  Ignore.lean          .qedignore parsing and fnmatch glob matching (*, ?, [abc], [!abc], ! negation)
+  Ignore.lean          .qedignore parsing and total glob matching (*, ?, [abc], [!abc], ! negation)
   ContractLock.lean    Verification contract locking (glob expansion, theorem extraction, lock file I/O)
   SpecLoader.lean      Load and pin spec files from disk (returns Spec.Pinned)
   Parser.lean          JSON spec parser (Lean.Json → Spec, parseFromJson for roundtrip proofs)
@@ -44,7 +44,7 @@ Qed/Proofs/
   LockRoundtrip.lean      Lock file writer↔reader roundtrip (parseLockFileFromJson ∘ lockFileToJson = ok)
   ShellProperties.lean    shellQuote produces exactly one shell word; command-last structure
   VerifierProperties.lean Proof-target resolution and sorry detection
-  IgnoreProperties.lean   .qedignore parse output contract and pattern precedence
+  IgnoreProperties.lean   Glob semantics, .qedignore parse contract, pattern precedence
   GlobProperties.lean     Valid glob patterns contain no shell metacharacters
   IntegrityEvents.lean    State machine response to the integrityViolation event
   WorkerLoopProperties.lean  step=transition, buildPrompt preserves the operator prompt
@@ -67,6 +67,7 @@ specs/                 qed's own specs (dogfooding)
   state-machine.spec.toml  State machine correctness — 13 proofs + agent
   parser.spec.toml         Parser correctness — 6 proofs + agent
   verify-mode.spec.toml    Verify mode correctness — 1 proof + commands + agent
+  ignore.spec.toml         .qedignore and glob correctness — 7 proofs + command + agent
   conventions.spec.toml    Convention adherence — naming, DRY, doc accuracy
   docs.spec.toml           Documentation accuracy — freshness + agent
 DocGen/
@@ -158,7 +159,7 @@ qed                   # run the binary (.lake/build/bin on PATH via .envrc)
 
 ## Proven properties
 
-The `Qed/Proofs/` directory contains 120+ theorems, every one checked by Lean 4's kernel — no `sorry`, no `native_decide`. See [docs/proven-properties.md](docs/proven-properties.md) for what they guarantee.
+The `Qed/Proofs/` directory contains 130 theorems, every one checked by Lean 4's kernel — no `sorry`, no `native_decide`. See [docs/proven-properties.md](docs/proven-properties.md) for what they guarantee.
 
 ## Repo-specific conventions
 

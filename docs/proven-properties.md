@@ -100,16 +100,27 @@ A proof criterion's target is split into a module and a theorem name, and the mo
 | `VerifierProperties.lean` | `isValidModuleName_iff` | **[spec]** Accepted module names carry no shell metacharacters      |
 | `VerifierProperties.lean` | `containsSorry_iff`     | **[spec]** `sorry` is detected exactly on identifier boundaries     |
 
-## `.qedignore` decides coverage predictably
+## `.qedignore` matching is total and its glob semantics are proven
 
-Blank lines and comments never become patterns, so nothing is silently matched against them. Precedence is last-matching-pattern-wins in both directions: a trailing plain pattern ignores a spec, a trailing `!` pattern brings it back. These hold however glob matching itself behaves, because they treat `fnmatch` as an abstract predicate.
+Glob matching terminates on every input — the matcher recurses only on arguments that decrease `pattern.length + name.length`, with the bracket case justified by the fact that a bracket expression always consumes at least its closing `]`. Nothing about `.qedignore` handling is opaque to the kernel.
 
-| File                    | Theorem                        | Guarantee                                           |
-| ----------------------- | ------------------------------ | --------------------------------------------------- |
-| `IgnoreProperties.lean` | `parseIgnoreFile_no_empty`     | Blank lines never become patterns                   |
-| `IgnoreProperties.lean` | `parseIgnoreFile_no_comments`  | Comment lines never become patterns                 |
-| `IgnoreProperties.lean` | `shouldIgnore_append_positive` | A trailing matching pattern ignores the spec        |
-| `IgnoreProperties.lean` | `shouldIgnore_append_negated`  | A trailing matching `!` pattern un-ignores the spec |
+The wildcards mean what the documentation says. A leading `*` matches exactly when some suffix of the name matches the rest of the pattern, which makes a bare `*` match everything including nested paths — `*` deliberately crosses `/`, while `?` deliberately does not. A pattern with no wildcards is an exact-match test: it matches its own text and nothing else, so `archive` never accidentally ignores `archived-specs`.
+
+Blank lines and comments never become patterns. Precedence is last-matching-pattern-wins in both directions: a trailing plain pattern ignores a spec, a trailing `!` pattern brings it back.
+
+| File                    | Theorem                        | Guarantee                                                                 |
+| ----------------------- | ------------------------------ | ------------------------------------------------------------------------- |
+| `IgnoreProperties.lean` | `matchGlob_star_iff_suffix`    | **[spec]** `*` matches iff some suffix of the name matches the rest       |
+| `IgnoreProperties.lean` | `star_matches_everything`      | **[spec]** A bare `*` matches every name, separators included             |
+| `IgnoreProperties.lean` | `question_matches_one`         | **[spec]** `?` matches exactly one character and never `/`                |
+| `IgnoreProperties.lean` | `literal_matches_iff`          | **[spec]** A wildcard-free pattern matches its own text and nothing else  |
+| `IgnoreProperties.lean` | `literal_star_matches_prefix`  | **[spec]** A literal prefix plus `*` matches every name with that prefix  |
+| `IgnoreProperties.lean` | `parseIgnoreFile_no_comments`  | **[spec]** Comment lines never become patterns                            |
+| `IgnoreProperties.lean` | `parseIgnoreFile_no_empty`     | Blank lines never become patterns                                         |
+| `IgnoreProperties.lean` | `shouldIgnore_append_negated`  | **[spec]** A trailing matching `!` pattern un-ignores the spec            |
+| `IgnoreProperties.lean` | `shouldIgnore_append_positive` | A trailing matching pattern ignores the spec                              |
+| `Ignore.lean`           | `scanBracket_shrinks`          | A bracket expression consumes at least its `]` — the termination argument |
+| `Ignore.lean`           | `matchBracket_shrinks`         | The same, through the optional leading `!`                                |
 
 ## A spec survives serialization unchanged
 

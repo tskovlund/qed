@@ -1,0 +1,101 @@
+#:schema ../docs/spec.schema.json
+
+# Ignore handling — .qedignore parsing, glob matching, and pattern precedence.
+# Owns Qed/Ignore.lean and Qed/Proofs/IgnoreProperties.lean.
+
+name = "ignore-correctness"
+
+# --- Structural assertions ---
+
+[[criteria]]
+description = "Glob matching is total — no partial definitions in Ignore.lean"
+
+[criteria.verify]
+type = "command"
+run = "! grep -q 'partial' Qed/Ignore.lean"
+lock = ["Qed/Ignore.lean"]
+
+# --- Proof criteria ---
+
+[[criteria]]
+description = "A leading * matches iff some suffix of the name matches the rest of the pattern"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.IgnoreProperties.matchGlob_star_iff_suffix"
+
+[[criteria]]
+description = "A bare * matches every name, path separators included"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.IgnoreProperties.star_matches_everything"
+
+[[criteria]]
+description = "? matches exactly one character and never a path separator"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.IgnoreProperties.question_matches_one"
+
+[[criteria]]
+description = "A pattern with no wildcards matches its own text and nothing else"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.IgnoreProperties.literal_matches_iff"
+
+[[criteria]]
+description = "A literal prefix followed by * matches every name carrying that prefix"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.IgnoreProperties.literal_star_matches_prefix"
+
+[[criteria]]
+description = "Blank lines and comments never become ignore patterns"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.IgnoreProperties.parseIgnoreFile_no_comments"
+
+[[criteria]]
+description = "The last matching pattern decides, in both directions including ! negation"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.IgnoreProperties.shouldIgnore_append_negated"
+
+# --- Agent review ---
+
+[[criteria]]
+description = """
+Glob matching handles every pattern form correctly and the ignore decision \
+matches documented .qedignore semantics."""
+
+[criteria.verify]
+type = "agent"
+prompt = """
+Review Qed/Ignore.lean. Verify:
+
+1. `matchGlob` handles every pattern form: `*`, `?`, `[abc]`, `[a-z]`, `[!abc]`,
+   and literal characters — with no unreachable or duplicated match arm
+2. `scanBracket` consumes through the closing `]` and reports a malformed
+   bracket (no closing `]`) as a non-match rather than a partial match
+3. The termination measure is honest — `matchGlob` recurses only on arguments
+   that decrease `pattern.length + name.length`, with the bracket case justified
+   by `matchBracket_shrinks`
+4. `shouldIgnore` applies patterns in order with `!` negation, and the last
+   matching pattern decides
+5. `parseIgnoreFile` drops blank lines and comments and trims trailing whitespace
+
+Report any pattern form handled incorrectly, any asymmetry between `*` and `?`
+that is not deliberate, or any way a malformed pattern could match unexpectedly.
+"""

@@ -18,7 +18,7 @@
       {"path":
        "Tests/Ignore.lean",
        "hash":
-       "b914e5dfae2a624cc3745d2963670f0486b0f97c9c4d55c4d6324baecbd22e84"},
+       "3a7857c235603ab789cb0c15051c48ae543cbf2a229876cdaebc3057887ac3df"},
       {"path":
        "Tests/Integration.lean",
        "hash":
@@ -262,6 +262,65 @@
        "theorem:Qed.Proofs.VerifierProperties.containsSorry_iff",
        "hash":
        "a6c81108adb8be6b4c4955d8169b72382d42c6ccd8caf3d738be27cb01db5a5f"}]}]},
+  {"specPath":
+   "./specs/ignore.spec.toml",
+   "criteria":
+   [{"description":
+     "Glob matching is total — no partial definitions in Ignore.lean",
+     "artifacts":
+     [{"path":
+       "Qed/Ignore.lean",
+       "hash":
+       "322055b596f56137f6eebfa0bb2c1f39639bbcc0f08627035f3f5eab441bdb2f"}]},
+    {"description":
+     "A leading * matches iff some suffix of the name matches the rest of the pattern",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.IgnoreProperties.matchGlob_star_iff_suffix",
+       "hash":
+       "617626ae2b0ae0057e0aab5d015e1053de822e79fbdec6744c249f27e1524c26"}]},
+    {"description":
+     "A bare * matches every name, path separators included",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.IgnoreProperties.star_matches_everything",
+       "hash":
+       "b174ffdfb753f2c3437a54992ebec88069725280dabc46e13cfe814e5b044c10"}]},
+    {"description":
+     "? matches exactly one character and never a path separator",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.IgnoreProperties.question_matches_one",
+       "hash":
+       "d7038368bf5fe9aed8f348ecfb767e8e3fd9826c79244a7b7a8b03aca43a730c"}]},
+    {"description":
+     "A pattern with no wildcards matches its own text and nothing else",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.IgnoreProperties.literal_matches_iff",
+       "hash":
+       "52d613e395c13b8e8eb5be7ee1424a28b619759407350b4f4b70cb0c92633503"}]},
+    {"description":
+     "A literal prefix followed by * matches every name carrying that prefix",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.IgnoreProperties.literal_star_matches_prefix",
+       "hash":
+       "92577e1753b11eb94d5ffc87a21255433eec97fb5eaf224a70c3b7a4bc805dda"}]},
+    {"description":
+     "Blank lines and comments never become ignore patterns",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.IgnoreProperties.parseIgnoreFile_no_comments",
+       "hash":
+       "c622dc8050b7eb343fc0a7c8492b69ea8128e22d65b3306cd996de171a52e853"}]},
+    {"description":
+     "The last matching pattern decides, in both directions including ! negation",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.IgnoreProperties.shouldIgnore_append_negated",
+       "hash":
+       "d79d2fd9d2e38938975253a27c7c79fa2b3e59d922dd3899cf43d8d8909ee7e6"}]}]},
   {"specPath":
    "./specs/verify-mode.spec.toml",
    "criteria":
