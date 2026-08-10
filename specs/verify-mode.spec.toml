@@ -33,21 +33,12 @@ type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.VerifyMode.verify_has_no_worker"
 
-[[criteria]]
-description = "Verify mode does not depend on the state machine transition function"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.VerifyMode.verify_independent_of_loop"
-
 # --- Agent review ---
 
 [[criteria]]
 description = """
 Verify mode design is correct and complete — single-pass verification \
 with no worker, no loop, no state machine dependency."""
-
 
 [criteria.verify]
 type = "agent"

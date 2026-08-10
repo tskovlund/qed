@@ -49,11 +49,7 @@ def lockFilePath : System.FilePath := "qed.lock"
 -- ═══════════════════════════════════════════════════════════════════
 
 /-- Whether a single character is safe inside a glob pattern that will be
-    expanded by a shell.
-    Allows: alphanumeric, *, ?, /, ., _, -, [, ]
-    Rejects: $, `, ;, &, |, (, ), {, }, <, >, quotes, space, etc.
-    `Proofs.GlobProperties.isGlobSafeChar_rejects_metacharacters` proves the
-    rejection half against the shell metacharacter set. -/
+    expanded by a shell. -/
 def isGlobSafeChar (c : Char) : Bool :=
   c.isAlpha || c.isDigit || c == '*' || c == '?' || c == '/' ||
   c == '.' || c == '_' || c == '-' || c == '[' || c == ']'
@@ -61,11 +57,8 @@ def isGlobSafeChar (c : Char) : Bool :=
 /-- Whether a glob pattern contains only safe characters for shell expansion.
     Empty patterns are rejected.
 
-    Iterates over `pattern.toList` rather than using `String.all`: the latter is
-    built on Lean 4.28.0's pattern/iterator machinery, which has no reduction
-    lemmas, so no property of it can be proven. Patterns are short and this runs
-    once per pattern at lock time, so materializing the list costs nothing and
-    buys `Proofs.GlobProperties.isValidGlobPattern_excludes_metacharacters`. -/
+    Iterates `pattern.toList` rather than `String.all`, whose iterator machinery
+    has no reduction lemmas and would leave the safety property unstatable. -/
 def isValidGlobPattern (pattern : String) : Bool :=
   !pattern.isEmpty && pattern.toList.all isGlobSafeChar
 
@@ -74,12 +67,9 @@ def isValidGlobPattern (pattern : String) : Bool :=
 def expandGlob (pattern : String) : IO (Except ErrorInfo (List String)) := do
   if !isValidGlobPattern pattern then
     return .error { message := s!"invalid glob pattern: '{pattern}' (contains unsafe characters)" }
-  -- Use bash with globstar and nullglob for reliable ** expansion.
-  -- Pattern is validated above to contain only glob-safe characters.
-  -- Note: the pattern sits inside single quotes in the bash -c argument,
-  -- which is itself inside Shell.runShellCommand's /bin/sh -c wrapper.
-  -- isValidGlobPattern rejects quotes and all shell metacharacters,
-  -- so the double-shell nesting is safe.
+  -- The pattern crosses two shell layers: single quotes inside `bash -c`, which
+  -- itself runs under `/bin/sh -c`. Safe because the validation above admits no
+  -- metacharacter — see `Proofs.GlobProperties`.
   let command := s!"bash -c 'shopt -s globstar nullglob; for f in {pattern}; do [ -f \"$f\" ] && printf \"%s\\n\" \"$f\"; done'"
   let (exitCode, stdout, _) ← Shell.runShellCommand command
   if exitCode == 0 then
@@ -362,9 +352,8 @@ def parseSpecLock (json : Json) : Except ErrorInfo SpecLock := do
   let criteria ← criteriaArr.toList.mapM parseCriterionLock
   .ok { specPath, criteria }
 
-/-- Parse a LockFile from an already-decoded JSON value.
-    Split out from `parseLockFile` so the roundtrip proof can reason about the
-    pure `Json → LockFile` step, mirroring `Parser.parseFromJson`. -/
+/-- Parse a LockFile from an already-decoded JSON value. Kept separate from
+    `parseLockFile` so the roundtrip proof has a pure `Json → LockFile` step. -/
 def parseLockFileFromJson (json : Json) : Except ErrorInfo LockFile := do
   let version ← match json.getObjValAs? Nat "version" with
     | .ok value => .ok value

@@ -2,11 +2,35 @@
 
 # Verifier — verification dispatch, shell execution safety, and
 # pure function correctness proofs.
-# Owns Qed/Verifier.lean and Qed/Proofs/VerifierProperties.lean.
+# Owns Qed/Verifier.lean, Qed/Shell.lean, and their proofs.
 
 name = "verifier-correctness"
 
 # --- Proof criteria ---
+
+[[criteria]]
+description = "Every string quotes to exactly one shell word that decodes back to it"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.ShellProperties.shellQuote_is_one_word"
+
+[[criteria]]
+description = "shellQuote of empty string produces the empty shell string ''"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.ShellProperties.shellQuote_empty"
+
+[[criteria]]
+description = "The command is always the trailing segment, never spliced into an export"
+
+[criteria.verify]
+type = "proof"
+prover = "lean4"
+target = "Qed.Proofs.ShellProperties.buildShellCommand_command_last"
 
 [[criteria]]
 description = "targetToModule returns the module prefix iff the target has at least two dot-separated parts"

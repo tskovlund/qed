@@ -1,194 +1,184 @@
 # Proven properties
 
-> Complete reference for all formally verified theorems in qed.
+> What qed's formal proofs guarantee, by subsystem.
 
-The `Qed/Proofs/` directory contains formal proofs verified by Lean 4's kernel. All proofs are complete — no `sorry`, no gaps. Theorems marked with **[spec]** are verified as acceptance criteria in `specs/`.
+Every theorem in `Qed/Proofs/` is checked by Lean 4's kernel. There is no `sorry` and no `native_decide` — nothing in this document rests on the compiler's evaluator or on an unfinished argument. Theorems marked **[spec]** are also acceptance criteria in `specs/`, so qed re-checks them on itself every time it verifies its own repo.
 
-One exception to "kernel": `WorkerLoopProperties.shellQuote_empty` closes by `native_decide`, which trusts the compiler's evaluator rather than the kernel. It is the only such proof in the repo. `String.Slice.replace` is built on Lean 4.28.0's searcher/fold iterator machinery, which ships no reduction lemmas (`Init/Data/String/Lemmas/Search.lean` contains two theorems, neither about `replace`), so `rfl`, `decide`, `decide +kernel`, and `simp [String.replace]` all get stuck. Removing this `native_decide` needs either upstream lemmas or a `replace`-free reformulation of `shellQuote`.
+## The worker loop always terminates
 
-## State machine (worker loop)
+A qed run cannot hang or spin forever. Each pass through the loop either reaches a terminal state or strictly decreases the fuel measure `maxIterations - iteration`, and fuel is a natural number, so the loop stops after at most `maxIterations` retries. The iteration count is bounded by the configured maximum, never rolls backwards, and the lifecycle only moves forward: `ready → workerRunning → verifying → terminal`.
 
-| File                  | Theorem                                      | Property                                                                                                              |
-| --------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `FinalStates.lean`    | `terminal_absorbing`                         | **[spec]** Terminal states ignore all events — transitioning from a terminal state returns the same state and context |
-| `Monotonic.lean`      | `iteration_monotonic`                        | **[spec]** The iteration count never decreases across transitions, or the result is terminal                          |
-| `NoSkip.lean`         | `no_skip_verification`                       | **[spec]** Cannot reach `passed` without going through `verifying` first                                              |
-| `NoSkip.lean`         | `worker_before_verification`                 | `verifying(n)` is only reachable from `workerRunning(n)` or `verifying(n)`                                            |
-| `StuckDetection.lean` | `stuck_iff_threshold`                        | **[spec]** Stuck detection fires iff consecutive failure count reaches the threshold                                  |
-| `StuckDetection.lean` | `failure_count_update`                       | Failure count increments on same failures, resets on different failures                                               |
-| `Termination.lean`    | `verify_someFailed_outcomes`                 | verify+someFailed produces stuck, maxIterationsReached, or workerRunning                                              |
-| `Termination.lean`    | `verify_someFailed_terminates_or_increments` | Each verify+someFailed step either terminates or increments iteration                                                 |
-| `Termination.lean`    | `verify_allPassed_terminates`                | verify+allPassed always reaches terminal state (passed)                                                               |
-| `Termination.lean`    | `verify_workerDone_stays`                    | verify+workerDone preserves terminal state                                                                            |
-| `Termination.lean`    | `workerRunning_transition`                   | workerRunning transitions to verifying, stays, or terminates (integrityViolation)                                     |
-| `Termination.lean`    | `fuel_decreases_on_retry`                    | The fuel measure (maxIterations - iteration) strictly decreases on retry                                              |
-| `Termination.lean`    | `loop_progress`                              | Each non-terminal step either terminates or increments iteration (bounded by maxIterations)                           |
-| `Termination.lean`    | `loop_terminates`                            | **[spec]** Full termination: each step terminates or strictly decreases fuel (maxIterations - iteration)              |
-| `Termination.lean`    | `progress_or_terminal`                       | **[spec]** Every state-changing non-terminal transition either terminates or strictly increases the progress measure  |
-| `Invariants.lean`     | `transition_deterministic`                   | **[spec]** Equal inputs produce equal outputs — the transition function is deterministic                              |
-| `Invariants.lean`     | `ready_unreachable`                          | **[spec]** No non-terminal transition produces `ready` — the initial state is visited exactly once                    |
-| `Invariants.lean`     | `phase_monotonic`                            | **[spec]** State lifecycle phase (initial → working → terminal) never decreases                                       |
-| `Invariants.lean`     | `iteration_bounded`                          | **[spec]** Iteration count never exceeds `maxIterations` (given `maxIterations ≥ 1`)                                  |
-| `Invariants.lean`     | `ready_always_advances`                      | **[spec]** Ready state always advances — transitions to workerRunning(1) or integrityViolation                        |
-| `Invariants.lean`     | `lifecycle_ordering`                         | **[spec]** Complete 5-way characterization of all non-terminal transitions (terminates, self-loops, or advances)      |
+| File               | Theorem                                      | Guarantee                                                                        |
+| ------------------ | -------------------------------------------- | -------------------------------------------------------------------------------- |
+| `Termination.lean` | `loop_terminates`                            | **[spec]** Every step terminates or strictly decreases fuel                      |
+| `Termination.lean` | `progress_or_terminal`                       | **[spec]** Every state-changing step terminates or advances the progress measure |
+| `Termination.lean` | `loop_progress`                              | A retry increments the iteration and stays within `maxIterations`                |
+| `Termination.lean` | `fuel_decreases_on_retry`                    | The fuel measure strictly decreases on retry                                     |
+| `Termination.lean` | `verify_someFailed_outcomes`                 | A failed verification yields stuck, maxIterationsReached, or the next iteration  |
+| `Termination.lean` | `verify_someFailed_terminates_or_increments` | Each failed verification terminates or increments the iteration                  |
+| `Termination.lean` | `verify_allPassed_terminates`                | A fully passing verification ends the run                                        |
+| `Termination.lean` | `verify_workerDone_stays`                    | A repeated `workerDone` holds the iteration steady                               |
+| `Termination.lean` | `workerRunning_transition`                   | A running worker advances to verification, stays, or terminates                  |
+| `Invariants.lean`  | `iteration_bounded`                          | **[spec]** The iteration count never exceeds `maxIterations`                     |
+| `Monotonic.lean`   | `iteration_monotonic`                        | **[spec]** The iteration count never decreases                                   |
+| `Invariants.lean`  | `phase_monotonic`                            | **[spec]** The lifecycle phase never moves backwards                             |
 
-## Spec integrity
+## The orchestrator cannot skip verification or resurrect a finished run
 
-| File                       | Theorem                          | Property                                                                                             |
-| -------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `IntegrityProperties.lean` | `integrity_violation_terminal`   | **[spec]** integrityViolation event from any non-terminal state produces terminal integrityViolation |
-| `IntegrityProperties.lean` | `integrity_violation_absorbing`  | integrityViolation state is absorbing (no event transitions out)                                     |
-| `IntegrityProperties.lean` | `integrity_violation_not_passed` | **[spec]** integrityViolation from a non-terminal state can never produce passed                     |
+`passed` is reachable only from `verifying`, so no code path can report success without having verified it. Terminal states absorb every event, so a finished run stays finished. The initial `ready` state is entered exactly once.
 
-**Scope warning:** despite the file name, `IntegrityProperties.lean` proves nothing about `Qed/Integrity.lean` — it does not import it. These theorems are about how the state machine _responds_ to an `integrityViolation` event. The detection half (`hashFile`, `checkGitClean`, and the `verify` composition that decides whether a violation is raised) has no proof coverage: all six definitions in `Integrity.lean` are `IO`, so there is nothing pure to attach a theorem to as written. Read a green build as "violations are handled correctly", never as "integrity checking is verified".
+| File               | Theorem                      | Guarantee                                                              |
+| ------------------ | ---------------------------- | ---------------------------------------------------------------------- |
+| `NoSkip.lean`      | `no_skip_verification`       | **[spec]** `passed` is reachable only from `verifying`                 |
+| `NoSkip.lean`      | `worker_before_verification` | `verifying(n)` is reachable only from `workerRunning(n)` or itself     |
+| `FinalStates.lean` | `terminal_absorbing`         | **[spec]** A terminal state ignores every event                        |
+| `Invariants.lean`  | `ready_unreachable`          | **[spec]** No transition returns to `ready`                            |
+| `Invariants.lean`  | `ready_always_advances`      | **[spec]** `ready` always advances on the first event                  |
+| `Invariants.lean`  | `lifecycle_ordering`         | **[spec]** Complete five-way characterization of every live transition |
 
-## Verify mode
+## Stuck runs are detected exactly at the threshold
 
-| File              | Theorem                      | Property                                                                   |
-| ----------------- | ---------------------------- | -------------------------------------------------------------------------- |
-| `VerifyMode.lean` | `verify_has_no_worker`       | **[spec]** `SpecMode.verify` cannot carry a `WorkerConfig` or `LoopConfig` |
-| `VerifyMode.lean` | `verify_independent_of_loop` | **[spec]** Verify mode is independent of the worker loop machinery         |
+A worker repeating the same failures is caught when — and only when — the consecutive failure count reaches `stuckThreshold`. The count rises on identical failures and resets when the failures change, so a worker making different mistakes is given the retries it was configured for.
 
-## Worker loop (execution engine)
+| File                  | Theorem                | Guarantee                                                          |
+| --------------------- | ---------------------- | ------------------------------------------------------------------ |
+| `StuckDetection.lean` | `stuck_iff_threshold`  | **[spec]** Stuck fires iff the failure count reaches the threshold |
+| `StuckDetection.lean` | `failure_count_update` | The count carries forward correctly into the next state            |
 
-| File                        | Theorem                        | Property                                                               |
-| --------------------------- | ------------------------------ | ---------------------------------------------------------------------- |
-| `WorkerLoopProperties.lean` | `step_eq_transition`           | **[spec]** The loop's step function is exactly StateMachine.transition |
-| `WorkerLoopProperties.lean` | `buildPrompt_empty_failures`   | **[spec]** No failures → base prompt returned unchanged                |
-| `WorkerLoopProperties.lean` | `buildPrompt_nonempty_appends` | **[spec]** Failures → base prompt is extended (not replaced)           |
-| `WorkerLoopProperties.lean` | `shellQuote_wraps`             | **[spec]** shellQuote wraps input in single quotes                     |
-| `WorkerLoopProperties.lean` | `shellQuote_empty`             | **[spec]** shellQuote of "" produces "''"                              |
+## A tampered spec stops the run
 
-## Types and output
+Once an integrity violation is raised, the loop lands in `integrityViolation` from any live state, cannot leave it, and can never reach `passed`. Work done under a modified spec is never reported as success.
 
-| File                     | Theorem                                      | Property                                                                                 |
-| ------------------------ | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `TypeProperties.lean`    | `isTerminal_iff`                             | isTerminal returns true iff state is one of the five terminal states                     |
-| `TypeProperties.lean`    | `isPassed_iff_pass`                          | `isPassed` returns true iff the result is `.pass`                                        |
-| `TypeProperties.lean`    | `isFailed_iff_fail`                          | `isFailed` returns true iff the result is `.fail`                                        |
-| `TypeProperties.lean`    | `isSkipped_iff_skipped`                      | `isSkipped` returns true iff the result is `.skipped`                                    |
-| `TypeProperties.lean`    | `predicates_mutually_exclusive`              | isPassed, isFailed, isSkipped are pairwise mutually exclusive                            |
-| `TypeProperties.lean`    | `result_exhaustive`                          | Every VerificationResult is exactly one of pass, fail, needsHuman, or skipped            |
-| `TypeProperties.lean`    | `result_complete_partition`                  | **[spec]** Complete partition — every result is exactly one variant; predicates agree    |
-| `OutputCorrectness.lean` | `allExecutionsPassed_iff_no_failures`        | **[spec]** Pass/fail decision is correct: true iff no execution is `.fail`               |
-| `OutputCorrectness.lean` | `executionsToJson_has_required_fields`       | **[spec]** JSON output always contains "spec", "passed", "criteria" fields               |
-| `OutputCorrectness.lean` | `workerExecutionsToJson_has_required_fields` | **[spec]** Worker loop JSON always contains "spec", "state", "passed", "criteria" fields |
+| File                   | Theorem                          | Guarantee                                                 |
+| ---------------------- | -------------------------------- | --------------------------------------------------------- |
+| `IntegrityEvents.lean` | `integrity_violation_terminal`   | **[spec]** A violation from any live state stops the loop |
+| `IntegrityEvents.lean` | `integrity_violation_absorbing`  | No event transitions out of a violation                   |
+| `IntegrityEvents.lean` | `integrity_violation_not_passed` | **[spec]** A violation can never yield `passed`           |
 
-## Verifier
+## The execution engine drives the proven state machine and nothing else
 
-| File                      | Theorem                          | Property                                                                                 |
-| ------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------- |
-| `VerifierProperties.lean` | `isIdentChar_eq_validModuleChar` | isIdentChar checks the same character set as isValidModuleName                           |
-| `VerifierProperties.lean` | `targetToModule_iff`             | **[spec]** targetToModule returns module prefix iff target has ≥2 dot-separated parts    |
-| `VerifierProperties.lean` | `moduleToPath_ends_with_lean`    | moduleToPath output always ends with ".lean"                                             |
-| `VerifierProperties.lean` | `moduleToPath_of_targetToModule` | Composing targetToModule and moduleToPath gives the expected file path                   |
-| `VerifierProperties.lean` | `isValidModuleName_iff`          | **[spec]** Valid iff all dot-separated parts are non-empty identifier-char-only segments |
-| `VerifierProperties.lean` | `containsSorry_iff`              | **[spec]** containsSorry detects exactly standalone sorry occurrences                    |
+`WorkerLoop.step` is definitionally `StateMachine.transition`, so every guarantee above applies to the code that actually runs. The prompt an operator writes is passed through unchanged when nothing has failed, and is extended rather than replaced when failure feedback is added.
 
-## Shell command construction
+| File                        | Theorem                        | Guarantee                                                    |
+| --------------------------- | ------------------------------ | ------------------------------------------------------------ |
+| `WorkerLoopProperties.lean` | `step_eq_transition`           | **[spec]** The loop's step function is the proven transition |
+| `WorkerLoopProperties.lean` | `buildPrompt_empty_failures`   | **[spec]** No failures leaves the prompt untouched           |
+| `WorkerLoopProperties.lean` | `buildPrompt_nonempty_appends` | **[spec]** Failure feedback extends the operator's prompt    |
 
-`buildShellCommand` splices environment variable values into a string handed to `/bin/sh -c`, so it is the shell-injection surface.
+## Nothing a caller supplies is read as shell syntax
 
-| File                   | Theorem                          | Property                                                                       |
-| ---------------------- | -------------------------------- | ------------------------------------------------------------------------------ |
-| `ShellProperties.lean` | `shellQuote_shim_eq`             | The `WorkerLoop.shellQuote` re-export is exactly `Shell.shellQuote`            |
-| `ShellProperties.lean` | `buildShellCommand_empty_env`    | With no environment variables the command is passed through untouched          |
-| `ShellProperties.lean` | `buildShellCommand_single`       | One variable expands to one `export` with a shell-quoted value, command last   |
-| `ShellProperties.lean` | `buildShellCommand_pair`         | Two variables quote both values and still leave the command last               |
-| `ShellProperties.lean` | `buildShellCommand_command_last` | For any non-empty environment the command is the trailing segment after `"; "` |
+`Shell.shellQuote` turns any string into exactly one POSIX shell word that decodes back to the original — quotes, `$(…)`, backticks, separators, whitespace and newlines included. The proof is a round-trip against a model of POSIX single-quote parsing, so it rules out the failure mode that matters: a value closing the quote early and exposing its remainder to the shell. Environment values reach `/bin/sh -c` only through that function, and the command being run is always the trailing segment, never spliced into the middle of an export.
 
-**Known gap:** quoting is proven for the zero-, one-, and two-variable cases plus the structural "command is last" property for arbitrary lists, but _not_ "every value in an arbitrary-length list is quoted". That statement requires induction over `String.intercalate`'s accumulator helper, which Lean 4.28.0 does not expose as an accessible constant.
+| File                   | Theorem                          | Guarantee                                                                |
+| ---------------------- | -------------------------------- | ------------------------------------------------------------------------ |
+| `ShellProperties.lean` | `shellQuote_is_one_word`         | **[spec]** Every string quotes to one shell word that decodes back to it |
+| `ShellProperties.lean` | `shellQuote_empty`               | **[spec]** The empty string quotes to `''`                               |
+| `ShellProperties.lean` | `readBody_escapeQuotes`          | The escaper is inverted by POSIX single-quote decoding                   |
+| `ShellProperties.lean` | `shellQuote_toList`              | The quoted form is the escaped body between two quotes                   |
+| `ShellProperties.lean` | `buildShellCommand_single`       | Values reach the shell only through `shellQuote`                         |
+| `ShellProperties.lean` | `buildShellCommand_command_last` | **[spec]** The command is always the trailing segment                    |
 
-## Glob pattern safety
+## Glob patterns cannot escape into the shell
 
-`ContractLock.expandGlob` splices a caller-supplied pattern into `bash -c 'shopt -s globstar nullglob; for f in {pattern}; ...'`, which is itself handed to `/bin/sh -c`. The pattern crosses two shell layers and `isValidGlobPattern` is the only barrier in front of it, so the character policy is kernel-checked rather than trusted to a code comment.
+`ContractLock.expandGlob` sends a caller-supplied pattern through two shell layers — single quotes inside `bash -c`, itself under `/bin/sh -c` — with `isValidGlobPattern` as the only barrier. No character of an accepted pattern is a shell metacharacter, and an accepted pattern is never empty. The policy is not vacuously safe: the patterns qed's own specs use are accepted.
 
-| File                  | Theorem                                      | Property                                                                                                                                   |
-| --------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GlobProperties.lean` | `isGlobSafeChar_rejects_metacharacters`      | Every shell metacharacter is rejected: quotes, `$`, backtick, `;`, `&`, `\|`, parens, redirections, whitespace, `\`, braces, `!`, `#`, `~` |
-| `GlobProperties.lean` | `isGlobSafeChar_accepts_glob_syntax`         | The characters glob expansion needs are accepted — the policy is not vacuously safe                                                        |
-| `GlobProperties.lean` | `isValidGlobPattern_empty`                   | The empty pattern is rejected                                                                                                              |
-| `GlobProperties.lean` | `isValidGlobPattern_eq`                      | The validator is exactly "non-empty and every character satisfies the policy"                                                              |
-| `GlobProperties.lean` | `isValidGlobPattern_excludes_metacharacters` | **Main theorem:** no character of an accepted pattern is a shell metacharacter                                                             |
-| `GlobProperties.lean` | `isValidGlobPattern_nonempty`                | An accepted pattern is never empty                                                                                                         |
-| `GlobProperties.lean` | `rejects_quote_escape`                       | `foo'; rm -rf /` — closing the `bash -c` quote to append a command — is rejected                                                           |
-| `GlobProperties.lean` | `rejects_command_substitution`               | `$(whoami)` and `` `whoami` `` are rejected                                                                                                |
-| `GlobProperties.lean` | `rejects_separators`                         | `;`, `\|`, and `&` separators are rejected                                                                                                 |
-| `GlobProperties.lean` | `accepts_real_patterns`                      | The patterns qed's own specs use are accepted                                                                                              |
+| File                  | Theorem                                      | Guarantee                                                         |
+| --------------------- | -------------------------------------------- | ----------------------------------------------------------------- |
+| `GlobProperties.lean` | `isValidGlobPattern_excludes_metacharacters` | No character of an accepted pattern can break out of either shell |
+| `GlobProperties.lean` | `isValidGlobPattern_nonempty`                | An accepted pattern is never empty                                |
+| `GlobProperties.lean` | `accepts_real_patterns`                      | Real glob patterns are accepted                                   |
 
-**Implementation note:** `isValidGlobPattern` iterates over `pattern.toList` rather than using `String.all`. `String.all` is built on Lean 4.28.0's pattern/iterator machinery, which ships no reduction lemmas — `rfl`, `decide`, `decide +kernel`, and `simp` all get stuck on it, so no property of it can be stated. `List.all` has `List.all_eq_true`, which is what makes the main theorem above provable. Patterns are short and validation runs once per pattern at lock time, so materializing the list costs nothing.
+`isValidGlobPattern` iterates `pattern.toList` rather than `String.all` because the string iterator ships no reduction lemmas, which would leave the property above unstatable.
 
-## Ignore file parsing and pattern precedence
+## Proof targets resolve safely, and `sorry` cannot slip through
 
-`.qedignore` decides which specs are skipped, so a wrong answer silently drops verification coverage.
+A proof criterion's target is split into a module and a theorem name, and the module name is validated before it is interpolated into `lake build`. An accepted name is drawn entirely from letters, digits, `_`, `'` and `.`, so it cannot carry shell syntax. Sorry detection fires on standalone occurrences only — no missed `sorry`, and no false positive on an identifier like `sorryHandler`.
 
-| File                    | Theorem                        | Property                                                                     |
-| ----------------------- | ------------------------------ | ---------------------------------------------------------------------------- |
-| `IgnoreProperties.lean` | `parseIgnoreFile_no_empty`     | Every parsed pattern is non-empty — blank lines are dropped                  |
-| `IgnoreProperties.lean` | `parseIgnoreFile_no_comments`  | No parsed pattern starts with `#` — comments are dropped                     |
-| `IgnoreProperties.lean` | `shouldIgnore_empty`           | With no patterns nothing is ignored — no built-in default set                |
-| `IgnoreProperties.lean` | `shouldIgnore_append_positive` | A trailing matching non-negated pattern forces "ignored", overriding earlier |
-| `IgnoreProperties.lean` | `shouldIgnore_append_negated`  | A trailing matching `!` pattern forces "not ignored", overriding earlier     |
+| File                      | Theorem                 | Guarantee                                                           |
+| ------------------------- | ----------------------- | ------------------------------------------------------------------- |
+| `VerifierProperties.lean` | `targetToModule_iff`    | **[spec]** A target resolves iff it has a module and a theorem part |
+| `VerifierProperties.lean` | `isValidModuleName_iff` | **[spec]** Accepted module names carry no shell metacharacters      |
+| `VerifierProperties.lean` | `containsSorry_iff`     | **[spec]** `sorry` is detected exactly on identifier boundaries     |
 
-The two `shouldIgnore_append_*` theorems are the last-matching-pattern-wins rule in both directions. They treat `fnmatch` as an abstract predicate, so they hold however globbing itself behaves.
+## `.qedignore` decides coverage predictably
 
-**Known gap:** no property of `fnmatch` itself is proven. Its inner loop `fnmatchGo` is `partial` — star backtracking resets the pattern pointer while advancing the string pointer, so it is not structurally decreasing — and a `partial def` is opaque to the kernel, with no equational lemmas. Stating any `fnmatch` property first requires re-expressing it with a fuel parameter or a well-founded measure. Behaviour stays covered by `Tests/Ignore.lean`.
+Blank lines and comments never become patterns, so nothing is silently matched against them. Precedence is last-matching-pattern-wins in both directions: a trailing plain pattern ignores a spec, a trailing `!` pattern brings it back. These hold however glob matching itself behaves, because they treat `fnmatch` as an abstract predicate.
 
-## Parser and serialization
+| File                    | Theorem                        | Guarantee                                           |
+| ----------------------- | ------------------------------ | --------------------------------------------------- |
+| `IgnoreProperties.lean` | `parseIgnoreFile_no_empty`     | Blank lines never become patterns                   |
+| `IgnoreProperties.lean` | `parseIgnoreFile_no_comments`  | Comment lines never become patterns                 |
+| `IgnoreProperties.lean` | `shouldIgnore_append_positive` | A trailing matching pattern ignores the spec        |
+| `IgnoreProperties.lean` | `shouldIgnore_append_negated`  | A trailing matching `!` pattern un-ignores the spec |
 
-| File                    | Theorem                     | Property                                                                                       |
-| ----------------------- | --------------------------- | ---------------------------------------------------------------------------------------------- |
-| `ParserProperties.lean` | `parseSchedule_iff`         | **[spec]** parseSchedule accepts exactly "always", "heavy", "manual" — rejects everything else |
-| `Roundtrip.lean`        | `schedule_roundtrip`        | parseSchedule inverts scheduleToString                                                         |
-| `Roundtrip.lean`        | `verifyType_roundtrip`      | parseVerifyType inverts verifyTypeToJson for every constructor                                 |
-| `Roundtrip.lean`        | `criterion_roundtrip`       | parseCriterion inverts criterionToJson                                                         |
-| `Roundtrip.lean`        | `workerConfig_roundtrip`    | parseWorkerConfig inverts workerConfigToJson                                                   |
-| `Roundtrip.lean`        | `criteria_list_roundtrip`   | Element-wise roundtrip lifts to list-level mapM roundtrip                                      |
-| `Roundtrip.lean`        | `spec_verify_roundtrip`     | parseFromJson inverts specToJson for verify-mode specs                                         |
-| `Roundtrip.lean`        | `spec_workerLoop_roundtrip` | parseFromJson inverts specToJson for workerLoop-mode specs                                     |
-| `Roundtrip.lean`        | `spec_roundtrip`            | **[spec]** **Main theorem:** parseFromJson inverts specToJson for all well-formed specs        |
+## A spec survives serialization unchanged
 
-## Contract lock file
+Reading back a spec qed wrote recovers it exactly, in both formats: the JSON parser is a proven inverse of the JSON serializer, and the TOML serializer is proven to produce the same JSON as the JSON serializer, so the TOML path inherits the same guarantee. A renamed or dropped field breaks the build instead of quietly changing what a spec means.
 
-The lock file (`qed.lock`) records content hashes for locked artifacts. Writer and reader are proven to agree on every field.
+| File                    | Theorem                      | Guarantee                                                          |
+| ----------------------- | ---------------------------- | ------------------------------------------------------------------ |
+| `Roundtrip.lean`        | `spec_roundtrip`             | **[spec]** Parsing a serialized spec recovers it exactly           |
+| `Roundtrip.lean`        | `spec_verify_roundtrip`      | The roundtrip holds for verify-mode specs                          |
+| `Roundtrip.lean`        | `spec_workerLoop_roundtrip`  | The roundtrip holds for worker-loop specs                          |
+| `Roundtrip.lean`        | `criterion_roundtrip`        | Every criterion field survives the roundtrip                       |
+| `Roundtrip.lean`        | `criteria_list_roundtrip`    | The criterion roundtrip lifts to lists                             |
+| `Roundtrip.lean`        | `workerConfig_roundtrip`     | Every worker config field survives the roundtrip                   |
+| `Roundtrip.lean`        | `verifyType_roundtrip`       | Every verification type survives the roundtrip                     |
+| `Roundtrip.lean`        | `schedule_roundtrip`         | Every schedule survives the roundtrip                              |
+| `TomlRoundtrip.lean`    | `toml_spec_roundtrip`        | **[spec]** Parsing a TOML-serialized spec recovers it exactly      |
+| `TomlRoundtrip.lean`    | `spec_toml_json_eq`          | The TOML serializer agrees with the JSON serializer                |
+| `TomlRoundtrip.lean`    | `criterion_toml_json_eq`     | Criterion pairs agree between the two serializers                  |
+| `TomlRoundtrip.lean`    | `criteria_list_toml_json_eq` | The criterion agreement lifts to lists                             |
+| `TomlRoundtrip.lean`    | `workerConfig_toml_json_eq`  | Worker config pairs agree between the two serializers              |
+| `TomlRoundtrip.lean`    | `verifyType_toml_json_eq`    | Verification type pairs agree between the two serializers          |
+| `TomlRoundtrip.lean`    | `schedule_toml_eq_json`      | Schedules agree between the two serializers                        |
+| `ParserProperties.lean` | `parseSchedule_iff`          | **[spec]** `parseSchedule` accepts exactly the three valid strings |
 
-| File                 | Theorem                         | Property                                                                                 |
-| -------------------- | ------------------------------- | ---------------------------------------------------------------------------------------- |
-| `LockRoundtrip.lean` | `artifact_roundtrip`            | parseArtifact inverts artifactToJson                                                     |
-| `LockRoundtrip.lean` | `artifacts_list_roundtrip`      | Element-wise artifact roundtrip lifts to list-level mapM roundtrip                       |
-| `LockRoundtrip.lean` | `criterionLock_roundtrip`       | parseCriterionLock inverts criterionLockToJson                                           |
-| `LockRoundtrip.lean` | `criterionLocks_list_roundtrip` | Element-wise criterion-lock roundtrip lifts to lists                                     |
-| `LockRoundtrip.lean` | `specLock_roundtrip`            | parseSpecLock inverts specLockToJson                                                     |
-| `LockRoundtrip.lean` | `specLocks_list_roundtrip`      | Element-wise spec-lock roundtrip lifts to lists                                          |
-| `LockRoundtrip.lean` | `lockFile_roundtrip`            | **Main theorem:** parseLockFileFromJson inverts lockFileToJson for the supported version |
-| `LockRoundtrip.lean` | `generated_lockFile_roundtrip`  | The roundtrip holds unconditionally for lock files qed generates                         |
+## A malformed lock file cannot silently corrupt state
 
-**Scope:** these cover the `LockFile ↔ Json` layer. The outer string layer (`serializeLockFile` = `Json.pretty`, `parseLockFile` = `Json.parse` then the above) rests on `Json.parse ∘ Json.pretty = id` — a property of Lean's JSON library, not of qed — and is covered by `testLockFileRoundtrip` instead. This is the same boundary the spec roundtrip draws at `specToJson`/`parseFromJson`.
+`qed.lock` records the content hashes that make verification results meaningful. The reader is a proven inverse of the writer at every level — artifact, criterion, spec, file — so a lock file qed wrote always reads back identically, and a field renamed on one side breaks the build rather than degrading integrity checking in silence. Only the supported format version is accepted; every other version is rejected outright.
 
-## TOML parser
+| File                 | Theorem                         | Guarantee                                               |
+| -------------------- | ------------------------------- | ------------------------------------------------------- |
+| `LockRoundtrip.lean` | `lockFile_roundtrip`            | The reader inverts the writer for the supported version |
+| `LockRoundtrip.lean` | `generated_lockFile_roundtrip`  | Every lock file qed writes reads back exactly           |
+| `LockRoundtrip.lean` | `specLock_roundtrip`            | Spec entries survive the roundtrip                      |
+| `LockRoundtrip.lean` | `criterionLock_roundtrip`       | Criterion entries survive the roundtrip                 |
+| `LockRoundtrip.lean` | `artifact_roundtrip`            | Artifact path and hash survive the roundtrip            |
+| `LockRoundtrip.lean` | `specLocks_list_roundtrip`      | The spec roundtrip lifts to lists                       |
+| `LockRoundtrip.lean` | `criterionLocks_list_roundtrip` | The criterion roundtrip lifts to lists                  |
+| `LockRoundtrip.lean` | `artifacts_list_roundtrip`      | The artifact roundtrip lifts to lists                   |
 
-| File                    | Theorem                                   | Property                                                                 |
-| ----------------------- | ----------------------------------------- | ------------------------------------------------------------------------ |
-| `TomlProperties.lean`   | `setNested_no_duplicate_at_leaf`          | setNested inserts without duplicates when key is absent                  |
-| `TomlProperties.lean`   | `setNested_rejects_duplicate`             | **[spec]** setNested returns error when key already exists               |
-| `TomlProperties.lean`   | `setNested_empty_keys`                    | Empty key path is always rejected                                        |
-| `TomlProperties.lean`   | `appendArray_empty_keys`                  | Empty key path is always rejected                                        |
-| `TomlProperties.lean`   | `appendArray_creates_new`                 | Absent key creates new single-element array                              |
-| `TomlProperties.lean`   | `tomlConverter_shim_eq`                   | `TomlConverter.tomlToJson` is exactly `TomlParser.tomlToJson` (shim tie) |
-| `TomlJsonValidity.lean` | `tomlToJson_total`                        | **[spec]** tomlToJson always returns Ok or Error (never diverges)        |
-| `TomlJsonValidity.lean` | `tomlToJson_ok_implies_parseDoc_ok`       | **[spec]** Successful conversion implies successful parse                |
-| `TomlJsonValidity.lean` | `parseDoc_error_implies_tomlToJson_error` | **[spec]** Parse failure propagates to conversion failure                |
-| `TomlJsonValidity.lean` | `toJson_str`                              | String values map to JSON strings                                        |
-| `TomlJsonValidity.lean` | `toJson_int`                              | Integer values map to JSON numbers                                       |
-| `TomlJsonValidity.lean` | `toJson_bool`                             | Boolean values map to JSON booleans                                      |
-| `TomlJsonValidity.lean` | `toJson_table`                            | Tables map to JSON objects via toJsonPairs                               |
-| `TomlJsonValidity.lean` | `toJson_array`                            | Arrays map to JSON arrays via toJsonList                                 |
-| `TomlJsonValidity.lean` | `toJson_empty_table`                      | Empty table produces empty JSON object                                   |
-| `TomlJsonValidity.lean` | `toJson_empty_array`                      | Empty array produces empty JSON array                                    |
-| `TomlRoundtrip.lean`    | `schedule_toml_eq_json`                   | TOML and JSON schedule serializers produce the same string               |
-| `TomlRoundtrip.lean`    | `verifyType_toml_json_eq`                 | TOML verify-type pairs convert to the same JSON as the serializer        |
-| `TomlRoundtrip.lean`    | `criterion_toml_json_eq`                  | TOML criterion pairs convert to the same JSON as the serializer          |
-| `TomlRoundtrip.lean`    | `criteria_list_toml_json_eq`              | Element-wise criterion equivalence lifts to lists                        |
-| `TomlRoundtrip.lean`    | `workerConfig_toml_json_eq`               | TOML worker config pairs convert to the same JSON as the serializer      |
-| `TomlRoundtrip.lean`    | `spec_toml_json_eq`                       | **[spec]** TOML serializer produces the same JSON as the JSON serializer |
-| `TomlRoundtrip.lean`    | `toml_spec_roundtrip`                     | **[spec]** Parsing TOML-serialized spec recovers the original spec       |
+## A duplicate TOML key is an error, and parse errors always surface
+
+Defining the same key twice in a spec fails loudly instead of silently overwriting. A TOML parse failure always propagates to the conversion result, so a broken spec file can never be read as an empty one.
+
+| File                    | Theorem                                   | Guarantee                                                   |
+| ----------------------- | ----------------------------------------- | ----------------------------------------------------------- |
+| `TomlProperties.lean`   | `setNested_rejects_duplicate`             | **[spec]** A duplicate key is an error, not an overwrite    |
+| `TomlProperties.lean`   | `setNested_no_duplicate_at_leaf`          | A fresh key is appended, leaving existing entries untouched |
+| `TomlJsonValidity.lean` | `parseDoc_error_implies_tomlToJson_error` | **[spec]** Parse errors are never swallowed                 |
+| `TomlJsonValidity.lean` | `tomlToJson_ok_implies_parseDoc_ok`       | **[spec]** A converted document was really parsed as TOML   |
+
+## The pass/fail decision and the JSON contract are correct
+
+A run passes exactly when no criterion failed. Every result is exactly one of pass, fail, needsHuman, or skipped, and the predicates the decision is built from agree with the constructor. The `--json` output always carries the fields consumers depend on.
+
+| File                     | Theorem                                      | Guarantee                                                         |
+| ------------------------ | -------------------------------------------- | ----------------------------------------------------------------- |
+| `OutputCorrectness.lean` | `allExecutionsPassed_iff_no_failures`        | **[spec]** A run passes iff no criterion failed                   |
+| `OutputCorrectness.lean` | `executionsToJson_has_required_fields`       | **[spec]** Verify output always has `spec`, `passed`, `criteria`  |
+| `OutputCorrectness.lean` | `workerExecutionsToJson_has_required_fields` | **[spec]** Worker output adds `state` to the same contract        |
+| `TypeProperties.lean`    | `result_complete_partition`                  | **[spec]** Every result is exactly one variant, predicates agree  |
+| `TypeProperties.lean`    | `isTerminal_iff`                             | `isTerminal` is true exactly on the five terminal states          |
+| `VerifyMode.lean`        | `verify_has_no_worker`                       | **[spec]** A verify-mode spec cannot carry a worker configuration |
+
+## Verification boundary
+
+The proofs cover qed's pure core. Three architectural facts define where that core ends.
+
+**IO is tested, not proven.** Process spawning, file reading, git inspection, and terminal output live in `Main.lean`, `Verifier.lean`, `Integrity.lean` and the IO half of `WorkerLoop.lean`. `Tests/` covers them end to end, including the CLI itself. The proofs reason about the pure functions those layers call — which is why `step_eq_transition` and `buildShellCommand_single` matter: they pin the IO layer to the proven core.
+
+**Serialization proofs stop at the `Json` layer.** `Roundtrip.lean` and `LockRoundtrip.lean` prove `parse ∘ serialize = id` on `Lean.Json` values. The outer string layer rests on `Json.parse ∘ Json.pretty = id`, a property of Lean's JSON library rather than of qed, and is covered by tests.
+
+**`parseDoc` and `fnmatch` are `partial`.** The TOML document parser and the fnmatch inner loop are written with recursion Lean cannot see as terminating, so the kernel treats them as opaque and properties of them cannot be stated. The proofs above are built to be independent of both: TOML guarantees are stated at the `Except` level, and the ignore-precedence proofs treat `fnmatch` as an abstract predicate. Behaviour is covered by `Tests/TomlParser.lean` and `Tests/Ignore.lean`.

@@ -7,36 +7,14 @@ namespace Qed.Proofs.LockRoundtrip
 
 open Qed Qed.ContractLock Lean
 
-/-! # Lock file serializer–parser roundtrip proofs
+/-! # Lock file writer–reader roundtrip
 
-The main result: `parseLockFileFromJson (lockFileToJson lockFile) = .ok lockFile`
-for lock files carrying the supported format version. This guarantees that
-`ContractLock`'s writer and reader agree on every field — a future rename or
-dropped field breaks the proof at compile time.
+The reader inverts the writer at every level of `qed.lock`, so a renamed or
+dropped field breaks the build instead of silently corrupting the lock.
 
-## Strategy
-
-Mirrors `Roundtrip.lean`. Lean 4.28.0 backs JSON objects with `Std.TreeMap`;
-`simp` cannot reduce `TreeMap.get?` on known keys but `rfl` (kernel reduction)
-can. So each level states its field lookups as `rfl`-provable lemmas, then
-`simp only` uses those lemmas to reduce the parser:
-
-1. `LockedArtifact` — path/hash, closes by `rfl` outright
-2. `CriterionLock` — description + artifact array
-3. `SpecLock` — spec path + criterion array
-4. `LockFile` — version + spec array
-
-Each array level needs a `mapM`/`map` induction lemma to lift the element-wise
-roundtrip to lists.
-
-## Scope
-
-These theorems cover the `LockFile ↔ Json` layer. The outer string layer
-(`serializeLockFile` = `Json.pretty`, `parseLockFile` = `Json.parse` + this)
-is covered by `testLockFileRoundtrip` rather than a proof, since it rests on
-`Json.parse ∘ Json.pretty = id` — a property of Lean's JSON library, not of
-qed. This is the same boundary the spec roundtrip draws at
-`specToJson`/`parseFromJson`. -/
+Field lookups are stated as `rfl`-provable lemmas because `simp` cannot reduce
+the `Std.TreeMap` backing `Json` objects on known keys, while kernel reduction
+can. Mirrors `Roundtrip.lean`. -/
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Level 1: LockedArtifact
@@ -128,11 +106,8 @@ private theorem lfj_specs (version : Nat) (specs : List SpecLock) :
     (lockFileToJson { version, specs }).getObjVal? "specs" =
       .ok (Json.arr (specs.map specLockToJson).toArray) := by rfl
 
-/-- **Main roundtrip theorem:** parsing the serialized JSON of a lock file
-recovers the lock file exactly, provided it carries the supported format
-version. `generateLockFile` always stamps `supportedLockFileVersion`, and
-`parseLockFileFromJson` rejects every other version, so this covers every lock
-file qed produces. -/
+/-- **Main roundtrip theorem:** parsing a serialized lock file recovers it
+exactly, provided it carries the supported format version. -/
 theorem lockFile_roundtrip (lockFile : LockFile)
     (hversion : lockFile.version = supportedLockFileVersion) :
     parseLockFileFromJson (lockFileToJson lockFile) = .ok lockFile := by
@@ -144,8 +119,8 @@ theorem lockFile_roundtrip (lockFile : LockFile)
       specLocks_list_roundtrip]
     rfl
 
-/-- Every lock file qed generates satisfies the version hypothesis, so the
-roundtrip holds unconditionally for freshly built lock files. -/
+/-- `generateLockFile` always stamps the supported version, so the roundtrip
+holds unconditionally for lock files qed writes. -/
 theorem generated_lockFile_roundtrip (specs : List SpecLock) :
     parseLockFileFromJson (lockFileToJson { specs }) = .ok { specs } :=
   lockFile_roundtrip { specs } rfl

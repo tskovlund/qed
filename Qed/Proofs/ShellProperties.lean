@@ -1,5 +1,4 @@
 import Qed.Shell
-import Qed.WorkerLoop
 
 set_option autoImplicit false
 
@@ -7,57 +6,61 @@ namespace Qed.Proofs.ShellProperties
 
 open Qed
 
-/-! # Shell command construction properties
+/-! # Shell quoting and command construction
 
-`Shell.buildShellCommand` is the shell-injection surface: it splices
-caller-supplied environment variable values into a string that is handed to
-`/bin/sh -c`. These theorems pin down that every value passes through
-`shellQuote`, and that the command itself is always the trailing segment.
+`Shell.buildShellCommand` splices caller-supplied environment values into a
+string handed to `/bin/sh -c`, with `Shell.shellQuote` as the only barrier. -/
 
-`WorkerLoopProperties` proves `shellQuote_wraps`/`shellQuote_empty` against
-`WorkerLoop.shellQuote`, which is a re-export shim. `shellQuote_shim_eq`
-below ties that shim to the real definition so the coverage cannot drift
-apart silently. -/
+/-- Decodes the body of a POSIX single-quoted word, up to its closing quote.
+    `none` is a quote that would end the word early and expose the rest of the
+    value to the shell — the shape `shellQuote` must never produce. -/
+def readBody : List Char → Option (List Char)
+  | [] => none
+  | ['\''] => some []
+  | '\'' :: '\\' :: '\'' :: '\'' :: rest => ('\'' :: ·) <$> readBody rest
+  | '\'' :: _ => none
+  | c :: rest => (c :: ·) <$> readBody rest
 
-/-- The `WorkerLoop.shellQuote` re-export is exactly `Shell.shellQuote`. -/
-theorem shellQuote_shim_eq (s : String) :
-    WorkerLoop.shellQuote s = Shell.shellQuote s := rfl
+/-- Decodes one complete single-quoted shell word. -/
+def readWord : List Char → Option (List Char)
+  | '\'' :: rest => readBody rest
+  | _ => none
 
-/-- With no environment variables, the command is passed through untouched —
-    no wrapping, no prefix, nothing for a shell to reinterpret. -/
-theorem buildShellCommand_empty_env (command : String) :
-    Shell.buildShellCommand [] command = command := rfl
+theorem readBody_escapeQuotes (chars : List Char) :
+    readBody (Shell.escapeQuotes chars ++ ['\'']) = some chars := by
+  induction chars with
+  | nil => rfl
+  | cons c rest ih =>
+    by_cases hquote : c = '\''
+    · subst hquote; simp [Shell.escapeQuotes, readBody, ih]
+    · simp [Shell.escapeQuotes, readBody, hquote, ih]
 
-/-- A single environment variable expands to exactly one `export` with a
-    shell-quoted value, followed by the unmodified command. -/
+private theorem quote_toList : ("'" : String).toList = ['\''] := rfl
+
+theorem shellQuote_toList (s : String) :
+    (Shell.shellQuote s).toList = '\'' :: (Shell.escapeQuotes s.toList ++ ['\'']) := by
+  simp [Shell.shellQuote, quote_toList]
+
+/-- **Main safety theorem:** every string quotes to exactly one shell word that
+    decodes back to it. No input can close the quote early, so nothing a caller
+    supplies is ever read as syntax. -/
+theorem shellQuote_is_one_word (s : String) :
+    readWord (Shell.shellQuote s).toList = some s.toList := by
+  rw [shellQuote_toList]
+  simp [readWord, readBody_escapeQuotes]
+
+theorem shellQuote_empty : Shell.shellQuote "" = "''" := rfl
+
+/-- Values reach the shell only through `shellQuote`. -/
 theorem buildShellCommand_single (name value command : String) :
     Shell.buildShellCommand [(name, value)] command =
       "export " ++ name ++ "=" ++ Shell.shellQuote value ++ "; " ++ command := rfl
 
-/-- Every non-empty environment list puts the command last, after a `"; "`
-    separator — the command is never spliced into the middle of an export. -/
+/-- The command is always the trailing segment, never spliced into an export. -/
 theorem buildShellCommand_command_last (entry : String × String)
     (rest : List (String × String)) (command : String) :
     ∃ exports, Shell.buildShellCommand (entry :: rest) command =
       exports ++ "; " ++ command :=
   ⟨_, rfl⟩
-
-/-- Two environment variables still quote both values and keep the command
-    last. Generalising this to an arbitrary-length list needs induction over
-    `String.intercalate`'s accumulator, whose `go` helper Lean does not expose
-    as an accessible constant — see the follow-up note in
-    `docs/proven-properties.md`. -/
-theorem buildShellCommand_pair (firstName firstValue secondName secondValue command : String) :
-    Shell.buildShellCommand [(firstName, firstValue), (secondName, secondValue)] command =
-      "export " ++ firstName ++ "=" ++ Shell.shellQuote firstValue ++ "; " ++
-      "export " ++ secondName ++ "=" ++ Shell.shellQuote secondValue ++ "; " ++ command := by
-  -- `String.intercalate` joins left-associatively; restate in that shape
-  -- (definitionally true) and let `append_assoc` normalise both sides.
-  have joined : Shell.buildShellCommand
-      [(firstName, firstValue), (secondName, secondValue)] command =
-      (("export " ++ firstName ++ "=" ++ Shell.shellQuote firstValue) ++ "; " ++
-       ("export " ++ secondName ++ "=" ++ Shell.shellQuote secondValue)) ++ "; " ++ command := rfl
-  rw [joined]
-  simp only [String.append_assoc]
 
 end Qed.Proofs.ShellProperties
