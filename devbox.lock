@@ -1,51 +1,41 @@
 {
   "lockfile_version": "1",
   "packages": {
-    "elan@4.2.3": {
-      "last_modified": "2026-08-12T11:28:58Z",
-      "resolved": "github:NixOS/nixpkgs/044bfe75bfe4c7bbe043dc17b5e42ea823b84a09#elan",
+    "elan@4.2.4": {
+      "last_modified": "2026-08-27T07:16:00Z",
+      "resolved": "github:NixOS/nixpkgs/c27cdad491a991b11ed731760aa2ef8db0cb0410#elan",
       "source": "devbox-search",
-      "version": "4.2.3",
+      "version": "4.2.4",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/gssjcs7wfkgngfbg78k9n72mn7ha4sp9-elan-4.2.3",
+              "path": "/nix/store/25z8aljqnmym8fl9arwnycc7ngn5m5l5-elan-4.2.4",
               "default": true
             }
           ],
-          "store_path": "/nix/store/gssjcs7wfkgngfbg78k9n72mn7ha4sp9-elan-4.2.3"
+          "store_path": "/nix/store/25z8aljqnmym8fl9arwnycc7ngn5m5l5-elan-4.2.4"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/vdjvs4qvcpl9vq12c6cwsya9kjygvh28-elan-4.2.3",
+              "path": "/nix/store/pkf1isv8s8rjihy5fv3v336bqbk7l7y7-elan-4.2.4",
               "default": true
             }
           ],
-          "store_path": "/nix/store/vdjvs4qvcpl9vq12c6cwsya9kjygvh28-elan-4.2.3"
-        },
-        "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/mrd0ag51rb6p9faqwr4f6bp3iyilc1kd-elan-4.2.3",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/mrd0ag51rb6p9faqwr4f6bp3iyilc1kd-elan-4.2.3"
+          "store_path": "/nix/store/pkf1isv8s8rjihy5fv3v336bqbk7l7y7-elan-4.2.4"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/cm1hbjm7n3d33k512f9nah8dlws62iay-elan-4.2.3",
+              "path": "/nix/store/d8v6knf1r9dln388bl5qk83yxy16wvqj-elan-4.2.4",
               "default": true
             }
           ],
-          "store_path": "/nix/store/cm1hbjm7n3d33k512f9nah8dlws62iay-elan-4.2.3"
+          "store_path": "/nix/store/d8v6knf1r9dln388bl5qk83yxy16wvqj-elan-4.2.4"
         }
       }
     },
