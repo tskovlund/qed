@@ -57,9 +57,6 @@ private def writeFailuresFile (failures : List (String × VerificationResult))
   IO.FS.writeFile path (json.pretty 2)
   return path
 
-/-- Re-export shellQuote for backward compatibility with proofs. -/
-def shellQuote := Shell.shellQuote
-
 /-- Spawn a worker process with the appropriate env vars and prompt handling.
     Catches non-UTF-8 output (Lean's IO.Process.output throws when the process
     emits bytes that aren't valid UTF-8). -/

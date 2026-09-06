@@ -31,18 +31,23 @@ Qed/Proofs/
   StuckDetection.lean  Stuck iff same failures for stuckThreshold iterations
   NoSkip.lean          Cannot skip verification phase
   FinalStates.lean     Terminal states are absorbing
-  Invariants.lean      Determinism, ready transience, phase ordering, iteration bound
+  Invariants.lean      Ready transience, phase ordering, iteration bound, lifecycle
   Monotonic.lean       Iteration count is non-decreasing
-  VerifyMode.lean      Verify mode type-level separation proofs
-  TypeProperties.lean  isTerminal decidability, isPassed/isFailed characterization
+  VerifyMode.lean      Verify mode carries no worker configuration
+  TypeProperties.lean  isTerminal characterization, result space partition
   OutputCorrectness.lean  allPassed correctness, JSON output contract
   ParserProperties.lean   parseSchedule completeness and rejection
-  TomlProperties.lean     setNested/appendArray structural integrity
-  TomlJsonValidity.lean   TOML→JSON pipeline totality and error propagation
+  TomlProperties.lean     setNested duplicate-key rejection
+  TomlJsonValidity.lean   TOML→JSON error propagation
   TomlRoundtrip.lean      TOML serializer↔parser roundtrip (toJson ∘ specToTomlPairs = specToJson)
   Roundtrip.lean          Serializer↔parser roundtrip (parseFromJson ∘ specToJson = ok)
-  IntegrityProperties.lean  Spec integrity: violation → terminal, absorbing, not passed
-  WorkerLoopProperties.lean  step=transition, buildPrompt, shellQuote proofs
+  LockRoundtrip.lean      Lock file writer↔reader roundtrip (parseLockFileFromJson ∘ lockFileToJson = ok)
+  ShellProperties.lean    shellQuote produces exactly one shell word; command-last structure
+  VerifierProperties.lean Proof-target resolution and sorry detection
+  IgnoreProperties.lean   .qedignore parse output contract and pattern precedence
+  GlobProperties.lean     Valid glob patterns contain no shell metacharacters
+  IntegrityEvents.lean    State machine response to the integrityViolation event
+  WorkerLoopProperties.lean  step=transition, buildPrompt preserves the operator prompt
 Tests/
   Main.lean            Test runner (imports all test modules)
   Types.lean           isTerminal behavior tests
@@ -56,12 +61,12 @@ Tests/
   Cli.lean             End-to-end CLI tests (invoke built binary, check output/exit codes)
 specs/                 qed's own specs (dogfooding)
   build.spec.json          Build integrity — compile, test, no sorry
-  cli.spec.toml            CLI + output correctness — 1 proof + agent
-  verifier.spec.toml       Verifier dispatch and shell execution — agent
-  worker-loop.spec.toml    Worker loop correctness — 5 proofs + agent
-  state-machine.spec.toml  State machine correctness — 5 proofs + agent
-  parser.spec.toml         Parser correctness — 3 proofs + agent
-  verify-mode.spec.toml    Verify mode correctness — 2 proofs + command + agent
+  cli.spec.toml            CLI + output correctness — 4 proofs + agent
+  verifier.spec.toml       Verifier dispatch and shell safety — 6 proofs + agent
+  worker-loop.spec.toml    Worker loop correctness — 3 proofs + agent
+  state-machine.spec.toml  State machine correctness — 13 proofs + agent
+  parser.spec.toml         Parser correctness — 6 proofs + agent
+  verify-mode.spec.toml    Verify mode correctness — 1 proof + commands + agent
   conventions.spec.toml    Convention adherence — naming, DRY, doc accuracy
   docs.spec.toml           Documentation accuracy — freshness + agent
 DocGen/
@@ -74,7 +79,7 @@ docs/                  Documentation (Diataxis: tutorial, how-to, reference, exp
   cli-reference.md     CLI reference (commands, flags, exit codes, env vars, config)
   spec-format.md       Spec format reference (auto-generated from schema)
   spec.schema.json     JSON Schema (auto-generated, CI-checked)
-  proven-properties.md All 40+ formally verified theorems
+  proven-properties.md What the proofs guarantee, by subsystem
   architecture.md      Explanation: state machine, verification dispatch, pure core/IO shell
   specs.md             Explanation: spec design philosophy and layer organization
 ```
@@ -153,7 +158,7 @@ qed                   # run the binary (.lake/build/bin on PATH via .envrc)
 
 ## Proven properties
 
-The `Qed/Proofs/` directory contains 70+ formal proofs verified by Lean 4's kernel. All proofs are complete (no `sorry`). See [docs/proven-properties.md](docs/proven-properties.md) for the full reference.
+The `Qed/Proofs/` directory contains 120+ theorems, every one checked by Lean 4's kernel — no `sorry`, no `native_decide`. See [docs/proven-properties.md](docs/proven-properties.md) for what they guarantee.
 
 ## Repo-specific conventions
 

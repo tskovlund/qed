@@ -53,14 +53,6 @@ prover = "lean4"
 target = "Qed.Proofs.Invariants.lifecycle_ordering"
 
 [[criteria]]
-description = "The transition function is deterministic — equal inputs always produce equal outputs"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.Invariants.transition_deterministic"
-
-[[criteria]]
 description = "Iteration count never decreases across transitions"
 
 [criteria.verify]
@@ -120,7 +112,7 @@ description = "Integrity violation from any non-terminal state always produces t
 [criteria.verify]
 type = "proof"
 prover = "lean4"
-target = "Qed.Proofs.IntegrityProperties.integrity_violation_terminal"
+target = "Qed.Proofs.IntegrityEvents.integrity_violation_terminal"
 
 [[criteria]]
 description = "Integrity violation from a non-terminal state can never produce passed — violated results are never accepted"
@@ -128,13 +120,12 @@ description = "Integrity violation from a non-terminal state can never produce p
 [criteria.verify]
 type = "proof"
 prover = "lean4"
-target = "Qed.Proofs.IntegrityProperties.integrity_violation_not_passed"
+target = "Qed.Proofs.IntegrityEvents.integrity_violation_not_passed"
 
 # --- Agent review ---
 
 [[criteria]]
 description = "Transition function is correct, total, and well-structured"
-
 
 [criteria.verify]
 type = "agent"

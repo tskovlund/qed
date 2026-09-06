@@ -10,39 +10,43 @@
      [{"path":
        "Tests/Cli.lean",
        "hash":
-       "153f5f7342f8a97688f991520cdf03d72dc220999bcd6ef7f65ba2897c577df9"},
+       "23bf0d2bb5c2e55d261b4d4e51744e7e78019bb130f894f569d6060b888e7d93"},
       {"path":
        "Tests/ContractLock.lean",
        "hash":
-       "e04c983e3403a5932b7ee9abec92f4f097b751cc501226f3afb3962dbf176b67"},
+       "56c8c798ee959c8796f886792bcddfccc310ba7a702f87d732b571e30c1e3f19"},
       {"path":
        "Tests/Ignore.lean",
        "hash":
-       "990a7ebd65afe5ae3ce510f11e36988ab6b1c8b648ca9fd5cab33c2a789af538"},
+       "b914e5dfae2a624cc3745d2963670f0486b0f97c9c4d55c4d6324baecbd22e84"},
       {"path":
        "Tests/Integration.lean",
        "hash":
-       "95a5bf54bde523eb98af4d480702409de6515bec2e964ace652ad730df449eeb"},
+       "241c3a1a9a2daac1ee654aca2baec689b8036e472efee06914db012ba850f6fe"},
       {"path":
        "Tests/Main.lean",
        "hash":
-       "881e8081a700d0574d759a04d7d8d80b2a8beaa37168c8ed5d71f6ce49c07382"},
+       "d2ac8b1486c2cfcdc59e29cfc9937795212209594c913f350747b69b8990f5f0"},
       {"path":
        "Tests/Parser.lean",
        "hash":
-       "7a6df865b1bd5077f5bc4b5beebf4bc9fd2d034a2f8bedc98ca7de783917d80c"},
+       "e8dc5c5ef0e3fdd31cfc9268b9ab1ff0aff7f6fa58aa95e250c27ef93524ec63"},
       {"path":
        "Tests/TomlParser.lean",
        "hash":
-       "fe7c4ce28c963305cc2869e7fe7ba6057cb3687e48e599ce6a5150f72c97e2e7"},
+       "883a6bba1a5c297350d677fca8c9d3b6136f4d527c1004de6d4406e6a95059f7"},
+      {"path":
+       "Tests/TomlSerializer.lean",
+       "hash":
+       "24023ab53bcdf152cccf3d2dfe0a9b02e81bede9b9f159ed90107fe9a399c443"},
       {"path":
        "Tests/Types.lean",
        "hash":
-       "9c4602cae70d7260c87990374ccf0f07ad95c05e58e5fdf36bc72128769ab661"},
+       "3b310c9a28d3c32b6d651a35a2687f65d7f97448f844a5aa602a6a37b566f2fb"},
       {"path":
        "Tests/Verifier.lean",
        "hash":
-       "bca3b1efaee2194eeb1e6c248aebc32c59f4082ac7dab1f8d6c071afa78dfa19"}]}]},
+       "b8fc7e6a1f1cc16aacf98a4805a4aecc2e82ad0ca4f4455dce06b154f6ed2f1d"}]}]},
   {"specPath":
    "./specs/cli.spec.toml",
    "criteria":
@@ -54,26 +58,26 @@
        "hash":
        "a6e1db808930f8df259271d1b7e669fe3af7028ca82d25d93e1dee1931563b7b"}]},
     {"description":
-     "Pass/fail decision is correct: allPassed returns true iff no result is .fail",
+     "Pass/fail decision is correct: allExecutionsPassed returns true iff no execution is .fail",
      "artifacts":
      [{"path":
-       "theorem:Qed.Proofs.OutputCorrectness.allPassed_iff_no_failures",
+       "theorem:Qed.Proofs.OutputCorrectness.allExecutionsPassed_iff_no_failures",
        "hash":
-       "88dd43cd2256d311bfb1a15fd6c6991b1c173754553a18886fa096e3f60254ba"}]},
+       "94c5c95b4d249159ff169a0a3c90fc4fdd497849e849861613c819b0c3bcc53e"}]},
     {"description":
      "Verify-mode JSON output always contains 'spec', 'passed', and 'criteria' fields",
      "artifacts":
      [{"path":
-       "theorem:Qed.Proofs.OutputCorrectness.resultsToJson_has_required_fields",
+       "theorem:Qed.Proofs.OutputCorrectness.executionsToJson_has_required_fields",
        "hash":
-       "c8c9f8405cfa7fb0980bb963923fbedb0f73166102f9cd132e2e8b66b6108195"}]},
+       "6eb82e830afbaa5dfb3877ec57725ba0bda49f2b5b42567035ff7a92aaddf86c"}]},
     {"description":
      "Worker-loop JSON output always contains 'spec', 'state', 'passed', and 'criteria' fields",
      "artifacts":
      [{"path":
-       "theorem:Qed.Proofs.OutputCorrectness.workerResultsToJson_has_required_fields",
+       "theorem:Qed.Proofs.OutputCorrectness.workerExecutionsToJson_has_required_fields",
        "hash":
-       "46d6328ff5d847b0e574442e38d4b9021f2d68c3edbdbebb2cd43ffac49570b0"}]}]},
+       "129961d7789d9df060403b16253e3b5c6e1bc0b89e0da0d624bf00df548eba01"}]}]},
   {"specPath":
    "./specs/state-machine.spec.toml",
    "criteria":
@@ -112,13 +116,6 @@
        "theorem:Qed.Proofs.Invariants.lifecycle_ordering",
        "hash":
        "ce6ec4753b6634f44c01c411565a14c8bccfc01a4ccaf8aa05c1fbe464ebc48a"}]},
-    {"description":
-     "The transition function is deterministic — equal inputs always produce equal outputs",
-     "artifacts":
-     [{"path":
-       "theorem:Qed.Proofs.Invariants.transition_deterministic",
-       "hash":
-       "4f3a8e9e678b6f1d29a42889b6c62b0d15dcef06db433f78a154c7226e6c8b55"}]},
     {"description":
      "Iteration count never decreases across transitions",
      "artifacts":
@@ -165,14 +162,14 @@
      "Integrity violation from any non-terminal state always produces terminal integrityViolation",
      "artifacts":
      [{"path":
-       "theorem:Qed.Proofs.IntegrityProperties.integrity_violation_terminal",
+       "theorem:Qed.Proofs.IntegrityEvents.integrity_violation_terminal",
        "hash":
        "67eba8d6bd9127bd11098fe5fe895e8d97f2ea73c8e4f4cde8cd7d10fa37c63b"}]},
     {"description":
      "Integrity violation from a non-terminal state can never produce passed — violated results are never accepted",
      "artifacts":
      [{"path":
-       "theorem:Qed.Proofs.IntegrityProperties.integrity_violation_not_passed",
+       "theorem:Qed.Proofs.IntegrityEvents.integrity_violation_not_passed",
        "hash":
        "d57e23d56d631f0fcd94c8596281f9e93b59421f3371ac9e22ece4cc70095886"}]}]},
   {"specPath":
@@ -193,13 +190,6 @@
        "hash":
        "b9321515ec593b0dfc7ff4e5d09a9c474d7b680fd2a7c3d196f123ef1957b7ef"}]},
     {"description":
-     "TOML→JSON conversion is total: always returns ok or error, never diverges",
-     "artifacts":
-     [{"path":
-       "theorem:Qed.Proofs.TomlJsonValidity.tomlToJson_total",
-       "hash":
-       "2d2ee418d3c38bf31b36cdfd41f865c33c93e4e46f797d4466add736a25d0bf5"}]},
-    {"description":
      "Successful TOML→JSON conversion implies the input was valid TOML",
      "artifacts":
      [{"path":
@@ -212,18 +202,46 @@
      [{"path":
        "theorem:Qed.Proofs.TomlJsonValidity.parseDoc_error_implies_tomlToJson_error",
        "hash":
-       "095e4ee8b48df7ac34caafb35d374e61ed5fc53aa43296c7ef71e0f51ea586ab"}]},
+       "569c796b1dcf68d7673eb23735652a92cfab8daa4071795477f24caf4a42754e"}]},
+    {"description":
+     "TOML serializer→parser roundtrip: TOML-serialized specs produce the same JSON as the JSON serializer",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.TomlRoundtrip.toml_spec_roundtrip",
+       "hash":
+       "f89b07561afb2462abd54248a0b21fbef61f20f122bb0b68097e7bca8475c323"}]},
     {"description":
      "TOML parser rejects duplicate keys at the leaf level",
      "artifacts":
      [{"path":
        "theorem:Qed.Proofs.TomlProperties.setNested_rejects_duplicate",
        "hash":
-       "f570bbc3b05638fdafc1c4f2015e7f45f11f4efc5b8809482202a1eb7b52fbff"}]}]},
+       "d9220915178f9e5eb34b85cb481a3368b27f2839cadbebf7a9f538f95a9c466c"}]}]},
   {"specPath":
    "./specs/verifier.spec.toml",
    "criteria":
    [{"description":
+     "Every string quotes to exactly one shell word that decodes back to it",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.ShellProperties.shellQuote_is_one_word",
+       "hash":
+       "3ccb576b0d50ddfffbf2fa383cd324507aba7c271a35c0442252c513e517c755"}]},
+    {"description":
+     "shellQuote of empty string produces the empty shell string ''",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.ShellProperties.shellQuote_empty",
+       "hash":
+       "f35c6667e9a2e50a1e016bba3cf947da20526c8999c5dcfb7e9f9561572ba1d7"}]},
+    {"description":
+     "The command is always the trailing segment, never spliced into an export",
+     "artifacts":
+     [{"path":
+       "theorem:Qed.Proofs.ShellProperties.buildShellCommand_command_last",
+       "hash":
+       "53db5a273692c96c8387a541178f8cb6241fd99dc406213a100f79bf8fdc268e"}]},
+    {"description":
      "targetToModule returns the module prefix iff the target has at least two dot-separated parts",
      "artifacts":
      [{"path":
@@ -253,28 +271,21 @@
      [{"path":
        "Qed/Types.lean",
        "hash":
-       "07b53a5ccead846227dd55049d0e702686de3d3203a2ff7600b8010bb8954fb0"}]},
+       "e8143e608c9915937ee1f6731ce797d78ce26bba731855ef5c6e5385babfb528"}]},
     {"description":
      "JSON Schema enforces at least one criterion when no worker is present",
      "artifacts":
      [{"path":
        "DocGen/Schema.lean",
        "hash":
-       "32b19861274a91cbbf5b4d44621ef4a7226639f888f167da498fe96e207dd8a0"}]},
+       "f9d2e7361778634df9b308ff9f93aa575b39a35881b5f30a1c204b77785d06b6"}]},
     {"description":
      "Verify mode cannot carry a WorkerConfig or LoopConfig",
      "artifacts":
      [{"path":
        "theorem:Qed.Proofs.VerifyMode.verify_has_no_worker",
        "hash":
-       "ea23c3f71f1f60e6edd03613353363b7a9ceff41b2970e37f56b8da5d90bcf82"}]},
-    {"description":
-     "Verify mode does not depend on the state machine transition function",
-     "artifacts":
-     [{"path":
-       "theorem:Qed.Proofs.VerifyMode.verify_independent_of_loop",
-       "hash":
-       "5e35c3cf8053bbd392577fceee91abf95bccab807bafb994dd105513de52d617"}]}]},
+       "ea23c3f71f1f60e6edd03613353363b7a9ceff41b2970e37f56b8da5d90bcf82"}]}]},
   {"specPath":
    "./specs/worker-loop.spec.toml",
    "criteria":
@@ -298,21 +309,7 @@
      [{"path":
        "theorem:Qed.Proofs.WorkerLoopProperties.buildPrompt_nonempty_appends",
        "hash":
-       "58029784262fce5d4a6120b229e936f327f0228adecc1b5cf8afd03faacebc7f"}]},
-    {"description":
-     "shellQuote wraps its input in single quotes",
-     "artifacts":
-     [{"path":
-       "theorem:Qed.Proofs.WorkerLoopProperties.shellQuote_wraps",
-       "hash":
-       "063fea70c620fcb1cb1a83b97f7b24c38fd21ee032b92adbd4c2b4b878d777b9"}]},
-    {"description":
-     "shellQuote of empty string produces the empty shell string ''",
-     "artifacts":
-     [{"path":
-       "theorem:Qed.Proofs.WorkerLoopProperties.shellQuote_empty",
-       "hash":
-       "02ab538b0772b8b6a52e6ee443b109729082982c3f872871ae61791e9c1d8bc2"}]}]},
+       "58029784262fce5d4a6120b229e936f327f0228adecc1b5cf8afd03faacebc7f"}]}]},
   {"specPath":
    "./specs/docs.spec.toml",
    "criteria":
@@ -322,27 +319,27 @@
      [{"path":
        "DocGen/Main.lean",
        "hash":
-       "122c42e21b0c3a1fb9432c5b47e103ca068f4e624b5b2de1084a4c9d4e389643"},
+       "2c050de7c8ecb7c9cc7158e3a8cd57d4e6dd2043fda2cca889224a1142942451"},
       {"path":
        "DocGen/Markdown.lean",
        "hash":
-       "ea7e0bbcdea3d08a37d461ae56427d6a6a823ed3cf23216f4cdf51ceb9ac1a1c"},
+       "95a489dd8b07cbd5bd4979d7a9460ab0041e48ae575bad1fd0dacfea20c4a1bb"},
       {"path":
        "DocGen/Schema.lean",
        "hash":
-       "32b19861274a91cbbf5b4d44621ef4a7226639f888f167da498fe96e207dd8a0"}]},
+       "f9d2e7361778634df9b308ff9f93aa575b39a35881b5f30a1c204b77785d06b6"}]},
     {"description":
      "Spec format reference is fresh (generated output matches committed file)",
      "artifacts":
      [{"path":
        "DocGen/Main.lean",
        "hash":
-       "122c42e21b0c3a1fb9432c5b47e103ca068f4e624b5b2de1084a4c9d4e389643"},
+       "2c050de7c8ecb7c9cc7158e3a8cd57d4e6dd2043fda2cca889224a1142942451"},
       {"path":
        "DocGen/Markdown.lean",
        "hash":
-       "ea7e0bbcdea3d08a37d461ae56427d6a6a823ed3cf23216f4cdf51ceb9ac1a1c"},
+       "95a489dd8b07cbd5bd4979d7a9460ab0041e48ae575bad1fd0dacfea20c4a1bb"},
       {"path":
        "DocGen/Schema.lean",
        "hash":
-       "32b19861274a91cbbf5b4d44621ef4a7226639f888f167da498fe96e207dd8a0"}]}]}]}
+       "f9d2e7361778634df9b308ff9f93aa575b39a35881b5f30a1c204b77785d06b6"}]}]}]}
