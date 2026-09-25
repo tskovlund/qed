@@ -169,7 +169,7 @@ The `Qed/Proofs/` directory contains 70+ formal proofs verified by Lean 4's kern
 1. Create feature branch
 2. Make changes, test with `lake build` and `lake test`
 3. Push and create PR
-4. Review loop: wait for CI + Copilot -> address comments -> push -> iterate until clean
+4. Review loop: wait for CI -> address review comments -> push -> iterate until clean
 5. Merge
 
 ### Issue tracking
