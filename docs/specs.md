@@ -43,15 +43,15 @@ Building-block lemmas (fuel measures, stuck detection directions, specific trans
 
 ### 3. Verify mode correctness (`verify-mode.spec.toml`)
 
-Two formal proofs verify the type-level separation between modes: verify mode cannot carry a WorkerConfig or LoopConfig, and is independent of the state machine. Structural assertions check the schema and documentation.
+One formal proof verifies the type-level separation between modes: a verify-mode spec cannot carry a WorkerConfig or LoopConfig. Structural assertions check the schema and documentation.
 
 ### 4. Parser correctness (`parser.spec.toml`)
 
-Six formal proofs verify parser correctness: schedule parsing accepts exactly the three valid strings and rejects everything else (`parseSchedule_iff`), the serializer↔parser roundtrip recovers the original spec exactly, TOML duplicate key rejection, and three TOML→JSON pipeline properties (totality, success implies valid parse, error propagation — currently skipped pending TSK-173). Building-block proofs (per-type roundtrips, array creation) live in the proof files. Agent reviews check the JSON and TOML parsers for data loss, correct defaults, and spec compliance.
+Six formal proofs verify parser correctness: schedule parsing accepts exactly the three valid strings and rejects everything else (`parseSchedule_iff`), the JSON and TOML roundtrips each recover the original spec exactly, TOML duplicate keys are rejected, and TOML parse errors propagate to the conversion result in both directions. Building-block proofs (per-type roundtrips) live in the proof files. Agent reviews check the JSON and TOML parsers for data loss, correct defaults, and spec compliance.
 
 ### 5. Worker loop correctness (`worker-loop.spec.toml`)
 
-Five formal proofs verify the worker loop execution engine: the loop drives the proven state machine exclusively (`step = transition`), empty failures leave the base prompt unchanged, non-empty failures extend (not replace) the base prompt, and shellQuote wraps correctly. An agent review checks the two-tier prompt model, shell safety, and terminal state handling.
+Three formal proofs verify the worker loop execution engine: the loop drives the proven state machine exclusively (`step = transition`), empty failures leave the base prompt unchanged, and non-empty failures extend rather than replace it. An agent review checks the two-tier prompt model, shell safety, and terminal state handling.
 
 ### 6. CLI and output correctness (`cli.spec.toml`)
 
@@ -59,7 +59,7 @@ Four formal proofs verify output correctness: the result complete partition (eve
 
 ### 7. Verifier correctness (`verifier.spec.toml`)
 
-Three formal proofs verify pure functions used in verification dispatch: `targetToModule` returns the module prefix iff the target has at least two dot-separated parts, `isValidModuleName` accepts only shell-safe identifier segments, and `containsSorry` detects exactly standalone sorry occurrences. An agent review verifies the dispatch logic: exhaustive match on all VerifyType constructors, platform-aware shell execution, output truncation preserving the most recent output, and correct result mappings.
+Six formal proofs verify pure functions used in verification dispatch and shell execution: `targetToModule` returns the module prefix iff the target has at least two dot-separated parts, `isValidModuleName` accepts only shell-safe identifier segments, `containsSorry` detects exactly standalone sorry occurrences, `shellQuote` turns any string into exactly one shell word that decodes back to it (including the empty string), and the command is always the trailing segment of a built shell invocation. An agent review verifies the dispatch logic: exhaustive match on all VerifyType constructors, platform-aware shell execution, output truncation preserving the most recent output, and correct result mappings.
 
 ### 8. Convention adherence (`conventions.spec.toml`)
 

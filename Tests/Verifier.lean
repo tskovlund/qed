@@ -269,7 +269,20 @@ def testVerifySkipReturnsNoMetadata : IO Bool := do
   -- Assert: skipped criteria have no exit code or timing
   return execution.exitCode.isNone && execution.elapsedMs.isNone
 
+def testShellQuoteSurvivesRealShell : IO Bool := do
+  -- Arrange
+  let trickyValues := ["", "'", "it's", "a'b'c", "$(whoami)", "`id`",
+    "semi;colon", "pipe|bar", "a b  c", "back\\slash", "æøå 日本"]
+  -- Act
+  for value in trickyValues do
+    let (exitCode, stdout, _) ← Shell.runShellCommand s!"printf %s {Shell.shellQuote value}"
+    -- Assert
+    if exitCode != 0 || stdout != value then
+      return false
+  return true
+
 def verifierTests : List (String × IO Bool) := [
+  ("testShellQuoteSurvivesRealShell", testShellQuoteSurvivesRealShell),
   ("testVerifyCommandReturnsPassOnExitZero", testVerifyCommandReturnsPassOnExitZero),
   ("testVerifyCommandReturnsFailOnNonZeroExit", testVerifyCommandReturnsFailOnNonZeroExit),
   ("testVerifyCommandCapturesStdout", testVerifyCommandCapturesStdout),

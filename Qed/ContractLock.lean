@@ -32,9 +32,12 @@ structure SpecLock where
   criteria : List CriterionLock
   deriving Repr, BEq
 
+/-- The only lock file format version this build reads and writes. -/
+def supportedLockFileVersion : Nat := 1
+
 /-- The lock file structure. -/
 structure LockFile where
-  version : Nat := 1
+  version : Nat := supportedLockFileVersion
   specs : List SpecLock
   deriving Repr, BEq
 
@@ -45,25 +48,28 @@ def lockFilePath : System.FilePath := "qed.lock"
 -- Glob expansion
 -- ═══════════════════════════════════════════════════════════════════
 
+/-- Whether a single character is safe inside a glob pattern that will be
+    expanded by a shell. -/
+def isGlobSafeChar (c : Char) : Bool :=
+  c.isAlpha || c.isDigit || c == '*' || c == '?' || c == '/' ||
+  c == '.' || c == '_' || c == '-' || c == '[' || c == ']'
+
 /-- Whether a glob pattern contains only safe characters for shell expansion.
-    Allows: alphanumeric, *, ?, /, ., _, -, [, ]
-    Rejects: $, `, ;, &, |, (, ), {, }, <, >, space, etc. -/
+    Empty patterns are rejected.
+
+    Iterates `pattern.toList` rather than `String.all`, whose iterator machinery
+    has no reduction lemmas and would leave the safety property unstatable. -/
 def isValidGlobPattern (pattern : String) : Bool :=
-  !pattern.isEmpty && pattern.all fun c =>
-    c.isAlpha || c.isDigit || c == '*' || c == '?' || c == '/' ||
-    c == '.' || c == '_' || c == '-' || c == '[' || c == ']'
+  !pattern.isEmpty && pattern.toList.all isGlobSafeChar
 
 /-- Expand a glob pattern to a list of file paths.
     Uses bash globstar for `**` support. Returns empty list for no matches. -/
 def expandGlob (pattern : String) : IO (Except ErrorInfo (List String)) := do
   if !isValidGlobPattern pattern then
     return .error { message := s!"invalid glob pattern: '{pattern}' (contains unsafe characters)" }
-  -- Use bash with globstar and nullglob for reliable ** expansion.
-  -- Pattern is validated above to contain only glob-safe characters.
-  -- Note: the pattern sits inside single quotes in the bash -c argument,
-  -- which is itself inside Shell.runShellCommand's /bin/sh -c wrapper.
-  -- isValidGlobPattern rejects quotes and all shell metacharacters,
-  -- so the double-shell nesting is safe.
+  -- The pattern crosses two shell layers: single quotes inside `bash -c`, which
+  -- itself runs under `/bin/sh -c`. Safe because the validation above admits no
+  -- metacharacter — see `Proofs.GlobProperties`.
   let command := s!"bash -c 'shopt -s globstar nullglob; for f in {pattern}; do [ -f \"$f\" ] && printf \"%s\\n\" \"$f\"; done'"
   let (exitCode, stdout, _) ← Shell.runShellCommand command
   if exitCode == 0 then
@@ -227,7 +233,7 @@ def generateLockFile (specs : List (String × Spec)) : IO (Except ErrorInfo Lock
     | .ok lock =>
       if !lock.criteria.isEmpty then
         specLocks := specLocks ++ [lock]
-  return .ok { version := 1, specs := specLocks }
+  return .ok { version := supportedLockFileVersion, specs := specLocks }
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Lock verification
@@ -346,19 +352,24 @@ def parseSpecLock (json : Json) : Except ErrorInfo SpecLock := do
   let criteria ← criteriaArr.toList.mapM parseCriterionLock
   .ok { specPath, criteria }
 
-/-- Parse a LockFile from a JSON string. -/
-def parseLockFile (input : String) : Except ErrorInfo LockFile := do
-  let json ← (Json.parse input).mapError fun error => ({ message := error } : ErrorInfo)
+/-- Parse a LockFile from an already-decoded JSON value. Kept separate from
+    `parseLockFile` so the roundtrip proof has a pure `Json → LockFile` step. -/
+def parseLockFileFromJson (json : Json) : Except ErrorInfo LockFile := do
   let version ← match json.getObjValAs? Nat "version" with
     | .ok value => .ok value
     | .error _ => .error { message := "lock file missing 'version'" }
-  if version != 1 then
-    .error { message := s!"unsupported lock file version: {version} (expected 1)" }
+  if version != supportedLockFileVersion then
+    .error { message := s!"unsupported lock file version: {version} (expected {supportedLockFileVersion})" }
   let specsArr ← match json.getObjVal? "specs" with
     | .ok (Json.arr items) => .ok items
     | _ => .error { message := "lock file missing 'specs' array" }
   let specs ← specsArr.toList.mapM parseSpecLock
   .ok { version, specs }
+
+/-- Parse a LockFile from a JSON string. -/
+def parseLockFile (input : String) : Except ErrorInfo LockFile := do
+  let json ← (Json.parse input).mapError fun error => ({ message := error } : ErrorInfo)
+  parseLockFileFromJson json
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Lock file I/O

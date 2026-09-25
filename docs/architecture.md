@@ -186,4 +186,4 @@ hint: check for typos in key names
 
 - [CLI reference](cli-reference.md) — commands, flags, exit codes, environment variables, configuration
 - [Spec format](spec-format.md) — complete field-by-field reference for spec files
-- [Proven properties](proven-properties.md) — all 70+ formally verified theorems
+- [Proven properties](proven-properties.md) — what the proofs guarantee, by subsystem

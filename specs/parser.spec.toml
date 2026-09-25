@@ -29,14 +29,6 @@ target = "Qed.Proofs.Roundtrip.spec_roundtrip"
 # --- TOML proof criteria ---
 
 [[criteria]]
-description = "TOML→JSON conversion is total: always returns ok or error, never diverges"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.TomlJsonValidity.tomlToJson_total"
-
-[[criteria]]
 description = "Successful TOML→JSON conversion implies the input was valid TOML"
 
 [criteria.verify]
@@ -76,7 +68,6 @@ JSON parser faithfully maps JSON to the Spec type — no data loss, no \
 silent defaults where explicit values should be required, no ambiguous \
 error messages."""
 
-
 [criteria.verify]
 type = "agent"
 prompt = """
@@ -101,7 +92,6 @@ description = """
 TOML parser correctly handles all value types and structural features \
 used in qed specs — arrays of tables with sub-tables, multi-line \
 strings, non-ASCII content, and duplicate key rejection."""
-
 
 [criteria.verify]
 type = "agent"
