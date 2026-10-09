@@ -21,22 +21,6 @@ def statePhase : LoopState → Nat
   | .escalated _ => 2
   | .integrityViolation _ => 2
 
--- 1. Determinism
-
-/-- The transition function is deterministic: equal inputs produce equal
-outputs. Trivially true for any pure function in Lean — stated explicitly
-as a specification so the guarantee survives architectural changes. -/
-theorem transition_deterministic (config₁ config₂ : LoopConfig)
-    (state₁ state₂ : LoopState) (context₁ context₂ : LoopContext)
-    (event₁ event₂ : LoopEvent)
-    (hc : config₁ = config₂) (hs : state₁ = state₂)
-    (hx : context₁ = context₂) (he : event₁ = event₂) :
-    transition config₁ state₁ context₁ event₁ =
-    transition config₂ state₂ context₂ event₂ := by
-  subst hc; subst hs; subst hx; subst he; rfl
-
--- 2. Ready is transient
-
 /-- The initial state `ready` is never revisited: no non-terminal transition
 produces `ready`. Combined with terminal absorption, this means `ready` is
 visited exactly once at the start of the loop. -/
@@ -64,8 +48,6 @@ theorem ready_unreachable (config : LoopConfig) (state : LoopState)
   | maxIterationsReached _ => simp [LoopState.isTerminal] at hnonterm
   | escalated _ => simp [LoopState.isTerminal] at hnonterm
   | integrityViolation _ => simp [LoopState.isTerminal] at hnonterm
-
--- 3. State phase is monotonically non-decreasing
 
 /-- States only move forward through lifecycle phases: initial → working →
 terminal. The working phase (workerRunning ↔ verifying) allows cycling
@@ -98,8 +80,6 @@ theorem phase_monotonic (config : LoopConfig) (state : LoopState)
   case true =>
     simp only [↓reduceIte]
     exact Nat.le_refl _
-
--- 4. Iteration count is bounded by maxIterations
 
 /-- The iteration count in any state produced by a transition never exceeds
 `maxIterations`, provided the input state also satisfies the bound and
@@ -141,8 +121,6 @@ theorem iteration_bounded (config : LoopConfig) (state : LoopState)
     simp only [↓reduceIte]
     exact hbound
 
--- 5. Ready state always advances
-
 /-- The initial state `ready` always advances: it transitions to
 `workerRunning 1` on any non-integrity event, or to `integrityViolation`
 on an integrity violation. This fully characterizes ready transitions. -/
@@ -157,8 +135,6 @@ theorem ready_always_advances (config : LoopConfig) (context : LoopContext)
   | allPassed => left; rfl
   | someFailed _ => left; rfl
   | integrityViolation reason => right; exact ⟨reason, rfl⟩
-
--- 6. Complete lifecycle ordering
 
 /-- Every non-terminal transition either terminates, self-loops, or follows one
 of exactly three advance patterns. This is a complete characterization of

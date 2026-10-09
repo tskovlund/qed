@@ -6,25 +6,10 @@ namespace Qed.Proofs.VerifierProperties
 
 open Qed.Verifier
 
--- ============================================================
--- isIdentChar: Character classification
--- ============================================================
+/-! # Proof-target resolution and sorry detection -/
 
-/-- isIdentChar checks the same character set used in isValidModuleName's
-    per-part validation. This connects the boundary detection in containsSorry
-    with the character validation in isValidModuleName. -/
-theorem isIdentChar_eq_validModuleChar (c : Char) :
-    isIdentChar c = (c.isAlpha || c.isDigit || c == '_' || c == '\'') := by
-  unfold isIdentChar
-  rfl
-
--- ============================================================
--- targetToModule: Module extraction from qualified names
--- ============================================================
-
-/-- Complete characterization of targetToModule: returns `some m` if and only if
-    the target has at least 2 dot-separated parts and `m` is the intercalation
-    of all parts except the last (the theorem name segment). -/
+/-- `targetToModule` yields the dot-separated prefix of a proof target exactly
+    when the target has a module part and a theorem part. -/
 theorem targetToModule_iff (target : String) (m : String) :
     targetToModule target = some m ↔
     (target.splitOn ".").length ≥ 2 ∧
@@ -39,38 +24,8 @@ theorem targetToModule_iff (target : String) (m : String) :
     simp
     exact ⟨hlen, hval.symm⟩
 
-/-- moduleToPath output always ends with ".lean". -/
-theorem moduleToPath_ends_with_lean (module : String) :
-    ∃ prefix_part, moduleToPath module = prefix_part ++ ".lean" := by
-  unfold moduleToPath
-  exact ⟨module.replace "." "/", rfl⟩
-
-/-- Composing targetToModule and moduleToPath: the file path is derived
-    from the dot-separated parts of the target (all but the last segment),
-    with dots replaced by path separators. -/
-theorem moduleToPath_of_targetToModule (target : String) (m : String)
-    (h : targetToModule target = some m) :
-    moduleToPath m =
-      (String.intercalate "." ((target.splitOn ".").dropLast)).replace "." "/"
-        ++ ".lean" := by
-  unfold targetToModule at h
-  simp at h
-  unfold moduleToPath
-  rw [h.2]
-
--- ============================================================
--- isValidModuleName: Shell injection prevention
--- ============================================================
-
-/-- Complete characterization of isValidModuleName: returns true if and only if
-    every dot-separated part is non-empty and contains only identifier characters
-    (alphanumeric, underscore, or single quote).
-
-    The only characters in the name are therefore drawn from
-    {alpha, digit, '_', '\'', '.'} — since splitOn "." decomposes at every
-    dot, and each segment is validated. This guarantees shell safety: the name
-    cannot contain shell metacharacters, preventing injection when interpolated
-    into `lake build {name}`. -/
+/-- An accepted module name is drawn entirely from {alpha, digit, `_`, `'`, `.`},
+    so it cannot carry shell metacharacters into `lake build {name}`. -/
 theorem isValidModuleName_iff (name : String) :
     isValidModuleName name = true ↔
     (name.splitOn ".").length > 0 ∧
@@ -87,15 +42,8 @@ theorem isValidModuleName_iff (name : String) :
     simp [Bool.and_eq_true]
     exact ⟨hlen, hparts⟩
 
--- ============================================================
--- containsSorry: Sorry detection with word boundaries
--- ============================================================
-
-/-- Complete characterization of containsSorry: returns true if and only if
-    "sorry" appears as a substring AND at least one occurrence has non-identifier
-    (or absent) characters on both sides. This guarantees both no false negatives
-    (standalone "sorry" is always detected) and no false positives ("sorry" inside
-    identifiers like "sorryHandler" is not flagged). -/
+/-- `sorry` is detected exactly when it occurs on identifier boundaries: no
+    missed standalone `sorry`, and no false positive inside `sorryHandler`. -/
 theorem containsSorry_iff (contents : String) :
     containsSorry contents = true ↔
     let parts := contents.splitOn "sorry"

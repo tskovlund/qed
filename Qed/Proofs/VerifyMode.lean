@@ -16,14 +16,4 @@ theorem verify_has_no_worker (spec : Spec) (h : spec.mode = .verify) :
   rw [h]
   exact SpecMode.noConfusion
 
-/-- Verify mode does not depend on the state machine transition function.
-A spec in verify mode can be characterized without referencing `LoopState`,
-`LoopConfig`, or `WorkerConfig` — the mode constructor carries no data. -/
-theorem verify_independent_of_loop (mode : SpecMode) (h : mode = .verify) :
-    ∀ (worker : WorkerConfig) (loopConfig : LoopConfig),
-      mode ≠ .workerLoop worker loopConfig := by
-  intros worker loopConfig
-  rw [h]
-  exact SpecMode.noConfusion
-
 end Qed.Proofs.VerifyMode

@@ -75,15 +75,16 @@ Every criterion must pass, be explicitly skipped, or have its tool available —
 
 ## Formally proven
 
-The core is written in Lean 4 with complete formal proofs — no `sorry`, no gaps. Key guarantees:
+The core is written in Lean 4 with complete formal proofs — every theorem checked by the kernel, no `sorry`, no `native_decide`. Key guarantees:
 
 - **Termination** — the loop always reaches a terminal state within `maxIterations`
 - **Stuck detection** — fires iff the same failures repeat for `stuckThreshold` consecutive iterations
 - **No skipped verification** — worker output is always checked before reaching a success state
 - **Absorbing terminal states** — once done, done — no event can change a terminal state
 - **Serializer↔parser roundtrip** — parsing serialized JSON recovers the original spec exactly
+- **Shell safety** — any string quotes to exactly one shell word that decodes back to it
 
-70+ theorems total across state machine, worker loop, types, output, parsing, and TOML. See [proven properties](docs/proven-properties.md) for the full list.
+See [proven properties](docs/proven-properties.md) for what the proofs guarantee, subsystem by subsystem.
 
 ## Status
 

@@ -3,13 +3,14 @@ import Qed.StateMachine
 
 set_option autoImplicit false
 
-namespace Qed.Proofs.IntegrityProperties
+namespace Qed.Proofs.IntegrityEvents
 
 open Qed Qed.StateMachine
 
-/-- An integrityViolation event from any non-terminal state produces a
-    terminal integrityViolation state. The state machine cannot continue
-    executing after integrity is violated. -/
+/-! # State machine response to the `integrityViolation` event -/
+
+/-- A violation from any live state lands in `integrityViolation`, so the loop
+    stops the moment integrity is lost. -/
 theorem integrity_violation_terminal (config : LoopConfig) (state : LoopState)
     (context : LoopContext) (reason : String)
     (hnonterm : state.isTerminal = false) :
@@ -18,9 +19,7 @@ theorem integrity_violation_terminal (config : LoopConfig) (state : LoopState)
   unfold transition
   simp [hnonterm]
 
-/-- The integrityViolation state is terminal — no event can transition out
-    of it. This is a specialization of terminal_absorbing, stated explicitly
-    for the spec integrity contract. -/
+/-- No event transitions out of `integrityViolation`. -/
 theorem integrity_violation_absorbing (config : LoopConfig) (context : LoopContext)
     (reason : String) (event : LoopEvent) :
     transition config (.integrityViolation reason) context event =
@@ -28,8 +27,8 @@ theorem integrity_violation_absorbing (config : LoopConfig) (context : LoopConte
   unfold transition
   simp [LoopState.isTerminal]
 
-/-- Integrity violation from a non-terminal state can never produce a passed
-    state. If integrity is violated during execution, results are never accepted. -/
+/-- A violation can never yield `passed`: results are never accepted once
+    integrity is lost. -/
 theorem integrity_violation_not_passed (config : LoopConfig) (state : LoopState)
     (context : LoopContext) (reason : String) (n : Nat)
     (hnonterm : state.isTerminal = false) :
@@ -37,4 +36,4 @@ theorem integrity_violation_not_passed (config : LoopConfig) (state : LoopState)
   unfold transition
   simp [hnonterm]
 
-end Qed.Proofs.IntegrityProperties
+end Qed.Proofs.IntegrityEvents

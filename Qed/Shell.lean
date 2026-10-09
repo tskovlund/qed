@@ -15,9 +15,18 @@ inductive TimeoutResult where
 def shellCmd : String × String :=
   if System.Platform.isWindows then ("cmd", "/c") else ("/bin/sh", "-c")
 
-/-- Quote a string for shell use (single-quote wrapping with escape). -/
+/-- Escape a character sequence for a POSIX single-quoted word: each `'`
+    becomes `'\''` — close the word, emit a backslash-escaped quote, reopen.
+    Structural rather than `String.replace`, whose well-founded definition the
+    kernel cannot unfold, which would leave `shellQuote` unprovable. -/
+def escapeQuotes : List Char → List Char
+  | [] => []
+  | '\'' :: rest => '\'' :: '\\' :: '\'' :: '\'' :: escapeQuotes rest
+  | c :: rest => c :: escapeQuotes rest
+
+/-- Quote a string as a single POSIX shell word. -/
 def shellQuote (s : String) : String :=
-  "'" ++ s.replace "'" "'\\''" ++ "'"
+  "'" ++ String.ofList (escapeQuotes s.toList) ++ "'"
 
 /-- Build a shell command string with exported environment variables.
     Each entry in `envVars` is `(name, value)` — values are shell-quoted.

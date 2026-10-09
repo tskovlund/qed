@@ -32,22 +32,6 @@ type = "proof"
 prover = "lean4"
 target = "Qed.Proofs.WorkerLoopProperties.buildPrompt_nonempty_appends"
 
-[[criteria]]
-description = "shellQuote wraps its input in single quotes"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.WorkerLoopProperties.shellQuote_wraps"
-
-[[criteria]]
-description = "shellQuote of empty string produces the empty shell string ''"
-
-[criteria.verify]
-type = "proof"
-prover = "lean4"
-target = "Qed.Proofs.WorkerLoopProperties.shellQuote_empty"
-
 # --- Agent review ---
 
 [[criteria]]
